@@ -1,7 +1,7 @@
 import * as http from 'node:http';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { createChatCommit, readChatBranchFiles, pushChatBranch } from '../backend/chatGitPlumbing';
+import { createChatCommit, readChatBranchFiles, pushChatBranch, detectGitConfig } from '../backend/chatGitPlumbing';
 import { DataIsolationGuard } from '../security/dataIsolationGuard';
 import { S3Client } from '../storage/s3Client';
 
@@ -17,11 +17,14 @@ export function startGitChatServer(options: ServerOptions): http.Server {
   const workspaceRoot = options.workspaceRoot;
   const s3Client = new S3Client();
 
+  // In-memory live relay buffer for instant multi-client discrete file sync
+  const liveRelayFiles = new Map<string, string>();
+
   const server = http.createServer(async (req, res) => {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Active-User');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Active-User, User-Agent');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -94,7 +97,8 @@ export function startGitChatServer(options: ServerOptions): http.Server {
         }
         return;
       }
-      // API: Detect Local Git / System User Identity
+
+      // API: Detect Local Git / System User Identity with Mobile vs Desktop device awareness
       if (url.pathname === '/api/identity' && req.method === 'GET') {
         let gitUserName = '';
         let gitUserEmail = '';
@@ -110,8 +114,18 @@ export function startGitChatServer(options: ServerOptions): http.Server {
 
         const os = await import('node:os');
         const sysUser = os.userInfo().username || 'user';
-        const displayName = gitUserName || sysUser;
-        const userId = `user_${displayName.toLowerCase().replace(/[^a-z0-9_]/g, '_')}`;
+        const baseName = gitUserName || sysUser;
+        const cleanBaseId = baseName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
+        const ua = req.headers['user-agent'] || '';
+        const isMobile = /Mobile|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+
+        const displayName = isMobile ? `${baseName} (Mobile)` : `${baseName} (Desktop)`;
+        const userId = isMobile ? `user_${cleanBaseId}_mobile` : `user_${cleanBaseId}`;
+        const avatar = isMobile ? '📱' : '💻';
+
+        // Detect remote git repo if configured
+        const gitConfig = await detectGitConfig(workspaceRoot);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
@@ -119,20 +133,39 @@ export function startGitChatServer(options: ServerOptions): http.Server {
           userId,
           name: displayName,
           email: gitUserEmail,
-          avatar: '💻',
+          avatar,
+          isMobile,
+          remote: gitConfig.info ? `${gitConfig.info.owner}/${gitConfig.info.repo}` : undefined,
         }));
         return;
       }
 
-      // API: Pull latest data from local git-chat ref
+      // API: Pull latest data from local git-chat ref + live memory relay
       if (url.pathname === '/api/sync/pull' && req.method === 'GET') {
-        const files = await readChatBranchFiles(workspaceRoot, 'git-chat');
+        const branchFiles = await readChatBranchFiles(workspaceRoot, 'git-chat');
+        const fileMap = new Map<string, string>();
+
+        // 1. Load files from Git branch
+        for (const f of branchFiles) {
+          fileMap.set(f.relativePath, f.content);
+        }
+
+        // 2. Overlay in-memory live relay files (instant sync between clients)
+        for (const [relPath, content] of liveRelayFiles.entries()) {
+          fileMap.set(relPath, content);
+        }
+
+        const mergedFiles = Array.from(fileMap.entries()).map(([relativePath, content]) => ({
+          relativePath,
+          content,
+        }));
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, files, timestamp: Date.now() }));
+        res.end(JSON.stringify({ success: true, files: mergedFiles, timestamp: Date.now() }));
         return;
       }
 
-      // API: Push discrete user files to local git-chat ref
+      // API: Push discrete user files to local git-chat ref & live memory relay
       if (url.pathname === '/api/sync/push' && req.method === 'POST') {
         let body = '';
         for await (const chunk of req) {
@@ -148,6 +181,12 @@ export function startGitChatServer(options: ServerOptions): http.Server {
           DataIsolationGuard.validateWritePath(f.relativePath, activeUserId);
         }
 
+        // 1. Immediately store in live memory relay for instant pull by other connected devices
+        for (const f of files) {
+          liveRelayFiles.set(f.relativePath, f.content);
+        }
+
+        // 2. Persist to git branch refs/heads/git-chat
         const commitRes = await createChatCommit({
           workspaceRoot,
           activeUserId,
@@ -155,8 +194,9 @@ export function startGitChatServer(options: ServerOptions): http.Server {
           message,
         });
 
+        // 3. Optional remote sync to GitHub origin
         if (data.pushRemote) {
-          await pushChatBranch(workspaceRoot, 'git-chat', 'origin').catch(() => {});
+          pushChatBranch(workspaceRoot, 'git-chat', 'origin').catch(() => {});
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
