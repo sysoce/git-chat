@@ -12,12 +12,20 @@ export interface ChatAttachment {
   size?: number;
 }
 
+export interface EncryptedPayload {
+  v: number; // schema version, e.g. 1
+  alg: 'AES-GCM-256';
+  iv: string; // base64 encoded 12-byte initialization vector
+  ciphertext: string; // base64 encoded ciphertext
+}
+
 export interface ChatMessage {
   id: string;
   channelId: string;
   threadRootId?: string;
   author: ChatAuthor;
-  content: string;
+  content: string; // Plaintext when in-memory / decrypted; or '[Encrypted Message]' if locked
+  encrypted?: EncryptedPayload; // Present when stored in Git / storage
   attachments?: ChatAttachment[];
   reactions?: Record<string, string[]>; // emoji -> userIds
   replyCount?: number;

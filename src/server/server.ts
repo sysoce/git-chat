@@ -30,6 +30,36 @@ export function startGitChatServer(options: ServerOptions): http.Server {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
     try {
+      // API: Detect Local Git / System User Identity
+      if (url.pathname === '/api/identity' && req.method === 'GET') {
+        let gitUserName = '';
+        let gitUserEmail = '';
+        try {
+          const { execFile } = await import('node:child_process');
+          const { promisify } = await import('node:util');
+          const execFileAsync = promisify(execFile);
+          const nameRes = await execFileAsync('git', ['config', 'user.name'], { cwd: workspaceRoot }).catch(() => ({ stdout: '' }));
+          const emailRes = await execFileAsync('git', ['config', 'user.email'], { cwd: workspaceRoot }).catch(() => ({ stdout: '' }));
+          gitUserName = nameRes.stdout.trim();
+          gitUserEmail = emailRes.stdout.trim();
+        } catch {}
+
+        const os = await import('node:os');
+        const sysUser = os.userInfo().username || 'user';
+        const displayName = gitUserName || sysUser;
+        const userId = `user_${displayName.toLowerCase().replace(/[^a-z0-9_]/g, '_')}`;
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          userId,
+          name: displayName,
+          email: gitUserEmail,
+          avatar: '💻',
+        }));
+        return;
+      }
+
       // API: Pull latest data from local git-chat ref
       if (url.pathname === '/api/sync/pull' && req.method === 'GET') {
         const files = await readChatBranchFiles(workspaceRoot, 'git-chat');

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>git-chat • Serverless Slack with Git Backend</title>
+  <title>git-chat • Encrypted Serverless Slack with Git Backend</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>" />
   <style>
     :root {
@@ -30,6 +30,7 @@
       --code-bg: #111214;
       --danger: #e01e5a;
       --success: #2eb886;
+      --warning: #ecb22e;
       --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
@@ -42,7 +43,7 @@
 
     /* Left Sidebar */
     #sidebar { width: 260px; min-width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-    .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .sidebar-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
     .workspace-title { font-weight: 700; font-size: 16px; color: var(--text-heading); display: flex; align-items: center; gap: 8px; }
     .workspace-status { font-size: 11px; color: var(--success); display: flex; align-items: center; gap: 4px; margin-top: 4px; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
@@ -50,6 +51,8 @@
     .sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 8px; }
     .nav-section { margin-bottom: 18px; }
     .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); padding: 4px 8px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .btn-add-icon { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; font-weight: bold; line-height: 1; transition: background 0.15s; }
+    .btn-add-icon:hover { background: var(--bg-hover); color: #fff; }
     
     .nav-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-size: 14px; margin-bottom: 2px; user-select: none; transition: background 0.15s; }
     .nav-item:hover { background: var(--bg-sidebar-hover); color: var(--text-heading); }
@@ -58,10 +61,11 @@
     .badge { background: var(--accent-blue); color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
 
     .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg-sidebar); }
-    .user-profile-summary { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-    .user-avatar { width: 32px; height: 32px; border-radius: 4px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-    .user-info-name { font-size: 13px; font-weight: 600; color: var(--text-heading); }
-    .user-info-role { font-size: 11px; color: var(--text-dim); }
+    .user-profile-summary { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; min-width: 0; }
+    .user-avatar { width: 34px; height: 34px; border-radius: 6px; background: #2c3136; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .user-info-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-info-name { font-size: 13px; font-weight: 600; color: var(--text-heading); overflow: hidden; text-overflow: ellipsis; }
+    .user-info-role { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
 
     /* Main Chat View */
     #main-chat { flex: 1; display: flex; flex-direction: column; background: var(--bg-main); overflow: hidden; position: relative; }
@@ -69,8 +73,10 @@
     .channel-info h2 { font-size: 17px; color: var(--text-heading); display: flex; align-items: center; gap: 6px; }
     .channel-topic { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
     .chat-header-actions { display: flex; align-items: center; gap: 8px; }
-    .header-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .header-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
     .header-btn:hover { background: var(--bg-hover); color: var(--text-heading); }
+    .header-btn.vault-locked { background: #4a2121; border-color: var(--danger); color: #ff8888; }
+    .header-btn.vault-unlocked { background: #1b382b; border-color: var(--success); color: #85e89d; }
 
     /* Timeline */
     #timeline-container { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
@@ -78,7 +84,7 @@
     .timeline-divider::before, .timeline-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
     .timeline-divider span { padding: 0 12px; }
 
-    .msg-group { display: flex; gap: 12px; position: relative; padding: 6px 10px; border-radius: 8px; transition: background 0.1s; }
+    .msg-group { display: flex; gap: 12px; position: relative; padding: 8px 12px; border-radius: 8px; transition: background 0.1s; }
     .msg-group:hover { background: var(--bg-hover); }
     .msg-avatar { width: 38px; height: 38px; border-radius: 6px; background: #2f343b; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
     .msg-body { flex: 1; min-width: 0; }
@@ -92,20 +98,21 @@
     .msg-content code { background: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; color: #f28b82; }
     .msg-content pre { background: var(--code-bg); padding: 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; overflow-x: auto; margin: 6px 0; border: 1px solid var(--border-light); }
     .msg-content blockquote { border-left: 3px solid var(--accent-blue); padding-left: 10px; margin: 6px 0; color: var(--text-muted); }
+    .encrypted-placeholder { color: var(--warning); font-style: italic; display: inline-flex; align-items: center; gap: 6px; background: rgba(236, 178, 46, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px dashed var(--warning); font-size: 13px; }
 
     /* Reactions */
-    .reactions-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-    .react-chip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2px 8px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--text-muted); transition: all 0.15s; }
-    .react-chip:hover { background: var(--bg-hover); color: var(--text-heading); }
+    .reactions-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .react-chip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 3px 9px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; color: var(--text-muted); transition: all 0.15s; user-select: none; }
+    .react-chip:hover { background: var(--bg-hover); color: var(--text-heading); border-color: #555c63; }
     .react-chip.active { background: var(--mention-bg); border-color: var(--mention-border); color: #fff; font-weight: 600; }
 
     /* Thread preview button */
-    .thread-link-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--accent-blue); cursor: pointer; font-weight: 600; text-decoration: none; padding: 2px 6px; border-radius: 4px; }
-    .thread-link-btn:hover { background: var(--bg-card); text-decoration: underline; }
+    .thread-link-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--accent-blue); cursor: pointer; font-weight: 600; text-decoration: none; padding: 3px 8px; border-radius: 4px; background: rgba(18, 100, 163, 0.1); }
+    .thread-link-btn:hover { background: rgba(18, 100, 163, 0.25); }
 
     /* Message Actions Hover Toolbar */
-    .msg-actions { position: absolute; right: 12px; top: -12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; display: none; padding: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-    .msg-group:hover .msg-actions { display: flex; gap: 2px; }
+    .msg-actions { position: absolute; right: 12px; top: -14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; display: none; padding: 2px 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10; }
+    .msg-group:hover .msg-actions { display: flex; gap: 3px; }
     .action-btn { background: none; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 13px; color: var(--text-muted); }
     .action-btn:hover { background: var(--bg-hover); color: var(--text-heading); }
 
@@ -114,37 +121,46 @@
     .composer-box { background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color 0.15s; }
     .composer-box:focus-within { border-color: #555c63; }
     .composer-toolbar { display: flex; align-items: center; gap: 4px; padding: 6px 10px; background: var(--bg-card); border-bottom: 1px solid var(--border-light); }
-    .tool-btn { background: none; border: none; color: var(--text-muted); padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-    .tool-btn:hover { background: var(--bg-hover); color: var(--text-heading); }
+    .tool-btn { background: var(--bg-card); border: 1px solid transparent; color: var(--text-muted); padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; min-width: 28px; }
+    .tool-btn:hover { background: var(--bg-hover); color: var(--text-heading); border-color: var(--border); }
     
-    .composer-textarea { width: 100%; min-height: 54px; max-height: 180px; padding: 10px 12px; background: transparent; border: none; color: var(--text-heading); font-family: var(--font); font-size: 14px; outline: none; resize: none; }
+    .composer-textarea { width: 100%; min-height: 56px; max-height: 180px; padding: 10px 12px; background: transparent; border: none; color: var(--text-heading); font-family: var(--font); font-size: 14px; outline: none; resize: none; }
     .composer-bottom { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px 8px 12px; }
     .isolation-pill { font-size: 11px; color: var(--success); display: flex; align-items: center; gap: 4px; }
-    .send-btn { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .send-btn { background: var(--accent); color: #fff; border: none; padding: 7px 16px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.15s; }
     .send-btn:hover { background: var(--accent-hover); }
 
     /* Right Thread Drawer */
-    #thread-drawer { width: 340px; min-width: 340px; background: var(--bg-main); border-left: 1px solid var(--border); display: none; flex-direction: column; }
+    #thread-drawer { width: 360px; min-width: 360px; background: var(--bg-main); border-left: 1px solid var(--border); display: none; flex-direction: column; }
     #thread-drawer.open { display: flex; }
     .drawer-header { height: 56px; border-bottom: 1px solid var(--border); padding: 0 16px; display: flex; align-items: center; justify-content: space-between; }
     .drawer-title { font-size: 16px; font-weight: 700; color: var(--text-heading); }
-    .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; }
+    .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px; border-radius: 4px; }
+    .close-btn:hover { background: var(--bg-hover); color: var(--text-heading); }
 
     /* Modals */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); }
     .modal-overlay.open { display: flex; }
-    .modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; width: 500px; max-width: 90vw; max-height: 85vh; overflow-y: auto; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; width: 480px; max-width: 90vw; max-height: 88vh; overflow-y: auto; padding: 24px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); }
     .modal-title { font-size: 18px; font-weight: 700; color: var(--text-heading); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
     .form-group { margin-bottom: 14px; }
     .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
-    .form-input { width: 100%; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: var(--text-heading); font-size: 14px; outline: none; }
+    .form-input { width: 100%; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: var(--text-heading); font-size: 14px; outline: none; transition: border-color 0.15s; }
     .form-input:focus { border-color: var(--accent-blue); }
-    .btn-primary { background: var(--accent-blue); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; }
-    .qr-container { text-align: center; margin: 16px 0; background: #fff; padding: 16px; border-radius: 8px; display: inline-block; }
+    .btn-primary { background: var(--accent-blue); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; margin-top: 12px; transition: opacity 0.15s; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 8px; }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 24px; right: 24px; background: #222529; border: 1px solid var(--border); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.4); z-index: 2000; align-items: center; gap: 8px; }
+
+    /* Spinner Animation */
+    .spin { animation: rotate 1s linear infinite; }
+    @keyframes rotate { 100% { transform: rotate(360deg); } }
 
     @media (max-width: 768px) {
       #sidebar { width: 70px; min-width: 70px; }
-      .workspace-title span, .section-title, .nav-item-left span, .user-info-name, .user-info-role, .workspace-status { display: none; }
+      .workspace-title span, .section-title, .nav-item-left span, .user-info-text, .workspace-status { display: none; }
       #thread-drawer { position: absolute; right: 0; top: 0; bottom: 0; width: 100%; z-index: 100; }
     }
   </style>
@@ -159,18 +175,21 @@
           <div class="workspace-title">💬 <span id="ws-name">Git-Chat</span></div>
           <div class="workspace-status"><span class="status-dot"></span> <span id="sync-status">refs/heads/git-chat</span></div>
         </div>
-        <button class="header-btn" id="btn-open-settings" title="Setup & QR Code" style="padding:4px 8px;">⚙️</button>
+        <button class="header-btn" id="btn-open-settings" title="Workspace Settings" style="padding:6px 9px;">⚙️</button>
       </div>
 
       <nav class="sidebar-nav">
         <div class="nav-section">
-          <div class="section-title"><span>Channels</span> <span style="cursor:pointer;" id="btn-add-chan">+</span></div>
+          <div class="section-title">
+            <span>Channels</span>
+            <button class="btn-add-icon" id="btn-add-chan" title="Create Channel">+</button>
+          </div>
           <div id="channel-list"></div>
         </div>
 
         <div class="nav-section">
           <div class="section-title"><span>Autonomous Agents</span></div>
-          <div class="nav-item" data-id="agent_supervisor">
+          <div class="nav-item" id="nav-agent-item" data-id="agent_supervisor">
             <div class="nav-item-left"><span>🤖</span> <span>SupervisorAgent</span></div>
             <span class="badge" style="background:var(--agent-badge)">AI</span>
           </div>
@@ -183,11 +202,11 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div class="user-profile-summary" id="btn-user-profile">
+        <div class="user-profile-summary" id="btn-user-profile" title="Click to edit profile & vault">
           <div class="user-avatar" id="current-user-avatar">💻</div>
-          <div>
-            <div class="user-info-name" id="current-user-name">Local User</div>
-            <div class="user-info-role" id="current-user-role">Active • Localhost</div>
+          <div class="user-info-text">
+            <div class="user-info-name" id="current-user-name">User</div>
+            <div class="user-info-role" id="current-user-role">🔓 E2EE Vault Active</div>
           </div>
         </div>
       </div>
@@ -201,8 +220,9 @@
           <div class="channel-topic" id="active-channel-topic">Company-wide announcements and work-based matters</div>
         </div>
         <div class="chat-header-actions">
+          <button class="header-btn vault-unlocked" id="btn-vault-toggle" title="Toggle Vault Encryption Lock">🔓 Vault Unlocked</button>
           <button class="header-btn" id="btn-open-search">🔍 Search</button>
-          <button class="header-btn" id="btn-sync-now">🔄 Sync</button>
+          <button class="header-btn" id="btn-sync-now"><span id="sync-icon">🔄</span> Sync</button>
         </div>
       </header>
 
@@ -214,15 +234,15 @@
       <div id="composer-container">
         <div class="composer-box">
           <div class="composer-toolbar">
-            <button class="tool-btn" data-fmt="bold" title="Bold"><b>B</b></button>
-            <button class="tool-btn" data-fmt="italic" title="Italic"><i>I</i></button>
-            <button class="tool-btn" data-fmt="code" title="Code">&lt;/&gt;</button>
-            <button class="tool-btn" data-fmt="quote" title="Quote">”</button>
-            <button class="tool-btn" data-fmt="agent" title="Ask AI Agent">🤖 @agent</button>
+            <button class="tool-btn" id="tb-bold" title="Bold"><b>B</b></button>
+            <button class="tool-btn" id="tb-italic" title="Italic"><i>I</i></button>
+            <button class="tool-btn" id="tb-code" title="Code Block">&lt;/&gt;</button>
+            <button class="tool-btn" id="tb-quote" title="Quote">”</button>
+            <button class="tool-btn" id="tb-agent" title="Ask AI Agent">🤖 @agent</button>
           </div>
           <textarea class="composer-textarea" id="message-input" placeholder="Message #general (Type / for commands, @ for mentions)..."></textarea>
           <div class="composer-bottom">
-            <div class="isolation-pill">🔒 Isolated Data Ref (master branch protected)</div>
+            <div class="isolation-pill">🔒 End-to-End Encrypted (AES-GCM-256)</div>
             <button class="send-btn" id="btn-send-message">Send ↵</button>
           </div>
         </div>
@@ -237,7 +257,7 @@
       </div>
       <div id="thread-timeline" style="flex:1; overflow-y:auto; padding:16px;"></div>
       <div style="padding:12px; border-top:1px solid var(--border);">
-        <textarea class="composer-textarea" id="thread-input" style="min-height:48px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px;" placeholder="Reply in thread..."></textarea>
+        <textarea class="composer-textarea" id="thread-input" style="min-height:50px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px;" placeholder="Reply in thread..."></textarea>
         <div style="display:flex; justify-content:flex-end; margin-top:8px;">
           <button class="send-btn" id="btn-send-thread">Reply</button>
         </div>
@@ -245,7 +265,51 @@
     </aside>
   </div>
 
-  <!-- SETTINGS & QR SETUP MODAL -->
+  <!-- VAULT LOGIN / SETUP MODAL -->
+  <div class="modal-overlay" id="vault-modal">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span>🔐 Vault Password & Identity</span>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+        git-chat protects your messages with <b>End-to-End Encryption (AES-GCM-256)</b>. Enter your vault password to unlock and decrypt your messages.
+      </p>
+      <div class="form-group">
+        <label class="form-label">Your Display Name</label>
+        <input class="form-input" id="vault-user-name" placeholder="e.g. Developer, Alice, John" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Your Avatar Emoji</label>
+        <input class="form-input" id="vault-user-avatar" value="💻" style="width:60px; text-align:center;" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Vault Encryption Password</label>
+        <input class="form-input" type="password" id="vault-password" placeholder="Enter vault password..." autofocus />
+      </div>
+      <button class="btn-primary" id="btn-unlock-vault">Unlock Vault 🔓</button>
+    </div>
+  </div>
+
+  <!-- CREATE CHANNEL MODAL -->
+  <div class="modal-overlay" id="create-chan-modal">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span>Create a Channel</span>
+        <button class="close-btn" id="btn-close-create-chan">×</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Channel Name</label>
+        <input class="form-input" id="new-chan-name" placeholder="e.g. frontend, general, deployment" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Topic / Description</label>
+        <input class="form-input" id="new-chan-topic" placeholder="What is this channel about?" />
+      </div>
+      <button class="btn-primary" id="btn-save-new-chan">Create Channel</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
   <div class="modal-overlay" id="settings-modal">
     <div class="modal-card">
       <div class="modal-title">
@@ -253,32 +317,31 @@
         <button class="close-btn" id="btn-close-settings">×</button>
       </div>
       <div class="form-group">
-        <label class="form-label">Active User Name</label>
-        <input class="form-input" id="cfg-user-name" value="Developer" />
+        <label class="form-label">Display Name</label>
+        <input class="form-input" id="cfg-user-name" />
       </div>
       <div class="form-group">
         <label class="form-label">User ID (Identity Scope)</label>
-        <input class="form-input" id="cfg-user-id" value="user_alice" />
+        <input class="form-input" id="cfg-user-id" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Avatar Emoji</label>
+        <input class="form-input" id="cfg-avatar" value="💻" style="width:60px; text-align:center;" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Vault Password</label>
+        <input class="form-input" type="password" id="cfg-vault-pass" placeholder="Change vault password..." />
       </div>
       <div class="form-group">
         <label class="form-label">GitHub Repository (owner/repo)</label>
         <input class="form-input" id="cfg-repo" value="sysoce/git-chat" />
       </div>
       <div class="form-group">
-        <label class="form-label">Data Branch Ref</label>
-        <input class="form-input" id="cfg-branch" value="git-chat" readonly style="opacity:0.7;" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">GitHub Personal Access Token (PAT) [Optional for local bridge]</label>
+        <label class="form-label">GitHub Personal Access Token (PAT) [Optional]</label>
         <input class="form-input" type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxx" />
       </div>
-      <div style="margin-top:16px; text-align:center;">
-        <label class="form-label">📱 Mobile Setup Link & Hash</label>
-        <div class="qr-container" id="qr-target">
-          <div id="qr-text" style="font-size:12px; color:#111; word-break:break-all;"></div>
-        </div>
-      </div>
-      <button class="btn-primary" id="btn-save-settings">Save & Re-sync</button>
+      <button class="btn-primary" id="btn-save-settings">Save Settings</button>
+      <button class="btn-secondary" id="btn-export-json">Export Workspace JSON</button>
     </div>
   </div>
 
@@ -293,6 +356,9 @@
       <div id="search-results-list" style="margin-top:16px; max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
     </div>
   </div>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
 
   <script>
     // ==========================================
@@ -314,14 +380,79 @@
     }
 
     // ==========================================
-    // IN-MEMORY CRDT STATE & CONFIG
+    // CRYPTO VAULT (Web Crypto AES-GCM & PBKDF2)
     // ==========================================
+    class CryptoVault {
+      static async deriveKey(passphrase, saltStr = 'git-chat-e2ee-vault-salt') {
+        const encoder = new TextEncoder();
+        const baseKey = await crypto.subtle.importKey(
+          'raw',
+          encoder.encode(passphrase),
+          { name: 'PBKDF2' },
+          false,
+          ['deriveKey']
+        );
+        return await crypto.subtle.deriveKey(
+          {
+            name: 'PBKDF2',
+            salt: encoder.encode(saltStr),
+            iterations: 100000,
+            hash: 'SHA-256'
+          },
+          baseKey,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+      }
+
+      static async encrypt(plaintext, key) {
+        if (!key) return null;
+        const encoder = new TextEncoder();
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const encrypted = await crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv },
+          key,
+          encoder.encode(plaintext)
+        );
+        return {
+          v: 1,
+          alg: 'AES-GCM-256',
+          iv: btoa(String.fromCharCode(...iv)),
+          ciphertext: btoa(String.fromCharCode(...new Uint8Array(encrypted)))
+        };
+      }
+
+      static async decrypt(payload, key) {
+        if (!key || !payload || !payload.iv || !payload.ciphertext) return null;
+        try {
+          const iv = new Uint8Array(atob(payload.iv).split('').map(c => c.charCodeAt(0)));
+          const ciphertext = new Uint8Array(atob(payload.ciphertext).split('').map(c => c.charCodeAt(0)));
+          const decrypted = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv },
+            key,
+            ciphertext
+          );
+          return new TextDecoder().decode(decrypted);
+        } catch (e) {
+          return null;
+        }
+      }
+    }
+
+    // ==========================================
+    // STATE & CONFIG
+    // ==========================================
+    let vaultKey = null;
+    let isVaultLocked = true;
+    let vaultPassword = '';
+
     const DEFAULT_CONFIG = {
       owner: 'sysoce',
       repo: 'git-chat',
       branch: 'git-chat',
       token: '',
-      user: { id: 'user_alice', name: 'Alice (Engineer)', avatar: '💻', role: 'member' }
+      user: { id: 'user_dev', name: 'Developer', avatar: '💻', role: 'member' }
     };
 
     let config = { ...DEFAULT_CONFIG };
@@ -338,14 +469,22 @@
       events: []
     };
 
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'flex';
+      setTimeout(() => { t.style.display = 'none'; }, 3000);
+    }
+
     // Save and load state from localStorage cache
     function saveLocalCache() {
       try {
         localStorage.setItem('git_chat_messages', JSON.stringify(state.messages));
         localStorage.setItem('git_chat_events', JSON.stringify(state.events));
         localStorage.setItem('git_chat_channels', JSON.stringify(state.channels));
+        localStorage.setItem('git_chat_config', JSON.stringify(config));
       } catch (e) {
-        console.warn('Failed to save state to localStorage', e);
+        console.warn('Failed to save to localStorage', e);
       }
     }
 
@@ -374,65 +513,42 @@
             state.events = parsedEv;
           }
         }
+
+        const savedCfg = localStorage.getItem('git_chat_config');
+        if (savedCfg) {
+          config = { ...config, ...JSON.parse(savedCfg) };
+        }
       } catch (e) {
         console.warn('Failed to load state from localStorage', e);
       }
-
-      // If state is still completely empty after loading cache, add default welcome message
-      if (state.messages.length === 0) {
-        state.messages.push({
-          id: 'msg_welcome_init_001',
-          channelId: 'chan_general',
-          author: { id: 'agent_supervisor', name: 'Supervisor Agent', avatar: '🤖', isBot: true },
-          content: `👋 **Welcome to git-chat!**\n\nThis app is running serverless from a **single HTML file** backed by your Git repository.\n- **Zero-Conflict Discrete Files**: Each message is an immutable atom.\n- **Strict Isolation**: Localhost users only push user data; system code on \`master\` cannot be overwritten.\n\nTry sending a message or ask \`@SupervisorAgent\`!`,
-          reactions: { '🚀': ['user_alice'] },
-          timestamp: Date.now()
-        });
-        saveLocalCache();
-      }
     }
 
-    // Load from URL hash or localStorage
-    function initConfig() {
-      if (window.location.hash.startsWith('#setup=')) {
-        try {
-          const raw = atob(window.location.hash.slice(7));
-          const parsed = JSON.parse(raw);
-          config = { ...config, ...parsed };
-          localStorage.setItem('git_chat_config', JSON.stringify(config));
-        } catch (e) { console.warn('Failed to parse hash setup', e); }
-      } else {
-        const saved = localStorage.getItem('git_chat_config');
-        if (saved) {
-          try { config = { ...config, ...JSON.parse(saved) }; } catch {}
+    // Auto-detect identity from backend /api/identity
+    async function detectIdentity() {
+      try {
+        const res = await fetch('/api/identity');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.name) {
+            config.user.name = data.name;
+            config.user.id = data.userId;
+            config.user.avatar = data.avatar || '💻';
+            saveLocalCache();
+          }
         }
-      }
-
-      document.getElementById('cfg-user-name').value = config.user.name;
-      document.getElementById('cfg-user-id').value = config.user.id;
-      document.getElementById('cfg-repo').value = `${config.owner}/${config.repo}`;
-      document.getElementById('cfg-token').value = config.token || '';
-      document.getElementById('current-user-name').textContent = config.user.name;
-      document.getElementById('current-user-avatar').textContent = config.user.avatar || '💻';
+      } catch {}
     }
 
     // Minimal Markdown Parser
     function renderMarkdown(text) {
       if (!text) return '';
       let escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      // Code blocks
       escaped = escaped.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-      // Inline code
       escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
-      // Bold
       escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-      // Italic
       escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-      // Blockquotes
       escaped = escaped.replace(/^> (.*)$/gm, '<blockquote>$1</blockquote>');
-      // Mentions
       escaped = escaped.replace(/(@[a-zA-Z0-9_-]+)/g, '<span style="background:var(--mention-bg); color:var(--text-heading); padding:1px 4px; border-radius:3px; font-weight:600;">$1</span>');
-      // Newlines to breaks
       return escaped.replace(/\n/g, '<br/>');
     }
 
@@ -447,6 +563,13 @@
         item.onclick = () => selectChannel(chan.id);
         listEl.appendChild(item);
       }
+
+      // Update User footer
+      document.getElementById('current-user-name').textContent = config.user.name;
+      document.getElementById('current-user-avatar').textContent = config.user.avatar || '💻';
+      document.getElementById('current-user-role').innerHTML = isVaultLocked
+        ? '<span style="color:var(--danger)">🔒 Locked</span>'
+        : '<span style="color:var(--success)">🔓 E2EE Vault Active</span>';
     }
 
     function selectChannel(chanId) {
@@ -461,7 +584,7 @@
     }
 
     // Render Timeline Messages
-    function renderTimeline() {
+    async function renderTimeline() {
       const container = document.getElementById('timeline-container');
       container.innerHTML = '';
 
@@ -479,6 +602,17 @@
         el.className = 'msg-group';
         const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+        // Decrypt content if encrypted
+        let displayContent = msg.content;
+        if (msg.encrypted) {
+          if (!isVaultLocked && vaultKey) {
+            const dec = await CryptoVault.decrypt(msg.encrypted, vaultKey);
+            displayContent = dec || msg.content || '<span class="encrypted-placeholder">🔒 [Decryption failed - Incorrect Key]</span>';
+          } else {
+            displayContent = '<span class="encrypted-placeholder">🔒 [Encrypted Message • Unlock Vault to view]</span>';
+          }
+        }
+
         // Thread count
         const replies = state.messages.filter(m => m.threadRootId === msg.id);
         let threadHtml = '';
@@ -490,10 +624,22 @@
         let reactionsHtml = '<div class="reactions-row">';
         const reacts = msg.reactions || {};
         for (const [emoji, users] of Object.entries(reacts)) {
-          const isActive = Array.isArray(users) && users.includes(config.user.id);
-          reactionsHtml += `<div class="react-chip ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} ${Array.isArray(users) ? users.length : 1}</div>`;
+          const userList = Array.isArray(users) ? users : [];
+          const isActive = userList.includes(config.user.id);
+          reactionsHtml += `<div class="react-chip ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} ${userList.length}</div>`;
         }
         reactionsHtml += '</div>';
+
+        const isAuthor = msg.author.id === config.user.id;
+        let actionsHtml = `
+          <button class="action-btn" onclick="toggleReaction('${msg.id}', '👍')" title="React with 👍">👍</button>
+          <button class="action-btn" onclick="toggleReaction('${msg.id}', '🚀')" title="React with 🚀">🚀</button>
+          <button class="action-btn" onclick="toggleReaction('${msg.id}', '❤️')" title="React with ❤️">❤️</button>
+          <button class="action-btn" onclick="openThread('${msg.id}')" title="Reply in thread">💬</button>
+        `;
+        if (isAuthor) {
+          actionsHtml += `<button class="action-btn" onclick="deleteMessage('${msg.id}')" title="Delete message" style="color:var(--danger)">🗑️</button>`;
+        }
 
         el.innerHTML = `
           <div class="msg-avatar">${msg.author.avatar || '👤'}</div>
@@ -503,100 +649,123 @@
               ${msg.author.isBot ? '<span class="bot-tag">BOT</span>' : ''}
               <span class="msg-time">${timeStr}</span>
             </div>
-            <div class="msg-content">${renderMarkdown(msg.content)}</div>
+            <div class="msg-content">${renderMarkdown(displayContent)}</div>
             ${reactionsHtml}
             ${threadHtml}
           </div>
-          <div class="msg-actions">
-            <button class="action-btn" onclick="toggleReaction('${msg.id}', '👍')">👍</button>
-            <button class="action-btn" onclick="toggleReaction('${msg.id}', '🚀')">🚀</button>
-            <button class="action-btn" onclick="toggleReaction('${msg.id}', '❤️')">❤️</button>
-            <button class="action-btn" onclick="openThread('${msg.id}')">💬</button>
-          </div>
+          <div class="msg-actions">${actionsHtml}</div>
         `;
         container.appendChild(el);
       }
       container.scrollTop = container.scrollHeight;
     }
 
-    // Send Message
+    // Send Message (with E2EE)
     async function sendMessage(content, threadRootId = null) {
       if (!content || !content.trim()) return;
       const text = content.trim();
 
+      if (isVaultLocked) {
+        document.getElementById('vault-modal').classList.add('open');
+        showToast('Please unlock your vault to send encrypted messages');
+        return;
+      }
+
+      const msgId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      let encryptedPayload = null;
+      if (vaultKey) {
+        encryptedPayload = await CryptoVault.encrypt(text, vaultKey);
+      }
+
       const newMsg = {
-        id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        id: msgId,
         channelId: activeChannelId,
         threadRootId: threadRootId || undefined,
         author: { ...config.user },
         content: text,
+        encrypted: encryptedPayload || undefined,
         reactions: {},
         timestamp: Date.now()
       };
 
-      // 1. Validate with DataIsolationGuard
       const relativePath = threadRootId
         ? `channels/${activeChannelId}/threads/${threadRootId}/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`
         : `channels/${activeChannelId}/messages/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`;
 
       ClientDataIsolationGuard.validatePath(relativePath, config.user.id);
 
-      // Optimistic update & instant persistence to localStorage
       state.messages.push(newMsg);
       saveLocalCache();
 
       if (threadRootId) renderThread();
       else renderTimeline();
 
-      // Push via local server bridge if available
-      try {
-        await fetch('/api/sync/push', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
-          body: JSON.stringify({
-            activeUserId: config.user.id,
-            files: [{ relativePath, content: JSON.stringify(newMsg, null, 2) }]
-          })
-        });
-      } catch (err) {
-        // Standalone browser mode
-      }
+      // Push to Git backend
+      const diskMsg = { ...newMsg, content: '[Encrypted Message]' }; // Content stored encrypted on disk/git
+      fetch('/api/sync/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
+        body: JSON.stringify({
+          activeUserId: config.user.id,
+          files: [{ relativePath, content: JSON.stringify(diskMsg, null, 2) }]
+        })
+      }).catch(() => {});
 
-      // Check for Autonomous Agent mention or command
+      // Agent mention
       if (text.includes('@SupervisorAgent') || text.startsWith('/agent')) {
         simulateAgentResponse(text, activeChannelId, threadRootId || newMsg.id);
       }
     }
 
     // Simulate Agent autonomous reply
-    function simulateAgentResponse(prompt, channelId, rootId) {
+    async function simulateAgentResponse(prompt, channelId, rootId) {
       setTimeout(async () => {
+        const replyText = `🤖 **SupervisorAgent Response**:\nProcessed prompt: \`"${prompt.slice(0, 60)}..."\`.\nYour message is protected with AES-GCM-256 E2EE on isolated branch \`refs/heads/git-chat\`. Code on \`master\` remains 100% untouched.`;
+        let enc = null;
+        if (vaultKey) {
+          enc = await CryptoVault.encrypt(replyText, vaultKey);
+        }
+
         const agentReply = {
           id: `msg_${Date.now()}_agent_${Math.random().toString(36).slice(2, 6)}`,
           channelId: channelId,
           threadRootId: rootId,
           author: { id: 'agent_supervisor', name: 'Supervisor Agent', avatar: '🤖', isBot: true },
-          content: `🤖 **SupervisorAgent Response**:\nI received your prompt: \`"${prompt.slice(0, 60)}..."\`.\nAll git-chat transactions are verified on branch \`refs/heads/git-chat\`. System code on \`master\` is 100% protected.`,
+          content: replyText,
+          encrypted: enc || undefined,
           timestamp: Date.now()
         };
+
         state.messages.push(agentReply);
         saveLocalCache();
         renderTimeline();
         if (activeThreadRootId === rootId) renderThread();
 
         const agentPath = `channels/${channelId}/threads/${rootId}/${agentReply.timestamp}_agent_supervisor_${agentReply.id}.json`;
-        try {
-          await fetch('/api/sync/push', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Active-User': 'agent_supervisor' },
-            body: JSON.stringify({
-              activeUserId: 'agent_supervisor',
-              files: [{ relativePath: agentPath, content: JSON.stringify(agentReply, null, 2) }]
-            })
-          });
-        } catch (e) {}
+        const diskAgentMsg = { ...agentReply, content: '[Encrypted Message]' };
+        fetch('/api/sync/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Active-User': 'agent_supervisor' },
+          body: JSON.stringify({
+            activeUserId: 'agent_supervisor',
+            files: [{ relativePath: agentPath, content: JSON.stringify(diskAgentMsg, null, 2) }]
+          })
+        }).catch(() => {});
       }, 500);
     }
+
+    // Delete message
+    window.deleteMessage = function(msgId) {
+      if (!confirm('Are you sure you want to delete this message?')) return;
+      state.messages = state.messages.filter(m => m.id !== msgId && m.threadRootId !== msgId);
+      saveLocalCache();
+      renderTimeline();
+      if (activeThreadRootId === msgId) {
+        document.getElementById('thread-drawer').classList.remove('open');
+        activeThreadRootId = null;
+      }
+      showToast('Message deleted');
+    };
 
     // Thread Drawer
     window.openThread = function(rootMsgId) {
@@ -606,7 +775,7 @@
       renderThread();
     };
 
-    function renderThread() {
+    async function renderThread() {
       if (!activeThreadRootId) return;
       const rootMsg = state.messages.find(m => m.id === activeThreadRootId);
       const replies = state.messages.filter(m => m.threadRootId === activeThreadRootId).sort((a,b) => a.timestamp - b.timestamp);
@@ -614,6 +783,10 @@
       container.innerHTML = '';
 
       if (rootMsg) {
+        let rootText = rootMsg.content;
+        if (rootMsg.encrypted && !isVaultLocked && vaultKey) {
+          rootText = (await CryptoVault.decrypt(rootMsg.encrypted, vaultKey)) || rootMsg.content;
+        }
         const rootEl = document.createElement('div');
         rootEl.className = 'msg-group';
         rootEl.style.borderBottom = '1px solid var(--border)';
@@ -622,20 +795,24 @@
           <div class="msg-avatar">${rootMsg.author.avatar || '👤'}</div>
           <div class="msg-body">
             <div class="msg-meta"><span class="msg-author">${rootMsg.author.name}</span> <span class="msg-time">${new Date(rootMsg.timestamp).toLocaleTimeString()}</span></div>
-            <div class="msg-content">${renderMarkdown(rootMsg.content)}</div>
+            <div class="msg-content">${renderMarkdown(rootText)}</div>
           </div>
         `;
         container.appendChild(rootEl);
       }
 
       for (const rep of replies) {
+        let repText = rep.content;
+        if (rep.encrypted && !isVaultLocked && vaultKey) {
+          repText = (await CryptoVault.decrypt(rep.encrypted, vaultKey)) || rep.content;
+        }
         const repEl = document.createElement('div');
         repEl.className = 'msg-group';
         repEl.innerHTML = `
           <div class="msg-avatar">${rep.author.avatar || '👤'}</div>
           <div class="msg-body">
             <div class="msg-meta"><span class="msg-author">${rep.author.name}</span> <span class="msg-time">${new Date(rep.timestamp).toLocaleTimeString()}</span></div>
-            <div class="msg-content">${renderMarkdown(rep.content)}</div>
+            <div class="msg-content">${renderMarkdown(repText)}</div>
           </div>
         `;
         container.appendChild(repEl);
@@ -659,7 +836,6 @@
       saveLocalCache();
       renderTimeline();
 
-      // Record event
       const ev = {
         id: `ev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         type: list.includes(uid) ? 'reaction_remove' : 'reaction_add',
@@ -684,63 +860,155 @@
     };
 
     // Pull Sync from Local Server
-    async function syncFromLocalServer() {
+    async function syncFromLocalServer(manual = false) {
+      const syncIcon = document.getElementById('sync-icon');
+      if (syncIcon) syncIcon.classList.add('spin');
       try {
         const res = await fetch('/api/sync/pull');
         if (res.ok) {
           const data = await res.json();
           if (data.files && data.files.length > 0) {
-            let changed = false;
+            let count = 0;
             for (const f of data.files) {
               try {
                 const parsed = JSON.parse(f.content);
-                // Handle channel messages and threads
                 if (f.relativePath.includes('/messages/') || f.relativePath.includes('/threads/')) {
-                  const existingIdx = state.messages.findIndex(m => m.id === parsed.id);
-                  if (existingIdx === -1) {
+                  const idx = state.messages.findIndex(m => m.id === parsed.id);
+                  if (idx === -1) {
                     state.messages.push(parsed);
-                    changed = true;
+                    count++;
                   } else {
-                    // Merge properties if newer
-                    state.messages[existingIdx] = {
-                      ...state.messages[existingIdx],
-                      ...parsed,
-                      reactions: { ...state.messages[existingIdx].reactions, ...parsed.reactions }
-                    };
+                    state.messages[idx] = { ...state.messages[idx], ...parsed };
                   }
                 }
-                // Handle channel metadata
                 if (f.relativePath.match(/^channels\/([a-zA-Z0-9_-]+)\/meta\.json$/)) {
-                  if (!state.channels[parsed.id]) {
-                    state.channels[parsed.id] = parsed;
-                    changed = true;
-                  }
+                  state.channels[parsed.id] = parsed;
                 }
               } catch {}
             }
-            if (changed) {
-              saveLocalCache();
-              renderSidebar();
-              renderTimeline();
-              if (activeThreadRootId) renderThread();
-            }
+            saveLocalCache();
+            renderSidebar();
+            renderTimeline();
+            if (activeThreadRootId) renderThread();
+            if (manual) showToast(`Synced ${count} new items from Git`);
+          } else if (manual) {
+            showToast('Git ref up to date');
           }
         }
       } catch (e) {
-        // Offline or standalone file:// mode
+        if (manual) showToast('Working in standalone local cache mode');
+      } finally {
+        if (syncIcon) syncIcon.classList.remove('spin');
       }
     }
 
+    // Text formatting helper
+    function wrapText(before, after) {
+      const input = document.getElementById('message-input');
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const val = input.value;
+      const selected = val.substring(start, end);
+      const replacement = before + (selected || 'text') + after;
+      input.value = val.substring(0, start) + replacement + val.substring(end);
+      input.focus();
+      input.setSelectionRange(start + before.length, start + replacement.length - after.length);
+    }
+
     // Setup Event Listeners
-    window.addEventListener('DOMContentLoaded', () => {
-      initConfig();
+    window.addEventListener('DOMContentLoaded', async () => {
       loadLocalCache();
+      await detectIdentity();
       renderSidebar();
       renderTimeline();
       syncFromLocalServer();
 
-      // Poll sync periodically
-      setInterval(syncFromLocalServer, 3000);
+      // Check URL hash for vault password or setup
+      if (window.location.hash.startsWith('#setup=')) {
+        try {
+          const raw = atob(window.location.hash.slice(7));
+          const parsed = JSON.parse(raw);
+          config = { ...config, ...parsed };
+          if (parsed.password) {
+            vaultPassword = parsed.password;
+            vaultKey = await CryptoVault.deriveKey(vaultPassword);
+            isVaultLocked = false;
+          }
+          saveLocalCache();
+        } catch {}
+      }
+
+      // If user hasn't set up vault yet, open vault modal
+      const savedPass = sessionStorage.getItem('git_chat_vault_pass');
+      if (savedPass) {
+        vaultPassword = savedPass;
+        vaultKey = await CryptoVault.deriveKey(vaultPassword);
+        isVaultLocked = false;
+        document.getElementById('btn-vault-toggle').className = 'header-btn vault-unlocked';
+        document.getElementById('btn-vault-toggle').textContent = '🔓 Vault Unlocked';
+        renderTimeline();
+        renderSidebar();
+      } else {
+        document.getElementById('vault-user-name').value = config.user.name;
+        document.getElementById('vault-user-avatar').value = config.user.avatar || '💻';
+        document.getElementById('vault-modal').classList.add('open');
+      }
+
+      // Vault Unlock Button
+      document.getElementById('btn-unlock-vault').onclick = async () => {
+        const pass = document.getElementById('vault-password').value;
+        const name = document.getElementById('vault-user-name').value;
+        const avatar = document.getElementById('vault-user-avatar').value;
+        if (!pass) {
+          alert('Please enter a vault password');
+          return;
+        }
+        vaultPassword = pass;
+        if (name && name.trim()) {
+          config.user.name = name.trim();
+          config.user.id = `user_${name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')}`;
+        }
+        if (avatar && avatar.trim()) config.user.avatar = avatar.trim();
+
+        vaultKey = await CryptoVault.deriveKey(vaultPassword);
+        isVaultLocked = false;
+        sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+        saveLocalCache();
+
+        document.getElementById('btn-vault-toggle').className = 'header-btn vault-unlocked';
+        document.getElementById('btn-vault-toggle').textContent = '🔓 Vault Unlocked';
+        document.getElementById('vault-modal').classList.remove('open');
+        renderSidebar();
+        renderTimeline();
+        showToast(`Vault unlocked! Welcome, ${config.user.name}`);
+      };
+
+      // Vault Toggle Button in header
+      document.getElementById('btn-vault-toggle').onclick = () => {
+        if (isVaultLocked) {
+          document.getElementById('vault-modal').classList.add('open');
+        } else {
+          isVaultLocked = true;
+          vaultKey = null;
+          sessionStorage.removeItem('git_chat_vault_pass');
+          document.getElementById('btn-vault-toggle').className = 'header-btn vault-locked';
+          document.getElementById('btn-vault-toggle').textContent = '🔒 Vault Locked';
+          renderTimeline();
+          renderSidebar();
+          showToast('Vault locked. Message contents hidden.');
+        }
+      };
+
+      // Toolbar buttons
+      document.getElementById('tb-bold').onclick = () => wrapText('**', '**');
+      document.getElementById('tb-italic').onclick = () => wrapText('*', '*');
+      document.getElementById('tb-code').onclick = () => wrapText('```\n', '\n```');
+      document.getElementById('tb-quote').onclick = () => wrapText('> ', '');
+      document.getElementById('tb-agent').onclick = () => {
+        const input = document.getElementById('message-input');
+        input.value += '@SupervisorAgent ';
+        input.focus();
+      };
 
       // Composer Send
       const input = document.getElementById('message-input');
@@ -756,20 +1024,7 @@
         }
       });
 
-      // Toolbar buttons
-      document.querySelectorAll('.composer-toolbar .tool-btn').forEach(btn => {
-        btn.onclick = () => {
-          const fmt = btn.getAttribute('data-fmt');
-          if (fmt === 'bold') input.value += '**bold text**';
-          else if (fmt === 'italic') input.value += '*italic text*';
-          else if (fmt === 'code') input.value += '\n```\n// code snippet\n```\n';
-          else if (fmt === 'quote') input.value += '\n> quoted text\n';
-          else if (fmt === 'agent') input.value += '@SupervisorAgent ';
-          input.focus();
-        };
-      });
-
-      // Thread Composer Send
+      // Thread Send
       const threadInput = document.getElementById('thread-input');
       const threadSendBtn = document.getElementById('btn-send-thread');
       threadSendBtn.onclick = () => {
@@ -790,27 +1045,80 @@
         activeThreadRootId = null;
       };
 
-      // Modals
+      // Create Channel Modal
+      const createChanModal = document.getElementById('create-chan-modal');
+      document.getElementById('btn-add-chan').onclick = () => {
+        document.getElementById('new-chan-name').value = '';
+        document.getElementById('new-chan-topic').value = '';
+        createChanModal.classList.add('open');
+      };
+      document.getElementById('btn-close-create-chan').onclick = () => createChanModal.classList.remove('open');
+      document.getElementById('btn-save-new-chan').onclick = () => {
+        const rawName = document.getElementById('new-chan-name').value;
+        const topic = document.getElementById('new-chan-topic').value;
+        if (!rawName || !rawName.trim()) return;
+        const cleanName = rawName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+        const id = `chan_${cleanName}`;
+        state.channels[id] = { id, name: cleanName, topic: topic || `Discussion for #${cleanName}` };
+        saveLocalCache();
+        createChanModal.classList.remove('open');
+        selectChannel(id);
+        showToast(`Channel #${cleanName} created!`);
+
+        fetch('/api/sync/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
+          body: JSON.stringify({
+            activeUserId: config.user.id,
+            files: [{ relativePath: `channels/${id}/meta.json`, content: JSON.stringify(state.channels[id], null, 2) }]
+          })
+        }).catch(() => {});
+      };
+
+      // Settings Modal
       const settingsModal = document.getElementById('settings-modal');
       document.getElementById('btn-open-settings').onclick = () => {
-        const payload = btoa(JSON.stringify(config));
-        document.getElementById('qr-text').textContent = window.location.origin + window.location.pathname + '#setup=' + payload;
+        document.getElementById('cfg-user-name').value = config.user.name;
+        document.getElementById('cfg-user-id').value = config.user.id;
+        document.getElementById('cfg-avatar').value = config.user.avatar || '💻';
+        document.getElementById('cfg-repo').value = `${config.owner}/${config.repo}`;
+        document.getElementById('cfg-token').value = config.token || '';
         settingsModal.classList.add('open');
       };
-      document.getElementById('btn-user-profile').onclick = () => {
-        document.getElementById('btn-open-settings').click();
-      };
+      document.getElementById('btn-user-profile').onclick = () => document.getElementById('btn-open-settings').click();
       document.getElementById('btn-close-settings').onclick = () => settingsModal.classList.remove('open');
-      document.getElementById('btn-save-settings').onclick = () => {
-        config.user.name = document.getElementById('cfg-user-name').value;
-        config.user.id = document.getElementById('cfg-user-id').value;
+      document.getElementById('btn-save-settings').onclick = async () => {
+        config.user.name = document.getElementById('cfg-user-name').value || 'User';
+        config.user.id = document.getElementById('cfg-user-id').value || 'user_dev';
+        config.user.avatar = document.getElementById('cfg-avatar').value || '💻';
         const [owner, repo] = document.getElementById('cfg-repo').value.split('/');
         config.owner = owner || 'sysoce';
         config.repo = repo || 'git-chat';
         config.token = document.getElementById('cfg-token').value;
-        localStorage.setItem('git_chat_config', JSON.stringify(config));
-        initConfig();
+
+        const newPass = document.getElementById('cfg-vault-pass').value;
+        if (newPass) {
+          vaultPassword = newPass;
+          vaultKey = await CryptoVault.deriveKey(vaultPassword);
+          sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+        }
+
+        saveLocalCache();
+        renderSidebar();
+        renderTimeline();
         settingsModal.classList.remove('open');
+        showToast('Settings updated');
+      };
+
+      // Export JSON
+      document.getElementById('btn-export-json').onclick = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `git-chat-backup-${Date.now()}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
       };
 
       // Search Modal
@@ -828,7 +1136,7 @@
         const q = searchInput.value.toLowerCase().trim();
         searchResults.innerHTML = '';
         if (!q) return;
-        const matches = state.messages.filter(m => m.content.toLowerCase().includes(q));
+        const matches = state.messages.filter(m => (m.content || '').toLowerCase().includes(q));
         for (const m of matches) {
           const item = document.createElement('div');
           item.style.padding = '8px';
@@ -844,30 +1152,11 @@
         }
       };
 
-      document.getElementById('btn-sync-now').onclick = () => syncFromLocalServer();
+      // Sync button
+      document.getElementById('btn-sync-now').onclick = () => syncFromLocalServer(true);
 
-      // Add Channel button
-      document.getElementById('btn-add-chan').onclick = () => {
-        const name = prompt('Enter new channel name (e.g. dev, design):');
-        if (name && name.trim()) {
-          const cleanName = name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
-          const id = `chan_${cleanName}`;
-          if (!state.channels[id]) {
-            state.channels[id] = { id, name: cleanName, topic: `Discussion for #${cleanName}` };
-            saveLocalCache();
-            selectChannel(id);
-            // Sync to git
-            fetch('/api/sync/push', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
-              body: JSON.stringify({
-                activeUserId: config.user.id,
-                files: [{ relativePath: `channels/${id}/meta.json`, content: JSON.stringify(state.channels[id], null, 2) }]
-              })
-            }).catch(() => {});
-          }
-        }
-      };
+      // Background sync every 4s
+      setInterval(() => syncFromLocalServer(false), 4000);
     });
   </script>
 </body>

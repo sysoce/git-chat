@@ -1,6 +1,7 @@
 export * from './types/chat';
 export * from './types/protocol';
 export * from './security/dataIsolationGuard';
+export * from './security/cryptoVault';
 export * from './engine/chatEventProjector';
 export * from './engine/chatManifestGenerator';
 export * from './backend/chatGitPlumbing';
