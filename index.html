@@ -3137,46 +3137,6 @@
       qrModal.classList.add('open');
     }
 
-    // Setup Event Listeners
-    window.addEventListener('DOMContentLoaded', async () => {
-      loadLocalCache();
-      await detectIdentity();
-      renderSidebar();
-      renderTimeline();
-      syncFromLocalServer();
-      checkS3Status();
-
-      // Check URL hash for vault password or setup
-      if (window.location.hash.startsWith('#setup=')) {
-        try {
-          const raw = atob(window.location.hash.slice(7));
-          const parsed = JSON.parse(raw);
-          if (parsed.owner) config.owner = parsed.owner;
-          if (parsed.repo) config.repo = parsed.repo;
-          if (parsed.branch) config.branch = parsed.branch;
-          if (parsed.workspaceSecret) config.workspaceSecret = parsed.workspaceSecret;
-          if (parsed.password) {
-            vaultPassword = parsed.password;
-            vaultKey = await CryptoVault.deriveKey(vaultPassword);
-            isVaultLocked = false;
-            sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
-            document.getElementById('btn-vault-toggle').className = 'header-btn vault-unlocked';
-            document.getElementById('btn-vault-toggle').textContent = '🔓 Vault Unlocked';
-          }
-          saveLocalCache();
-          showToast(`Configured for repository: ${config.owner}/${config.repo}`);
-        } catch (e) {
-          console.error('Failed to parse setup hash', e);
-        }
-      }
-
-      // Check for saved vault session
-      const savedPass = sessionStorage.getItem('git_chat_vault_pass') || localStorage.getItem('git_chat_saved_vault_pass');
-      if (savedPass && !vaultPassword) {
-        vaultPassword = savedPass;
-        vaultKey = await CryptoVault.deriveKey(vaultPassword);
-        isVaultLocked = false;
-        document.getElementById('btn-vault-toggle').className = 'header-btn vault-unlocked';
     // Helper for resilient event binding
     function setClickHandler(id, handler) {
       const el = document.getElementById(id);
