@@ -98,11 +98,52 @@ export interface ChatEvent {
   timestamp: number;
 }
 
+export type MembershipPolicy = 'open' | 'invite_only';
+
+export interface WorkspaceMember {
+  id: string;
+  gitUsername: string;
+  name: string;
+  role: 'admin' | 'member' | 'guest';
+  storageRepo?: string;
+  storageVolumes?: string[];
+  joinedAt: number;
+}
+
+export interface WorkspaceMembersConfig {
+  workspaceId: string;
+  membershipPolicy: MembershipPolicy;
+  members: WorkspaceMember[];
+  updatedAt: number;
+}
+
+export interface GitStorageConfig {
+  provider: 'github' | 'gita' | 'gitlab' | 'custom';
+  owner?: string;
+  repo?: string;
+  branch?: string;
+  token?: string;
+  baseUrl?: string;
+  allowInlineFallback?: boolean;
+}
+
+export interface StorageVolumeMetadata {
+  volumeName: string;
+  volumeIndex: number;
+  repo: string;
+  branch: string;
+  sizeBytes?: number;
+  fileCount?: number;
+  isFull?: boolean;
+  createdAt: number;
+}
+
 export interface ChatWorkspaceConfig {
   name: string;
   description?: string;
   defaultChannelId: string;
   channels: ChatChannel[];
+  membershipPolicy?: MembershipPolicy;
   createdAt: number;
   version: string;
 }
@@ -124,3 +165,4 @@ export interface ChatManifest {
   activeUsersCount: number;
   totalMessagesCount: number;
 }
+

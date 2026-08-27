@@ -1107,49 +1107,129 @@
 
   <!-- SETTINGS MODAL -->
   <div class="modal-overlay" id="settings-modal">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width:560px; max-height:85vh; display:flex; flex-direction:column;">
       <div class="modal-sheet-handle"></div>
       <div class="modal-title">
-        <span>⚙️ Workspace & Git Setup</span>
+        <span>⚙️ Workspace Settings</span>
         <button class="close-btn" id="btn-close-settings">×</button>
       </div>
-      <div class="form-group">
-        <label class="form-label">Display Name</label>
-        <input class="form-input" id="cfg-user-name" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">User ID (Identity Scope)</label>
-        <input class="form-input" id="cfg-user-id" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Avatar Emoji</label>
-        <input class="form-input" id="cfg-avatar" value="💻" style="width:70px; text-align:center;" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Vault Password</label>
-        <input class="form-input" type="password" id="cfg-vault-pass" placeholder="Change vault password..." />
-      </div>
-      <div class="form-group">
-        <label class="form-label">GitHub Data Repository (owner/repo)</label>
-        <input class="form-input" id="cfg-repo" value="sysoce/git-chat" />
-        <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Can be any repository you have access to. All users pointing to this repo can communicate.</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Data Branch</label>
-        <input class="form-input" id="cfg-branch" value="git-chat" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">GitHub Personal Access Token (PAT) [Optional / Standalone Remote Sync]</label>
-        <input class="form-input" type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxx" />
-      </div>
       
-      <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px; display:flex; flex-direction:column; gap:8px;">
-        <button class="btn-secondary" id="btn-copy-mobile-setup-link">📱 Copy Mobile Setup Link</button>
-        <button class="btn-secondary" id="btn-show-qr-code">📱 Connect Phone via QR Code</button>
-        <button class="btn-secondary" id="btn-export-json">💾 Export Workspace JSON</button>
+      <!-- Settings Tabs -->
+      <div class="settings-tabs" style="display:flex; gap:6px; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:14px;">
+        <button class="tab-btn active" id="stab-general" onclick="switchSettingsTab('general')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-sidebar-active); color:#fff; cursor:pointer;">⚙️ Workspace</button>
+        <button class="tab-btn" id="stab-storage" onclick="switchSettingsTab('storage')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:pointer;">📦 Git-S3 Storage</button>
+        <button class="tab-btn" id="stab-access" onclick="switchSettingsTab('access')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:pointer;">👥 Access & Members</button>
       </div>
-      
-      <button class="btn-primary" id="btn-save-settings">Save Settings</button>
+
+      <div id="settings-tab-content" style="overflow-y:auto; flex:1; padding-right:4px;">
+        <!-- TAB 1: GENERAL -->
+        <div id="sec-general">
+          <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input class="form-input" id="cfg-user-name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">User ID (Identity Scope)</label>
+            <input class="form-input" id="cfg-user-id" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Avatar Emoji</label>
+            <input class="form-input" id="cfg-avatar" value="💻" style="width:70px; text-align:center;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Vault Password</label>
+            <input class="form-input" type="password" id="cfg-vault-pass" placeholder="Change vault password..." />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Git Data Repository (owner/repo)</label>
+            <input class="form-input" id="cfg-repo" value="sysoce/git-chat" />
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Can be any repository on GitHub or Gita. All users pointing here communicate.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data Branch</label>
+            <input class="form-input" id="cfg-branch" value="git-chat" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Git Personal Access Token (PAT) [Optional / Standalone Remote Sync]</label>
+            <input class="form-input" type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxx" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Git-Chat Server / Bridge URL (Default: http://localhost:4300)</label>
+            <input class="form-input" id="cfg-backend-url" placeholder="http://localhost:4300" />
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">When opening directly from <code>file://</code>, Git-Chat connects to this server bridge for real-time LAN sync.</div>
+          </div>
+        </div>
+
+        <!-- TAB 2: GIT-S3 STORAGE -->
+        <div id="sec-storage" style="display:none;">
+          <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
+            Zero-Server Personal Storage: Every user automatically has their own 10 GB Git repository for media & attachments.
+          </div>
+          <div class="form-group">
+            <label class="form-label">Storage Provider</label>
+            <select class="form-input" id="cfg-storage-provider">
+              <option value="github">GitHub (api.github.com)</option>
+              <option value="gita">KTH Gita (gita.sys.kth.se)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Personal Storage Repository</label>
+            <input class="form-input" id="cfg-storage-repo" placeholder="username/git-chat-media" />
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Auto-created on first upload. When full (~8.5GB), auto-spawns vol2.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Personal Storage Access Token (PAT)</label>
+            <input class="form-input" type="password" id="cfg-storage-token" placeholder="Storage repo write token" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Active Storage Volume</label>
+            <div style="padding:8px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; font-size:13px; color:var(--success);" id="cfg-storage-volume-status">
+              📦 Active Volume: Auto (Personal Repo / Fallback)
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="btn-secondary" id="btn-test-storage-conn" style="flex:1;">⚡ Test Storage Access</button>
+            <button class="btn-secondary" id="btn-rollover-storage" style="flex:1;">🔄 Next Volume</button>
+          </div>
+        </div>
+
+        <!-- TAB 3: ACCESS & MEMBERS -->
+        <div id="sec-access" style="display:none;">
+          <div class="form-group">
+            <label class="form-label">Workspace Membership Policy</label>
+            <select class="form-input" id="cfg-membership-policy">
+              <option value="open">🌟 Free Open Use (Instant Join, No Allowlist)</option>
+              <option value="invite_only">🏢 Enterprise Strict (Invite Only / Allowlist)</option>
+            </select>
+          </div>
+          <div style="margin-top:12px;">
+            <label class="form-label">Workspace Member Roster</label>
+            <div id="members-list-container" style="max-height:160px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); padding:6px; display:flex; flex-direction:column; gap:4px; font-size:12px;">
+              <div style="color:var(--text-muted); padding:8px; text-align:center;">Loading roster...</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:6px; margin-top:10px;">
+            <input class="form-input" id="inp-add-member-user" placeholder="Git username (e.g. alice_kth)" style="margin-bottom:0;" />
+            <select class="form-input" id="sel-add-member-role" style="width:110px; margin-bottom:0;">
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+              <option value="guest">Guest</option>
+            </select>
+            <button class="btn-secondary" id="btn-add-roster-member" style="white-space:nowrap;">Add</button>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn-secondary" id="btn-gen-invite-link" style="width:100%;">🔗 Generate 1-Click Invite Link</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px; display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; gap:8px;">
+          <button class="btn-secondary" id="btn-copy-mobile-setup-link" style="flex:1;">📱 Copy Mobile Setup</button>
+          <button class="btn-secondary" id="btn-show-qr-code" style="flex:1;">📱 Connect Phone (QR)</button>
+        </div>
+        <button class="btn-primary" id="btn-save-settings">Save Settings</button>
+      </div>
     </div>
   </div>
 
@@ -1723,8 +1803,25 @@
       repo: 'git-chat',
       branch: 'git-chat',
       token: '',
+      backendUrl: '',
       user: { id: 'user_dev', name: 'Developer', avatar: '💻', role: 'member' }
     };
+
+    function getApiBase() {
+      if (config.backendUrl && config.backendUrl.trim()) {
+        return config.backendUrl.trim().replace(/\/+$/, '');
+      }
+      if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
+        return 'http://localhost:4300';
+      }
+      return '';
+    }
+
+    function apiUrl(path) {
+      const base = getApiBase();
+      const cleanPath = path.startsWith('/') ? path : '/' + path;
+      return base ? `${base}${cleanPath}` : cleanPath;
+    }
 
     let config = { ...DEFAULT_CONFIG };
     let activeChannelId = 'chan_general';
@@ -1808,7 +1905,7 @@
     // Auto-detect identity from backend /api/identity
     async function detectIdentity() {
       try {
-        const res = await fetch('/api/identity');
+        const res = await fetch(apiUrl('/api/identity'));
         if (res.ok) {
           const data = await res.json();
           const isMobileClient = data.isMobile || /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
@@ -1840,6 +1937,87 @@
       } catch {}
     }
 
+    // Direct GitHub Git Data API Push helper (when standalone with PAT)
+    async function pushFilesToGitHub(files) {
+      if (!config.token || !config.owner || !config.repo || !files || !files.length) return;
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': `token ${config.token}`,
+        'Content-Type': 'application/json'
+      };
+      const branch = config.branch || 'git-chat';
+
+      const refRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/refs/heads/${branch}`, { headers });
+      if (!refRes.ok) return;
+      const refData = await refRes.json();
+      const parentCommitSha = refData.object.sha;
+
+      const commitRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/commits/${parentCommitSha}`, { headers });
+      if (!commitRes.ok) return;
+      const commitData = await commitRes.json();
+      const baseTreeSha = commitData.tree.sha;
+
+      const treeItems = files.map(f => ({
+        path: f.relativePath,
+        mode: '100644',
+        type: 'blob',
+        content: f.content
+      }));
+
+      const createTreeRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/trees`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ base_tree: baseTreeSha, tree: treeItems })
+      });
+      if (!createTreeRes.ok) return;
+      const newTreeData = await createTreeRes.json();
+
+      const newCommitRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/commits`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          message: `git-chat: ${files.length} discrete sync updates`,
+          tree: newTreeData.sha,
+          parents: [parentCommitSha]
+        })
+      });
+      if (!newCommitRes.ok) return;
+      const newCommitData = await newCommitRes.json();
+
+      await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/refs/heads/${branch}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ sha: newCommitData.sha })
+      });
+    }
+
+    // Push discrete files with local server bridge and GitHub fallback
+    async function pushFiles(files, activeUserId) {
+      const uid = activeUserId || config.user.id;
+      let localPushed = false;
+      try {
+        const res = await fetch(apiUrl('/api/sync/push'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Active-User': uid },
+          body: JSON.stringify({
+            activeUserId: uid,
+            files: files
+          })
+        });
+        if (res.ok) {
+          localPushed = true;
+        }
+      } catch (e) {}
+
+      if (!localPushed && config.token && config.owner && config.repo) {
+        try {
+          await pushFilesToGitHub(files);
+        } catch (err) {
+          console.warn('GitHub direct push fallback failed', err);
+        }
+      }
+    }
+
     // Publish User Profile & Heartbeat Presence
     async function publishUserProfile() {
       if (!config.user || !config.user.id) return;
@@ -1861,14 +2039,7 @@
       };
 
       const relPath = `users/${config.user.id}.json`;
-      fetch('/api/sync/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
-        body: JSON.stringify({
-          activeUserId: config.user.id,
-          files: [{ relativePath: relPath, content: JSON.stringify(profileData, null, 2) }]
-        })
-      }).catch(() => {});
+      pushFiles([{ relativePath: relPath, content: JSON.stringify(profileData, null, 2) }], config.user.id);
     }
 
     async function publishPresence() {
@@ -1879,14 +2050,7 @@
         lastSeen: Date.now()
       };
       const relPath = `presence/${config.user.id}.json`;
-      fetch('/api/sync/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
-        body: JSON.stringify({
-          activeUserId: config.user.id,
-          files: [{ relativePath: relPath, content: JSON.stringify(presenceData, null, 2) }]
-        })
-      }).catch(() => {});
+      pushFiles([{ relativePath: relPath, content: JSON.stringify(presenceData, null, 2) }], config.user.id);
     }
 
     // Format File Size
@@ -1903,7 +2067,7 @@
       if (!attachments || !attachments.length) return '';
       let html = '<div class="msg-attachments-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
       for (const att of attachments) {
-        const url = att.url || `/api/s3/file/${att.key}`;
+        const url = att.url || apiUrl(`/api/s3/file/${att.key}`);
         const mime = (att.type || '').toLowerCase();
         const name = att.name || 'file';
         const sizeStr = formatFileSize(att.size);
@@ -1969,67 +2133,271 @@
       renderStagedAttachments();
     };
 
-    // Upload Files to S3
+    // ==========================================
+    // BROWSER GIT STORAGE CLIENT (Zero-Server Decentralized S3)
+    // ==========================================
+    class BrowserGitStorage {
+      static getVolumeRepo(username, volumeIndex = 1) {
+        const clean = (username || 'user').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+        return volumeIndex <= 1 ? `${clean}/git-chat-media` : `${clean}/git-chat-media-vol${volumeIndex}`;
+      }
+
+      static getRawUrl(repo, branch, filePath, provider = 'github') {
+        const cleanPath = filePath.replace(/^\//, '');
+        if (provider === 'gita' || provider === 'gitlab') {
+          return `https://gita.sys.kth.se/${repo}/-/raw/${branch}/${cleanPath}`;
+        }
+        return `https://raw.githubusercontent.com/${repo}/${branch}/${cleanPath}`;
+      }
+
+      static async uploadMedia(file, authorId = 'user') {
+        const provider = localStorage.getItem('git_chat_storage_provider') || 'github';
+        const defaultRepo = BrowserGitStorage.getVolumeRepo(config.user?.name || config.user?.id || authorId, 1);
+        const userRepo = localStorage.getItem('git_chat_storage_repo') || defaultRepo;
+        const token = localStorage.getItem('git_chat_storage_token') || config.token || '';
+        const branch = localStorage.getItem('git_chat_storage_branch') || 'main';
+
+        const safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+        const ext = safeName.includes('.') ? safeName.split('.').pop().toLowerCase() : 'bin';
+        const hash = Math.random().toString(36).substring(2, 9);
+        const storagePath = `attachments/${Date.now()}_${authorId}_${hash}.${ext}`;
+
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        const size = bytes.byteLength;
+
+        let binaryStr = '';
+        for (let i = 0; i < bytes.length; i++) binaryStr += String.fromCharCode(bytes[i]);
+        const base64Data = btoa(binaryStr);
+
+        // Tier 1: Upload to personal Git repository if token is present
+        if (token && userRepo) {
+          try {
+            if (provider === 'gita' || provider === 'gitlab') {
+              const encRepo = encodeURIComponent(userRepo);
+              const encPath = encodeURIComponent(storagePath);
+              const res = await fetch(`https://gita.sys.kth.se/api/v4/projects/${encRepo}/repository/files/${encPath}`, {
+                method: 'POST',
+                headers: {
+                  'PRIVATE-TOKEN': token,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  branch,
+                  content: base64Data,
+                  encoding: 'base64',
+                  commit_message: `Upload ${safeName} via git-chat`
+                })
+              });
+              if (res.ok) {
+                return {
+                  name: file.name,
+                  type: file.type || 'application/octet-stream',
+                  size,
+                  url: BrowserGitStorage.getRawUrl(userRepo, branch, storagePath, 'gita')
+                };
+              }
+            } else {
+              const res = await fetch(`https://api.github.com/repos/${userRepo}/contents/${storagePath}`, {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/vnd.github.v3+json',
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  message: `Upload ${safeName} via git-chat`,
+                  content: base64Data,
+                  branch
+                })
+              });
+              if (res.ok) {
+                return {
+                  name: file.name,
+                  type: file.type || 'application/octet-stream',
+                  size,
+                  url: BrowserGitStorage.getRawUrl(userRepo, branch, storagePath, 'github')
+                };
+              }
+            }
+          } catch (e) {
+            console.warn('[GitStorage] Remote direct upload failed, checking local server / inline fallback:', e);
+          }
+        }
+
+        // Tier 2: Local server upload if server bridge is active
+        try {
+          const res = await fetch(apiUrl('/api/s3/upload'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              data: base64Data
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.attachment) return data.attachment;
+          }
+        } catch {}
+
+        // Tier 3: Inline Data URL Fallback (<2MB)
+        if (size < 2 * 1024 * 1024) {
+          return {
+            name: file.name,
+            type: file.type || 'application/octet-stream',
+            size,
+            url: `data:${file.type || 'application/octet-stream'};base64,${base64Data}`
+          };
+        }
+
+        throw new Error('File exceeds 2MB and personal Git storage token is missing. Please configure in Settings > Git-S3 Storage.');
+      }
+    }
+
+    // Upload Files to Git-S3
     async function uploadFilesToS3(files) {
       if (!files || !files.length) return;
       for (const file of files) {
-        showToast(`Uploading ${file.name} to S3...`);
+        showToast(`Uploading ${file.name}...`);
         try {
-          const reader = new FileReader();
-          reader.onload = async () => {
-            try {
-              const base64 = (reader.result || '').toString().split(',')[1];
-              const res = await fetch('/api/s3/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  filename: file.name,
-                  mimeType: file.type || 'application/octet-stream',
-                  data: base64
-                })
-              });
-              const data = await res.json();
-              if (data.success && data.attachment) {
-                stagedAttachments.push(data.attachment);
-                renderStagedAttachments();
-                showToast(`✅ Uploaded ${file.name} to S3!`);
-              } else {
-                showToast(`❌ S3 Upload failed: ${data.error || 'Check MinIO status'}`);
-              }
-            } catch (err) {
-              showToast(`❌ S3 Upload failed: ${err.message}`);
-            }
-          };
-          reader.readAsDataURL(file);
+          const att = await BrowserGitStorage.uploadMedia(file, config.user?.id || 'user');
+          stagedAttachments.push(att);
+          renderStagedAttachments();
+          showToast(`✅ Uploaded ${file.name}!`);
         } catch (err) {
-          showToast(`❌ Error reading file: ${err.message}`);
+          showToast(`❌ Upload failed: ${err.message}`);
         }
       }
     }
 
-    // Check S3 Storage Health Status
+    // Check Git-S3 Storage Health Status
     async function checkS3Status() {
+      const dot = document.getElementById('s3-status-dot');
+      const btn = document.getElementById('btn-s3-status');
+      const userRepo = localStorage.getItem('git_chat_storage_repo') || BrowserGitStorage.getVolumeRepo(config.user?.name || config.user?.id || 'user', 1);
+      const token = localStorage.getItem('git_chat_storage_token') || config.token;
+
+      if (token && userRepo) {
+        if (dot) dot.style.background = 'var(--success)';
+        if (btn) {
+          btn.innerHTML = `<span id="s3-status-dot" style="width:7px; height:7px; border-radius:50%; background:var(--success);"></span> 📦 Storage: ${userRepo}`;
+          btn.title = `Decentralized Git-S3 Storage Active (${userRepo})`;
+        }
+        return true;
+      }
+
+      // Check local server bridge fallback
       try {
-        const res = await fetch('/api/s3/status');
-        const dot = document.getElementById('s3-status-dot');
-        const btn = document.getElementById('btn-s3-status');
+        const res = await fetch(apiUrl('/api/s3/status'));
         if (res.ok) {
           const data = await res.json();
           if (data.online) {
             if (dot) dot.style.background = 'var(--success)';
-            if (btn) btn.title = `S3 Online: ${data.endpoint} (Bucket: ${data.bucket})`;
+            if (btn) btn.title = `S3 Online (Local Server): ${data.bucket}`;
             return true;
           }
         }
-        if (dot) dot.style.background = 'var(--danger)';
-        if (btn) btn.title = 'S3 Server Offline. Run /Users/user/Work/code/s3/start.sh';
-        return false;
-      } catch {
-        const dot = document.getElementById('s3-status-dot');
-        if (dot) dot.style.background = 'var(--danger)';
-        return false;
+      } catch {}
+
+      if (dot) dot.style.background = 'var(--accent-blue)';
+      if (btn) {
+        btn.innerHTML = `<span id="s3-status-dot" style="width:7px; height:7px; border-radius:50%; background:var(--accent-blue);"></span> 📦 Git-S3 (Inline Ready)`;
+        btn.title = 'Personal storage token not configured; inline media (<2MB) active. Configure in Settings.';
+      }
+      return false;
+    }
+
+    // Settings Modal Tab Switcher
+    window.switchSettingsTab = function(tabName) {
+      document.getElementById('sec-general').style.display = tabName === 'general' ? 'block' : 'none';
+      document.getElementById('sec-storage').style.display = tabName === 'storage' ? 'block' : 'none';
+      document.getElementById('sec-access').style.display = tabName === 'access' ? 'block' : 'none';
+
+      document.getElementById('stab-general').style.background = tabName === 'general' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+      document.getElementById('stab-general').style.color = tabName === 'general' ? '#fff' : 'var(--text-muted)';
+
+      document.getElementById('stab-storage').style.background = tabName === 'storage' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+      document.getElementById('stab-storage').style.color = tabName === 'storage' ? '#fff' : 'var(--text-muted)';
+
+      document.getElementById('stab-access').style.background = tabName === 'access' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+      document.getElementById('stab-access').style.color = tabName === 'access' ? '#fff' : 'var(--text-muted)';
+
+      if (tabName === 'access') renderMembersRoster();
+      if (tabName === 'storage') updateStorageVolumeStatusDisplay();
+    };
+
+    // Access & Member Roster Management
+    function renderMembersRoster() {
+      const container = document.getElementById('members-list-container');
+      if (!container) return;
+      if (!state.membersConfig) {
+        state.membersConfig = {
+          workspaceId: 'workspace_default',
+          membershipPolicy: 'open',
+          members: [
+            { id: config.user.id, gitUsername: config.user.name.toLowerCase().replace(/\s+/g, '_'), name: config.user.name, role: 'admin', joinedAt: Date.now() }
+          ]
+        };
+      }
+
+      const policySelect = document.getElementById('cfg-membership-policy');
+      if (policySelect) policySelect.value = state.membersConfig.membershipPolicy || 'open';
+
+      const members = state.membersConfig.members || [];
+      if (members.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); padding:8px; text-align:center;">No members explicitly listed. Open access mode active.</div>';
+        return;
+      }
+
+      container.innerHTML = members.map(m => {
+        const roleBadgeColor = m.role === 'admin' ? 'var(--warning)' : m.role === 'member' ? 'var(--accent-blue)' : 'var(--text-muted)';
+        const defaultStorage = BrowserGitStorage.getVolumeRepo(m.gitUsername || m.name, 1);
+        const storageDisplay = m.storageRepo || defaultStorage;
+
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-input); padding:6px 10px; border-radius:4px; border:1px solid var(--border-light);">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-weight:600; color:var(--text-heading);">${m.name}</span>
+              <span style="font-size:10px; padding:1px 5px; border-radius:3px; background:${roleBadgeColor}; color:#000; font-weight:bold; text-transform:uppercase;">${m.role}</span>
+              <span style="font-size:11px; color:var(--text-dim);">📦 ${storageDisplay}</span>
+            </div>
+            ${m.id !== config.user.id ? `<button onclick="removeMemberFromRoster('${m.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; font-weight:bold;">×</button>` : '<span style="font-size:11px; color:var(--text-dim);">You</span>'}
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.removeMemberFromRoster = function(memberId) {
+      if (!state.membersConfig || !state.membersConfig.members) return;
+      state.membersConfig.members = state.membersConfig.members.filter(m => m.id !== memberId);
+      saveLocalCache();
+      renderMembersRoster();
+      pushFiles([{ relativePath: 'config/members.json', content: JSON.stringify(state.membersConfig, null, 2) }], config.user.id);
+      showToast('Member removed');
+    };
+
+    function updateStorageVolumeStatusDisplay() {
+      const statusDiv = document.getElementById('cfg-storage-volume-status');
+      const repoInput = document.getElementById('cfg-storage-repo');
+      const providerSel = document.getElementById('cfg-storage-provider');
+      const tokenInput = document.getElementById('cfg-storage-token');
+
+      const savedProvider = localStorage.getItem('git_chat_storage_provider') || 'github';
+      const defaultRepo = BrowserGitStorage.getVolumeRepo(config.user?.name || config.user?.id || 'user', 1);
+      const savedRepo = localStorage.getItem('git_chat_storage_repo') || defaultRepo;
+      const savedToken = localStorage.getItem('git_chat_storage_token') || '';
+
+      if (providerSel) providerSel.value = savedProvider;
+      if (repoInput) repoInput.value = savedRepo;
+      if (tokenInput) tokenInput.value = savedToken;
+
+      if (statusDiv) {
+        statusDiv.innerHTML = `📦 Active Volume: <b>${savedRepo}</b> (${savedToken ? 'Remote Git Storage Ready' : 'Inline Fallback Ready'})`;
       }
     }
+
 
     // Minimal Markdown Parser
     function renderMarkdown(text) {
@@ -2311,14 +2679,7 @@
 
       // Push to Git backend
       const diskMsg = { ...newMsg, content: '[Encrypted Message]' }; // Plaintext omitted on git ref
-      fetch('/api/sync/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
-        body: JSON.stringify({
-          activeUserId: config.user.id,
-          files: [{ relativePath, content: JSON.stringify(diskMsg, null, 2) }]
-        })
-      }).catch(() => {});
+      pushFiles([{ relativePath, content: JSON.stringify(diskMsg, null, 2) }], config.user.id);
 
       // Agent mention
       if (text.includes('@SupervisorAgent') || text.startsWith('/agent')) {
@@ -2353,14 +2714,7 @@
 
         const agentPath = `channels/${channelId}/threads/${rootId}/${agentReply.timestamp}_agent_supervisor_${agentReply.id}.json`;
         const diskAgentMsg = { ...agentReply, content: '[Encrypted Message]' };
-        fetch('/api/sync/push', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Active-User': 'agent_supervisor' },
-          body: JSON.stringify({
-            activeUserId: 'agent_supervisor',
-            files: [{ relativePath: agentPath, content: JSON.stringify(diskAgentMsg, null, 2) }]
-          })
-        }).catch(() => {});
+        pushFiles([{ relativePath: agentPath, content: JSON.stringify(diskAgentMsg, null, 2) }], 'agent_supervisor');
       }, 500);
     }
 
@@ -2463,84 +2817,167 @@
       saveLocalCache();
 
       const evPath = `channels/${msg.channelId}/events/${ev.timestamp}_${uid}_${ev.type}_${ev.id}.json`;
-      fetch('/api/sync/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Active-User': uid },
-        body: JSON.stringify({
-          activeUserId: uid,
-          files: [{ relativePath: evPath, content: JSON.stringify(ev, null, 2) }]
-        })
-      }).catch(() => {});
+      pushFiles([{ relativePath: evPath, content: JSON.stringify(ev, null, 2) }], uid);
     };
 
-    // Pull Sync from Local Server
+    // Process discrete chat files from either local server bridge or direct GitHub API
+    function processSyncFile(relativePath, contentStr) {
+      try {
+        const parsed = typeof contentStr === 'string' ? JSON.parse(contentStr) : contentStr;
+        if (!parsed) return false;
+
+        // User discovery: users/<userId>.json
+        if (relativePath.match(/^users\/([a-zA-Z0-9_-]+)\.json$/)) {
+          if (parsed.id) {
+            state.users[parsed.id] = { ...state.users[parsed.id], ...parsed };
+            return true;
+          }
+        }
+
+        // Presence discovery: presence/<userId>.json
+        if (relativePath.match(/^presence\/([a-zA-Z0-9_-]+)\.json$/)) {
+          if (parsed.userId && state.users[parsed.userId]) {
+            state.users[parsed.userId].lastSeen = parsed.lastSeen;
+            return true;
+          }
+        }
+
+        // Channel metadata: channels/<chan_id>/meta.json
+        if (relativePath.match(/^channels\/([a-zA-Z0-9_-]+)\/meta\.json$/)) {
+          state.channels[parsed.id] = { ...state.channels[parsed.id], ...parsed };
+          return true;
+        }
+
+        // Messages & Thread replies: channels/<chan_id>/messages/ or channels/<chan_id>/threads/
+        if (relativePath.includes('/messages/') || relativePath.includes('/threads/')) {
+          const idx = state.messages.findIndex(m => m.id === parsed.id);
+          if (idx === -1) {
+            state.messages.push(parsed);
+          } else {
+            state.messages[idx] = { ...state.messages[idx], ...parsed };
+          }
+
+          // Discover author as user
+          if (parsed.author && parsed.author.id && !state.users[parsed.author.id]) {
+            state.users[parsed.author.id] = {
+              id: parsed.author.id,
+              name: parsed.author.name,
+              avatar: parsed.author.avatar || '👤',
+              lastSeen: parsed.timestamp
+            };
+          }
+          return true;
+        }
+
+        // Reaction and delete events
+        if (relativePath.includes('/events/')) {
+          if (parsed.type === 'reaction_add') {
+            const targetMsg = state.messages.find(m => m.id === parsed.targetMessageId);
+            if (targetMsg) {
+              targetMsg.reactions = targetMsg.reactions || {};
+              targetMsg.reactions[parsed.emoji] = targetMsg.reactions[parsed.emoji] || [];
+              if (!targetMsg.reactions[parsed.emoji].includes(parsed.authorId)) {
+                targetMsg.reactions[parsed.emoji].push(parsed.authorId);
+              }
+            }
+          } else if (parsed.type === 'reaction_remove') {
+            const targetMsg = state.messages.find(m => m.id === parsed.targetMessageId);
+            if (targetMsg && targetMsg.reactions && targetMsg.reactions[parsed.emoji]) {
+              targetMsg.reactions[parsed.emoji] = targetMsg.reactions[parsed.emoji].filter(u => u !== parsed.authorId);
+            }
+          } else if (parsed.type === 'message_delete') {
+            state.messages = state.messages.filter(m => m.id !== parsed.targetMessageId && m.threadRootId !== parsed.targetMessageId);
+          }
+          return true;
+        }
+      } catch (err) {
+        console.warn('Failed to parse sync file:', relativePath, err);
+      }
+      return false;
+    }
+
+    // Direct GitHub REST API Sync (for standalone zero-backend mode)
+    async function syncFromGitHub(manual = false) {
+      if (!config.owner || !config.repo) return;
+      try {
+        const branch = config.branch || 'git-chat';
+        const headers = { 'Accept': 'application/vnd.github.v3+json' };
+        if (config.token) headers['Authorization'] = `token ${config.token}`;
+
+        const treeUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/git/trees/${branch}?recursive=1`;
+        const treeRes = await fetch(treeUrl, { headers });
+        if (!treeRes.ok) return;
+
+        const treeData = await treeRes.json();
+        if (!treeData.tree || !Array.isArray(treeData.tree)) return;
+
+        const chatBlobs = treeData.tree.filter(item => 
+          item.type === 'blob' && (
+            item.path.startsWith('channels/') ||
+            item.path.startsWith('users/') ||
+            item.path.startsWith('presence/') ||
+            item.path === 'workspace.json'
+          )
+        );
+
+        let count = 0;
+        await Promise.all(chatBlobs.map(async (item) => {
+          try {
+            const rawUrl = `https://raw.githubusercontent.com/${config.owner}/${config.repo}/${branch}/${item.path}`;
+            const fileRes = await fetch(rawUrl, { headers });
+            if (fileRes.ok) {
+              const text = await fileRes.text();
+              if (processSyncFile(item.path, text)) {
+                count++;
+              }
+            }
+          } catch {}
+        }));
+
+        saveLocalCache();
+        renderSidebar();
+        renderTimeline();
+        if (activeThreadRootId) renderThread();
+        if (manual) showToast(`Synced ${count} items from GitHub (${config.owner}/${config.repo})`);
+      } catch (e) {
+        console.warn('GitHub sync failed:', e);
+      }
+    }
+
+    // Pull Sync from Local Server Bridge with Automatic GitHub Fallback
     async function syncFromLocalServer(manual = false) {
       const syncIcon = document.getElementById('sync-icon');
       if (syncIcon) syncIcon.classList.add('spin');
+      let localBridgeSucceeded = false;
       try {
-        const res = await fetch('/api/sync/pull');
+        const res = await fetch(apiUrl('/api/sync/pull'));
         if (res.ok) {
+          localBridgeSucceeded = true;
           const data = await res.json();
           if (data.files && data.files.length > 0) {
             let count = 0;
             for (const f of data.files) {
-              try {
-                const parsed = JSON.parse(f.content);
-
-                // User discovery: users/<userId>.json
-                if (f.relativePath.match(/^users\/([a-zA-Z0-9_-]+)\.json$/)) {
-                  if (parsed.id) {
-                    state.users[parsed.id] = { ...state.users[parsed.id], ...parsed };
-                  }
-                }
-
-                // Presence discovery: presence/<userId>.json
-                if (f.relativePath.match(/^presence\/([a-zA-Z0-9_-]+)\.json$/)) {
-                  if (parsed.userId && state.users[parsed.userId]) {
-                    state.users[parsed.userId].lastSeen = parsed.lastSeen;
-                  }
-                }
-
-                // Channel metadata: channels/<chan_id>/meta.json
-                if (f.relativePath.match(/^channels\/([a-zA-Z0-9_-]+)\/meta\.json$/)) {
-                  state.channels[parsed.id] = parsed;
-                }
-
-                // Messages & Thread replies
-                if (f.relativePath.includes('/messages/') || f.relativePath.includes('/threads/')) {
-                  const idx = state.messages.findIndex(m => m.id === parsed.id);
-                  if (idx === -1) {
-                    state.messages.push(parsed);
-                    count++;
-                  } else {
-                    state.messages[idx] = { ...state.messages[idx], ...parsed };
-                  }
-
-                  // Discover author as user
-                  if (parsed.author && parsed.author.id && !state.users[parsed.author.id]) {
-                    state.users[parsed.author.id] = {
-                      id: parsed.author.id,
-                      name: parsed.author.name,
-                      avatar: parsed.author.avatar || '👤',
-                      lastSeen: parsed.timestamp
-                    };
-                  }
-                }
-              } catch {}
+              if (processSyncFile(f.relativePath, f.content)) {
+                count++;
+              }
             }
             saveLocalCache();
             renderSidebar();
             renderTimeline();
             if (activeThreadRootId) renderThread();
-            if (manual) showToast(`Synced ${count} new items from Git`);
+            if (manual) showToast(`Synced ${count} items from Git-Chat bridge`);
           } else if (manual) {
             showToast('Git ref up to date');
           }
         }
       } catch (e) {
-        if (manual) showToast('Working in standalone local cache mode');
+        // Local bridge offline
       } finally {
         if (syncIcon) syncIcon.classList.remove('spin');
+      }
+
+      if (!localBridgeSucceeded && config.owner && config.repo) {
+        await syncFromGitHub(manual);
       }
     }
 
@@ -2886,15 +3323,7 @@
         createChanModal.classList.remove('open');
         selectChannel(id);
         showToast(`Channel #${cleanName} created!`);
-
-        fetch('/api/sync/push', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
-          body: JSON.stringify({
-            activeUserId: config.user.id,
-            files: [{ relativePath: `channels/${id}/meta.json`, content: JSON.stringify(state.channels[id], null, 2) }]
-          })
-        }).catch(() => {});
+        pushFiles([{ relativePath: `channels/${id}/meta.json`, content: JSON.stringify(state.channels[id], null, 2) }], config.user.id);
       };
 
       // Settings Modal
@@ -2906,10 +3335,109 @@
         document.getElementById('cfg-repo').value = `${config.owner}/${config.repo}`;
         document.getElementById('cfg-branch').value = config.branch || 'git-chat';
         document.getElementById('cfg-token').value = config.token || '';
+        document.getElementById('cfg-backend-url').value = config.backendUrl || (window.location.protocol === 'file:' ? 'http://localhost:4300' : '');
+
+        // Storage & Access Tab fields
+        updateStorageVolumeStatusDisplay();
+        renderMembersRoster();
+        switchSettingsTab('general');
         settingsModal.classList.add('open');
       };
       document.getElementById('btn-user-profile').onclick = () => document.getElementById('btn-open-settings').click();
       document.getElementById('btn-close-settings').onclick = () => settingsModal.classList.remove('open');
+
+      // Test Storage Connection Button
+      document.getElementById('btn-test-storage-conn').onclick = async () => {
+        const provider = document.getElementById('cfg-storage-provider').value;
+        const repo = document.getElementById('cfg-storage-repo').value.trim();
+        const token = document.getElementById('cfg-storage-token').value.trim();
+        if (!token) {
+          showToast('ℹ️ No token entered. Inline storage fallback (<2MB) will be used.');
+          return;
+        }
+        showToast('⚡ Testing Git storage repository access...');
+        try {
+          if (provider === 'gita' || provider === 'gitlab') {
+            const enc = encodeURIComponent(repo);
+            const res = await fetch(`https://gita.sys.kth.se/api/v4/projects/${enc}`, {
+              headers: { 'PRIVATE-TOKEN': token }
+            });
+            if (res.ok) {
+              showToast(`✅ Connected to KTH Gita storage repository: ${repo}`);
+            } else if (res.status === 404) {
+              showToast(`ℹ️ Repository not found. It will be auto-created on first upload.`);
+            } else {
+              showToast(`⚠️ Storage check returned status ${res.status}`);
+            }
+          } else {
+            const res = await fetch(`https://api.github.com/repos/${repo}`, {
+              headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (res.ok) {
+              showToast(`✅ Connected to GitHub storage repository: ${repo}`);
+            } else if (res.status === 404) {
+              showToast(`ℹ️ Repository not found. It will be auto-created on first upload.`);
+            } else {
+              showToast(`⚠️ Storage check returned status ${res.status}`);
+            }
+          }
+        } catch (e) {
+          showToast(`⚠️ Test error: ${e.message}`);
+        }
+      };
+
+      // Rollover Volume Button
+      document.getElementById('btn-rollover-storage').onclick = () => {
+        const repoInput = document.getElementById('cfg-storage-repo');
+        const cur = repoInput.value.trim() || BrowserGitStorage.getVolumeRepo(config.user.name, 1);
+        const match = cur.match(/^(.+?)(?:-vol(\d+))?$/);
+        if (match) {
+          const base = match[1];
+          const nextIdx = match[2] ? parseInt(match[2], 10) + 1 : 2;
+          repoInput.value = `${base}-vol${nextIdx}`;
+          showToast(`Switched active storage volume to: ${repoInput.value}`);
+        }
+      };
+
+      // Add Roster Member Button
+      document.getElementById('btn-add-roster-member').onclick = () => {
+        const userInput = document.getElementById('inp-add-member-user');
+        const roleSel = document.getElementById('sel-add-member-role');
+        const username = (userInput.value || '').trim();
+        if (!username) return;
+
+        if (!state.membersConfig) {
+          state.membersConfig = { workspaceId: 'workspace_default', membershipPolicy: 'open', members: [] };
+        }
+        const cleanUser = username.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+        const existing = state.membersConfig.members.find(m => m.gitUsername === cleanUser || m.id === `user_${cleanUser}`);
+        if (existing) {
+          existing.role = roleSel.value;
+        } else {
+          state.membersConfig.members.push({
+            id: `user_${cleanUser}`,
+            gitUsername: cleanUser,
+            name: username,
+            role: roleSel.value,
+            storageRepo: BrowserGitStorage.getVolumeRepo(cleanUser, 1),
+            joinedAt: Date.now()
+          });
+        }
+        userInput.value = '';
+        saveLocalCache();
+        renderMembersRoster();
+        pushFiles([{ relativePath: 'config/members.json', content: JSON.stringify(state.membersConfig, null, 2) }], config.user.id);
+        showToast(`Added member ${username} (${roleSel.value})`);
+      };
+
+      // Generate 1-Click Invite Link Button
+      document.getElementById('btn-gen-invite-link').onclick = () => {
+        const link = generateMobileSetupUrl();
+        navigator.clipboard.writeText(link);
+        showToast('🔗 1-Click Invite link copied to clipboard!');
+      };
+
+      // Save Settings
       document.getElementById('btn-save-settings').onclick = async () => {
         config.user.name = document.getElementById('cfg-user-name').value || 'User';
         config.user.id = document.getElementById('cfg-user-id').value || 'user_dev';
@@ -2920,6 +3448,21 @@
         config.repo = repo || 'git-chat';
         config.branch = document.getElementById('cfg-branch').value || 'git-chat';
         config.token = document.getElementById('cfg-token').value;
+        config.backendUrl = document.getElementById('cfg-backend-url').value.trim();
+
+        // Storage Settings
+        const storageProvider = document.getElementById('cfg-storage-provider').value;
+        const storageRepo = document.getElementById('cfg-storage-repo').value.trim();
+        const storageToken = document.getElementById('cfg-storage-token').value.trim();
+        localStorage.setItem('git_chat_storage_provider', storageProvider);
+        localStorage.setItem('git_chat_storage_repo', storageRepo);
+        localStorage.setItem('git_chat_storage_token', storageToken);
+
+        // Membership Policy
+        if (state.membersConfig) {
+          state.membersConfig.membershipPolicy = document.getElementById('cfg-membership-policy').value;
+          pushFiles([{ relativePath: 'config/members.json', content: JSON.stringify(state.membersConfig, null, 2) }], config.user.id);
+        }
 
         const newPass = document.getElementById('cfg-vault-pass').value;
         if (newPass) {
@@ -2932,9 +3475,11 @@
         publishUserProfile();
         renderSidebar();
         renderTimeline();
+        checkS3Status();
         settingsModal.classList.remove('open');
         showToast('Settings saved successfully');
       };
+
 
       // Export JSON
       document.getElementById('btn-export-json').onclick = () => {

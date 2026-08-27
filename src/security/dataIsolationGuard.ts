@@ -1,3 +1,5 @@
+import type { WorkspaceMembersConfig } from '../types/chat';
+
 export class SecurityViolationError extends Error {
   constructor(message: string, public readonly violatedPath?: string) {
     super(`[DataIsolationGuard Security Violation] ${message}${violatedPath ? ` (Path: ${violatedPath})` : ''}`);
@@ -7,6 +9,8 @@ export class SecurityViolationError extends Error {
 
 export interface ValidationOptions {
   isWorkspaceInit?: boolean;
+  membersConfig?: WorkspaceMembersConfig | null;
+  callerRole?: 'admin' | 'member' | 'guest';
 }
 
 const PROTECTED_SYSTEM_PATTERNS = [
@@ -75,22 +79,36 @@ export class DataIsolationGuard {
     // 3. Normalized active user id
     const userId = (activeUserId || '').trim();
 
-    // 4. Whitelist matching
+    // 4. Membership policy enforcement if in invite_only mode
+    if (options.membersConfig && options.membersConfig.membershipPolicy === 'invite_only' && !options.isWorkspaceInit) {
+      const isAllowed = options.membersConfig.members.some(
+        (m) => m.id === userId || m.gitUsername === userId
+      );
+      if (!isAllowed) {
+        throw new SecurityViolationError(
+          `Access Denied: User "${userId}" is not authorized on the workspace member roster (invite-only policy)`,
+          cleanPath
+        );
+      }
+    }
+
+    // 5. Whitelist matching
     // Case A: workspace.json
     if (cleanPath === 'workspace.json') {
-      if (!options.isWorkspaceInit) {
-        // Only workspace init/admin allowed to modify workspace.json
-        // In local mode, workspace.json is read-only after init
-      }
       return true;
     }
 
-    // Case B: chat-manifest.json
+    // Case B: config/members.json
+    if (cleanPath === 'config/members.json') {
+      return true;
+    }
+
+    // Case C: chat-manifest.json
     if (cleanPath === 'chat-manifest.json') {
       return true;
     }
 
-    // Case C: users/<user_id>.json
+    // Case D: users/<user_id>.json
     const userMatch = cleanPath.match(/^users\/([a-zA-Z0-9_-]+)\.json$/);
     if (userMatch) {
       const targetUserId = userMatch[1]!;
@@ -102,6 +120,7 @@ export class DataIsolationGuard {
       }
       return true;
     }
+
 
     // Case D: presence/<user_id>.json
     const presenceMatch = cleanPath.match(/^presence\/([a-zA-Z0-9_-]+)\.json$/);

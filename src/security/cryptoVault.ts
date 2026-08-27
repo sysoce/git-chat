@@ -564,3 +564,79 @@ export async function decryptContent(
   const decoder = new TextDecoder();
   return decoder.decode(decryptedBuffer);
 }
+
+/**
+ * Encrypts arbitrary binary data (e.g. image, voice memo, PDF) using AES-GCM-256.
+ */
+export async function encryptBinary(
+  data: Uint8Array,
+  key: VaultKey
+): Promise<{ iv: string; ciphertext: string }> {
+  const iv = new Uint8Array(12);
+  if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(iv);
+  } else {
+    for (let i = 0; i < 12; i++) iv[i] = Math.floor(Math.random() * 256);
+  }
+
+  if (key instanceof Uint8Array || !globalThis.crypto?.subtle) {
+    const keyBytes = key instanceof Uint8Array ? key : new Uint8Array(32);
+    const fullEnc = pureJsAesGcmEncrypt(keyBytes, iv, data);
+    const encIv = fullEnc.subarray(0, 12);
+    const encCiphertextWithTag = fullEnc.subarray(12);
+
+    return {
+      iv: bufferToBase64(encIv),
+      ciphertext: bufferToBase64(encCiphertextWithTag),
+    };
+  }
+
+  const subtle = globalThis.crypto.subtle;
+  const encryptedBuffer = await subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv,
+    },
+    key,
+    data as any
+  );
+
+  return {
+    iv: bufferToBase64(iv),
+    ciphertext: bufferToBase64(encryptedBuffer),
+  };
+}
+
+/**
+ * Decrypts binary ciphertext using AES-GCM-256.
+ */
+export async function decryptBinary(
+  ivBase64: string,
+  ciphertextBase64: string,
+  key: VaultKey
+): Promise<Uint8Array> {
+  const iv = base64ToBuffer(ivBase64);
+  const ciphertext = base64ToBuffer(ciphertextBase64);
+
+  if (key instanceof Uint8Array || !globalThis.crypto?.subtle) {
+    const keyBytes = key instanceof Uint8Array ? key : new Uint8Array(32);
+    const combined = new Uint8Array(iv.length + ciphertext.length);
+    combined.set(iv, 0);
+    combined.set(ciphertext, iv.length);
+
+    return pureJsAesGcmDecrypt(keyBytes, combined);
+  }
+
+  const subtle = globalThis.crypto.subtle;
+  const decryptedBuffer = await subtle.decrypt(
+    {
+      name: 'AES-GCM',
+      iv: iv as any,
+    },
+    key,
+    ciphertext as any
+  );
+
+  return new Uint8Array(decryptedBuffer);
+}
+
