@@ -12,7 +12,7 @@
   - `master` branch is strictly protected. User chat actions only commit to `refs/heads/git-chat`.
   - Built-in `DataIsolationGuard` sandboxes all write paths, blocking attempts to touch codebase files (`package.json`, `index.html`, `src/`, etc.) or use path traversal (`../`).
   - Author identity confinement: Users can only write/push to author-prefixed message files matching their active user ID.
-- **Autonomous AI Agents as First-Class Teammates**: AI agents (`@SupervisorAgent`) participate directly in channel timelines and reply to threads.
+- **Autonomous AI Agents as First-Class Teammates**: The built-in AI agent (**Human** / `@Human`) participates directly in channel timelines, replies to threads, and is always active in the dedicated `#Talk to a Human` channel.
 - **Instant Setup Wizard & Terminal QR**: Modeled after the `monitor` app—one command (`npm run setup`) detects your GitHub configuration and prints a mobile pairing QR code.
 
 ---
@@ -25,7 +25,7 @@ npm run setup
 ```
 This wizard will:
 1. Detect your Git remote (`origin` -> `sysoce/git-chat`) and GitHub credentials (`gh auth token` or `GITHUB_TOKEN`).
-2. Initialize the isolated data branch (`refs/heads/git-chat`) with default channels (`#general`, `#engineering`, `#agents`, `#random`).
+2. Initialize the isolated data branch (`refs/heads/git-chat`) with default channels (`#general`, `#Talk to a Human`, `#engineering`, `#random`).
 3. Generate a quick setup URL (`#setup=...`) and print a terminal QR code for instant mobile/browser connection.
 
 ### 2. Start the Local App

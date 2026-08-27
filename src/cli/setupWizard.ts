@@ -44,8 +44,8 @@ export async function runSetupWizard(workspaceRoot: string, port = 4300): Promis
     version: '1.0.0',
     channels: [
       { id: 'chan_general', name: 'general', topic: 'Company-wide announcements and work-based matters', isPrivate: false },
+      { id: 'chan_talk_to_a_human', name: 'Talk to a Human', topic: 'Always-open direct channel with Human', isPrivate: false },
       { id: 'chan_engineering', name: 'engineering', topic: 'Architecture, PRs, CI/CD, and technical discussions', isPrivate: false },
-      { id: 'chan_agents', name: 'agents', topic: 'Autonomous AI agents collaborating on code and tasks', isPrivate: false },
       { id: 'chan_random', name: 'random', topic: 'Non-work banter, water cooler chats, and fun links', isPrivate: false },
     ],
   };
@@ -58,9 +58,9 @@ export async function runSetupWizard(workspaceRoot: string, port = 4300): Promis
   };
 
   const agentUser: ChatUser = {
-    id: 'agent_supervisor',
-    name: 'Supervisor Agent',
-    avatar: '🤖',
+    id: 'agent_human',
+    name: 'Human',
+    avatar: '👤',
     role: 'agent',
     isBot: true,
   };
@@ -69,26 +69,40 @@ export async function runSetupWizard(workspaceRoot: string, port = 4300): Promis
     id: 'msg_welcome_001',
     channelId: 'chan_general',
     author: {
-      id: 'agent_supervisor',
-      name: 'Supervisor Agent',
-      avatar: '🤖',
+      id: 'agent_human',
+      name: 'Human',
+      avatar: '👤',
       isBot: true,
     },
-    content: `👋 **Welcome to git-chat!**\n\nThis entire workspace is synced peer-to-peer over your Git repository on branch \`refs/heads/${branch}\`.\n- **Zero Central Servers Required**\n- **Zero Merge Conflicts** (discrete atomic files)\n- **Strict Isolation**: localhost users push only chat data, leaving system code intact.\n\nType \`/help\` or tag \`@SupervisorAgent\` to get started!`,
+    content: `👋 **Welcome to git-chat!**\n\nThis entire workspace is synced peer-to-peer over your Git repository on branch \`refs/heads/${branch}\`.\n- **Zero Central Servers Required**\n- **Zero Merge Conflicts** (discrete atomic files)\n- **Strict Isolation**: localhost users push only chat data, leaving system code intact.\n\nType \`/help\`, tag \`@Human\`, or visit the **#Talk to a Human** channel to get started!`,
+    timestamp: Date.now(),
+  };
+
+  const humanChanWelcomeMessage: ChatMessage = {
+    id: 'msg_human_welcome_001',
+    channelId: 'chan_talk_to_a_human',
+    author: {
+      id: 'agent_human',
+      name: 'Human',
+      avatar: '👤',
+      isBot: true,
+    },
+    content: `👋 Hello! I am **Human**, your built-in autonomous AI partner. Ask me anything here, brainstorm ideas, or get help with your code and tasks!`,
     timestamp: Date.now(),
   };
 
   const stagedFiles = [
     { relativePath: 'workspace.json', content: JSON.stringify(workspaceConfig, null, 2) },
     { relativePath: 'users/user_admin.json', content: JSON.stringify(adminUser, null, 2) },
-    { relativePath: 'users/agent_supervisor.json', content: JSON.stringify(agentUser, null, 2) },
+    { relativePath: 'users/agent_human.json', content: JSON.stringify(agentUser, null, 2) },
     { relativePath: 'presence/user_admin.json', content: JSON.stringify({ userId: 'user_admin', status: 'online', emoji: '💻', lastSeen: Date.now() }, null, 2) },
-    { relativePath: 'presence/agent_supervisor.json', content: JSON.stringify({ userId: 'agent_supervisor', status: 'online', emoji: '🤖', lastSeen: Date.now(), currentTask: 'Listening for @mentions' }, null, 2) },
+    { relativePath: 'presence/agent_human.json', content: JSON.stringify({ userId: 'agent_human', status: 'online', emoji: '👤', lastSeen: Date.now(), currentTask: 'Active in #Talk to a Human' }, null, 2) },
     { relativePath: 'channels/chan_general/meta.json', content: JSON.stringify(workspaceConfig.channels[0], null, 2) },
-    { relativePath: 'channels/chan_engineering/meta.json', content: JSON.stringify(workspaceConfig.channels[1], null, 2) },
-    { relativePath: 'channels/chan_agents/meta.json', content: JSON.stringify(workspaceConfig.channels[2], null, 2) },
+    { relativePath: 'channels/chan_talk_to_a_human/meta.json', content: JSON.stringify(workspaceConfig.channels[1], null, 2) },
+    { relativePath: 'channels/chan_engineering/meta.json', content: JSON.stringify(workspaceConfig.channels[2], null, 2) },
     { relativePath: 'channels/chan_random/meta.json', content: JSON.stringify(workspaceConfig.channels[3], null, 2) },
-    { relativePath: `channels/chan_general/messages/${Date.now()}_agent_supervisor_msg-001.json`, content: JSON.stringify(welcomeMessage, null, 2) },
+    { relativePath: `channels/chan_general/messages/${Date.now()}_agent_human_msg-001.json`, content: JSON.stringify(welcomeMessage, null, 2) },
+    { relativePath: `channels/chan_talk_to_a_human/messages/${Date.now()}_agent_human_msg-002.json`, content: JSON.stringify(humanChanWelcomeMessage, null, 2) },
   ];
 
   // 2. Commit initial workspace onto refs/heads/git-chat with isolated staging

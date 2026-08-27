@@ -1,21 +1,33 @@
 export function renderQrToTerminal(matrix: boolean[][]): string {
-  const border = 2;
   const size = matrix.length;
-  const lines: string[] = [];
-  const topBottom = '█'.repeat((size + border * 2) * 2);
-
-  for (let b = 0; b < border; b++) lines.push(topBottom);
+  const border = 2;
+  const fullSize = size + border * 2;
+  const grid: boolean[][] = Array.from({ length: fullSize }, () => Array(fullSize).fill(false));
 
   for (let r = 0; r < size; r++) {
-    let line = '██'.repeat(border);
     for (let c = 0; c < size; c++) {
-      line += matrix[r]![c] ? '  ' : '██';
+      grid[r + border]![c + border] = matrix[r]![c] ?? false;
     }
-    line += '██'.repeat(border);
-    lines.push(line);
   }
 
-  for (let b = 0; b < border; b++) lines.push(topBottom);
+  const lines: string[] = [];
+  for (let r = 0; r < fullSize; r += 2) {
+    let line = '';
+    for (let c = 0; c < fullSize; c++) {
+      const top = grid[r]![c];
+      const bottom = r + 1 < fullSize ? grid[r + 1]![c] : false;
+      if (top && bottom) {
+        line += '█';
+      } else if (top && !bottom) {
+        line += '▀';
+      } else if (!top && bottom) {
+        line += '▄';
+      } else {
+        line += ' ';
+      }
+    }
+    lines.push(line);
+  }
 
   return lines.join('\n');
 }
