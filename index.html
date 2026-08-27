@@ -1233,6 +1233,10 @@
           <button class="btn-secondary" id="btn-copy-mobile-setup-link" style="flex:1;">📱 Copy Mobile Setup</button>
           <button class="btn-secondary" id="btn-show-qr-code" style="flex:1;">📱 Connect Phone (QR)</button>
         </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-secondary" id="btn-export-json" style="flex:1;">💾 Export Backup</button>
+          <button class="btn-secondary" id="btn-reset-cache" style="flex:1; color:var(--danger);">🗑️ Clear Cache</button>
+        </div>
         <button class="btn-primary" id="btn-save-settings">Save Settings</button>
       </div>
     </div>
@@ -3173,15 +3177,73 @@
         vaultKey = await CryptoVault.deriveKey(vaultPassword);
         isVaultLocked = false;
         document.getElementById('btn-vault-toggle').className = 'header-btn vault-unlocked';
-        document.getElementById('btn-vault-toggle').textContent = '🔓 Vault Unlocked';
+    // Helper for resilient event binding
+    function setClickHandler(id, handler) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.onclick = handler;
+      }
+    }
+
+    // Setup Event Listeners
+    window.addEventListener('DOMContentLoaded', async () => {
+      loadLocalCache();
+      await detectIdentity();
+      renderSidebar();
+      renderTimeline();
+      syncFromLocalServer();
+      checkS3Status();
+
+      // Check URL hash for vault password or setup
+      if (window.location.hash.startsWith('#setup=')) {
+        try {
+          const raw = atob(window.location.hash.slice(7));
+          const parsed = JSON.parse(raw);
+          if (parsed.owner) config.owner = parsed.owner;
+          if (parsed.repo) config.repo = parsed.repo;
+          if (parsed.branch) config.branch = parsed.branch;
+          if (parsed.workspaceSecret) config.workspaceSecret = parsed.workspaceSecret;
+          if (parsed.password) {
+            vaultPassword = parsed.password;
+            vaultKey = await CryptoVault.deriveKey(vaultPassword);
+            isVaultLocked = false;
+            sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+            const vaultBtn = document.getElementById('btn-vault-toggle');
+            if (vaultBtn) {
+              vaultBtn.className = 'header-btn vault-unlocked';
+              vaultBtn.textContent = '🔓 Vault Unlocked';
+            }
+          }
+          saveLocalCache();
+          showToast(`Configured for repository: ${config.owner}/${config.repo}`);
+        } catch (e) {
+          console.error('Failed to parse setup hash', e);
+        }
+      }
+
+      // Check for saved vault session
+      const savedPass = sessionStorage.getItem('git_chat_vault_pass') || localStorage.getItem('git_chat_saved_vault_pass');
+      if (savedPass && !vaultPassword) {
+        vaultPassword = savedPass;
+        vaultKey = await CryptoVault.deriveKey(vaultPassword);
+        isVaultLocked = false;
+        const vaultBtn = document.getElementById('btn-vault-toggle');
+        if (vaultBtn) {
+          vaultBtn.className = 'header-btn vault-unlocked';
+          vaultBtn.textContent = '🔓 Vault Unlocked';
+        }
         renderTimeline();
         renderSidebar();
         publishUserProfile();
       } else if (isVaultLocked) {
-        document.getElementById('vault-user-name').value = config.user.name;
-        document.getElementById('vault-user-avatar').value = config.user.avatar || (/Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? '📱' : '💻');
-        document.getElementById('vault-backend-repo').value = `${config.owner}/${config.repo}`;
-        document.getElementById('vault-modal').classList.add('open');
+        const uName = document.getElementById('vault-user-name');
+        if (uName) uName.value = config.user.name;
+        const uAvatar = document.getElementById('vault-user-avatar');
+        if (uAvatar) uAvatar.value = config.user.avatar || (/Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? '📱' : '💻');
+        const uRepo = document.getElementById('vault-backend-repo');
+        if (uRepo) uRepo.value = `${config.owner}/${config.repo}`;
+        const vModal = document.getElementById('vault-modal');
+        if (vModal) vModal.classList.add('open');
       }
 
       // S3 Attach button and file input
@@ -3198,36 +3260,39 @@
       }
 
       // S3 Status Click
-      const s3Btn = document.getElementById('btn-s3-status');
-      if (s3Btn) {
-        s3Btn.onclick = async () => {
-          const online = await checkS3Status();
-          if (online) {
-            showToast('✅ S3 Storage is online on localhost:9000');
-          } else {
-            showToast('⚠️ S3 Storage offline. Run ./start.sh in /Users/user/Work/code/s3');
-          }
-        };
-      }
+      setClickHandler('btn-s3-status', async () => {
+        const online = await checkS3Status();
+        if (online) {
+          showToast('✅ S3 Storage is online on localhost:9000');
+        } else {
+          showToast('⚠️ S3 Storage offline. Run ./start.sh in /Users/user/Work/code/s3');
+        }
+      });
 
       // Mobile Link in header & QR Modal
-      document.getElementById('btn-mobile-sync-link').onclick = openMobileModal;
-      document.getElementById('btn-show-qr-code').onclick = () => {
-        document.getElementById('settings-modal').classList.remove('open');
+      setClickHandler('btn-mobile-sync-link', openMobileModal);
+      setClickHandler('btn-show-qr-code', () => {
+        const sModal = document.getElementById('settings-modal');
+        if (sModal) sModal.classList.remove('open');
         openMobileModal();
-      };
-      document.getElementById('btn-close-qr').onclick = () => document.getElementById('qr-modal').classList.remove('open');
-      document.getElementById('btn-copy-qr-link').onclick = () => {
+      });
+      setClickHandler('btn-close-qr', () => {
+        const qrModal = document.getElementById('qr-modal');
+        if (qrModal) qrModal.classList.remove('open');
+      });
+      setClickHandler('btn-copy-qr-link', () => {
         const urlInput = document.getElementById('mobile-link-url');
-        urlInput.select();
-        navigator.clipboard.writeText(urlInput.value);
-        showToast('📋 Mobile setup link copied!');
-      };
-      document.getElementById('btn-copy-mobile-setup-link').onclick = () => {
+        if (urlInput) {
+          urlInput.select();
+          navigator.clipboard.writeText(urlInput.value);
+          showToast('📋 Mobile setup link copied!');
+        }
+      });
+      setClickHandler('btn-copy-mobile-setup-link', () => {
         const link = generateMobileSetupUrl();
         navigator.clipboard.writeText(link);
         showToast('📋 Mobile setup link copied to clipboard!');
-      };
+      });
 
       // Clipboard Paste (e.g. Screenshot or copied file)
       document.addEventListener('paste', (e) => {
@@ -3257,28 +3322,32 @@
       }
 
       // Passphrase Generator Button
-      document.getElementById('btn-gen-pass').onclick = () => {
+      setClickHandler('btn-gen-pass', () => {
         const words = ['delta', 'cyber', 'orbit', 'falcon', 'matrix', 'beacon', 'galaxy', 'quantum', 'signal', 'vector', 'harbor', 'shadow', 'summit', 'aurora', 'nexus', 'stellar', 'plasma', 'zenith', 'pulse', 'echo'];
         const generated = Array.from({ length: 4 }, () => words[Math.floor(Math.random() * words.length)]).join('-');
         const pwdInput = document.getElementById('vault-password');
-        pwdInput.value = generated;
-        pwdInput.type = 'text';
+        if (pwdInput) {
+          pwdInput.value = generated;
+          pwdInput.type = 'text';
+        }
         showToast('Generated passphrase: ' + generated);
-      };
+      });
 
       // Password Visibility Toggle
-      document.getElementById('btn-toggle-pwd-vis').onclick = () => {
+      setClickHandler('btn-toggle-pwd-vis', () => {
         const pwdInput = document.getElementById('vault-password');
-        pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
-      };
+        if (pwdInput) {
+          pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
+        }
+      });
 
       // Vault Unlock Button
-      document.getElementById('btn-unlock-vault').onclick = async () => {
-        const pass = document.getElementById('vault-password').value;
-        const name = document.getElementById('vault-user-name').value;
-        const avatar = document.getElementById('vault-user-avatar').value;
+      setClickHandler('btn-unlock-vault', async () => {
+        const pass = document.getElementById('vault-password')?.value;
+        const name = document.getElementById('vault-user-name')?.value;
+        const avatar = document.getElementById('vault-user-avatar')?.value;
         const customRepo = document.getElementById('vault-backend-repo')?.value;
-        const remember = document.getElementById('chk-remember-vault').checked;
+        const remember = document.getElementById('chk-remember-vault')?.checked;
         if (!pass) {
           alert('Please enter or generate a vault password');
           return;
@@ -3307,125 +3376,188 @@
         saveLocalCache();
         publishUserProfile();
 
-        document.getElementById('btn-vault-toggle').className = 'header-btn vault-unlocked';
-        document.getElementById('btn-vault-toggle').textContent = '🔓 Vault Unlocked';
-        document.getElementById('vault-modal').classList.remove('open');
+        const vaultBtn = document.getElementById('btn-vault-toggle');
+        if (vaultBtn) {
+          vaultBtn.className = 'header-btn vault-unlocked';
+          vaultBtn.textContent = '🔓 Vault Unlocked';
+        }
+        const vModal = document.getElementById('vault-modal');
+        if (vModal) vModal.classList.remove('open');
         renderSidebar();
         renderTimeline();
         showToast(`Vault unlocked! Welcome, ${config.user.name}`);
-      };
+      });
+
+      // Vault input Enter key
+      const vaultPassInput = document.getElementById('vault-password');
+      if (vaultPassInput) {
+        vaultPassInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const btn = document.getElementById('btn-unlock-vault');
+            if (btn) btn.click();
+          }
+        });
+      }
 
       // Vault Toggle Button in header
-      document.getElementById('btn-vault-toggle').onclick = () => {
+      setClickHandler('btn-vault-toggle', () => {
         if (isVaultLocked) {
-          document.getElementById('vault-modal').classList.add('open');
+          const vModal = document.getElementById('vault-modal');
+          if (vModal) vModal.classList.add('open');
         } else {
           isVaultLocked = true;
           vaultKey = null;
           sessionStorage.removeItem('git_chat_vault_pass');
           localStorage.removeItem('git_chat_saved_vault_pass');
-          document.getElementById('btn-vault-toggle').className = 'header-btn vault-locked';
-          document.getElementById('btn-vault-toggle').textContent = '🔒 Vault Locked';
+          const vaultBtn = document.getElementById('btn-vault-toggle');
+          if (vaultBtn) {
+            vaultBtn.className = 'header-btn vault-locked';
+            vaultBtn.textContent = '🔒 Vault Locked';
+          }
           renderTimeline();
           renderSidebar();
           showToast('Vault locked. Message contents hidden.');
         }
-      };
+      });
 
       // Toolbar buttons
-      document.getElementById('tb-bold').onclick = () => wrapText('**', '**');
-      document.getElementById('tb-italic').onclick = () => wrapText('*', '*');
-      document.getElementById('tb-code').onclick = () => wrapText('```\n', '\n```');
-      document.getElementById('tb-quote').onclick = () => wrapText('> ', '');
-      document.getElementById('tb-agent').onclick = () => {
+      setClickHandler('tb-bold', () => wrapText('**', '**'));
+      setClickHandler('tb-italic', () => wrapText('*', '*'));
+      setClickHandler('tb-code', () => wrapText('```\n', '\n```'));
+      setClickHandler('tb-quote', () => wrapText('> ', ''));
+      setClickHandler('tb-agent', () => {
         const input = document.getElementById('message-input');
-        input.value += '@SupervisorAgent ';
-        input.focus();
-      };
+        if (input) {
+          input.value += '@SupervisorAgent ';
+          input.focus();
+        }
+      });
 
       // Composer Send
       const input = document.getElementById('message-input');
       const sendBtn = document.getElementById('btn-send-message');
-      sendBtn.onclick = () => {
-        sendMessage(input.value);
-        input.value = '';
-      };
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendBtn.click();
-        }
-      });
+      if (sendBtn && input) {
+        sendBtn.onclick = () => {
+          sendMessage(input.value);
+          input.value = '';
+        };
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendBtn.click();
+          }
+        });
+      }
 
       // Thread Send
       const threadInput = document.getElementById('thread-input');
       const threadSendBtn = document.getElementById('btn-send-thread');
-      threadSendBtn.onclick = () => {
-        if (activeThreadRootId) {
-          sendMessage(threadInput.value, activeThreadRootId);
-          threadInput.value = '';
-        }
-      };
-      threadInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          threadSendBtn.click();
-        }
-      });
+      if (threadSendBtn && threadInput) {
+        threadSendBtn.onclick = () => {
+          if (activeThreadRootId) {
+            sendMessage(threadInput.value, activeThreadRootId);
+            threadInput.value = '';
+          }
+        };
+        threadInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            threadSendBtn.click();
+          }
+        });
+      }
 
-      document.getElementById('btn-close-thread').onclick = () => {
-        document.getElementById('thread-drawer').classList.remove('open');
+      // Thread Drawer Close & Back buttons
+      setClickHandler('btn-close-thread', () => {
+        const drawer = document.getElementById('thread-drawer');
+        if (drawer) drawer.classList.remove('open');
         activeThreadRootId = null;
-      };
+      });
+      setClickHandler('btn-back-thread', () => {
+        const drawer = document.getElementById('thread-drawer');
+        if (drawer) drawer.classList.remove('open');
+        activeThreadRootId = null;
+      });
 
       // Create Channel Modal
       const createChanModal = document.getElementById('create-chan-modal');
-      document.getElementById('btn-add-chan').onclick = () => {
-        document.getElementById('new-chan-name').value = '';
-        document.getElementById('new-chan-topic').value = '';
-        createChanModal.classList.add('open');
-      };
-      document.getElementById('btn-close-create-chan').onclick = () => createChanModal.classList.remove('open');
-      document.getElementById('btn-save-new-chan').onclick = () => {
-        const rawName = document.getElementById('new-chan-name').value;
-        const topic = document.getElementById('new-chan-topic').value;
+      setClickHandler('btn-add-chan', () => {
+        const nInput = document.getElementById('new-chan-name');
+        if (nInput) nInput.value = '';
+        const tInput = document.getElementById('new-chan-topic');
+        if (tInput) tInput.value = '';
+        if (createChanModal) {
+          createChanModal.classList.add('open');
+          if (nInput) nInput.focus();
+        }
+      });
+      setClickHandler('btn-close-create-chan', () => {
+        if (createChanModal) createChanModal.classList.remove('open');
+      });
+      setClickHandler('btn-save-new-chan', () => {
+        const rawName = document.getElementById('new-chan-name')?.value;
+        const topic = document.getElementById('new-chan-topic')?.value;
         if (!rawName || !rawName.trim()) return;
         const cleanName = rawName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
         const id = `chan_${cleanName}`;
         state.channels[id] = { id, name: cleanName, topic: topic || `Discussion for #${cleanName}` };
         saveLocalCache();
-        createChanModal.classList.remove('open');
+        if (createChanModal) createChanModal.classList.remove('open');
         selectChannel(id);
         showToast(`Channel #${cleanName} created!`);
         pushFiles([{ relativePath: `channels/${id}/meta.json`, content: JSON.stringify(state.channels[id], null, 2) }], config.user.id);
-      };
+      });
+
+      const newChanInput = document.getElementById('new-chan-name');
+      if (newChanInput) {
+        newChanInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-new-chan');
+            if (btn) btn.click();
+          }
+        });
+      }
 
       // Settings Modal
       const settingsModal = document.getElementById('settings-modal');
-      document.getElementById('btn-open-settings').onclick = () => {
-        document.getElementById('cfg-user-name').value = config.user.name;
-        document.getElementById('cfg-user-id').value = config.user.id;
-        document.getElementById('cfg-avatar').value = config.user.avatar || '💻';
-        document.getElementById('cfg-repo').value = `${config.owner}/${config.repo}`;
-        document.getElementById('cfg-branch').value = config.branch || 'git-chat';
-        document.getElementById('cfg-token').value = config.token || '';
-        document.getElementById('cfg-backend-url').value = config.backendUrl || (window.location.protocol === 'file:' ? 'http://localhost:4300' : '');
-        document.getElementById('cfg-workspace-secret').value = config.workspaceSecret || '';
+      const openSettingsHandler = () => {
+        const uName = document.getElementById('cfg-user-name');
+        if (uName) uName.value = config.user.name;
+        const uId = document.getElementById('cfg-user-id');
+        if (uId) uId.value = config.user.id;
+        const uAvatar = document.getElementById('cfg-avatar');
+        if (uAvatar) uAvatar.value = config.user.avatar || '💻';
+        const uRepo = document.getElementById('cfg-repo');
+        if (uRepo) uRepo.value = `${config.owner}/${config.repo}`;
+        const uBranch = document.getElementById('cfg-branch');
+        if (uBranch) uBranch.value = config.branch || 'git-chat';
+        const uToken = document.getElementById('cfg-token');
+        if (uToken) uToken.value = config.token || '';
+        const uBackend = document.getElementById('cfg-backend-url');
+        if (uBackend) uBackend.value = config.backendUrl || (window.location.protocol === 'file:' ? 'http://localhost:4300' : '');
+        const uSecret = document.getElementById('cfg-workspace-secret');
+        if (uSecret) uSecret.value = config.workspaceSecret || '';
 
         // Storage & Access Tab fields
         updateStorageVolumeStatusDisplay();
         renderMembersRoster();
         switchSettingsTab('general');
-        settingsModal.classList.add('open');
+        if (settingsModal) settingsModal.classList.add('open');
       };
-      document.getElementById('btn-user-profile').onclick = () => document.getElementById('btn-open-settings').click();
-      document.getElementById('btn-close-settings').onclick = () => settingsModal.classList.remove('open');
+
+      setClickHandler('btn-open-settings', openSettingsHandler);
+      setClickHandler('btn-user-profile', openSettingsHandler);
+      setClickHandler('btn-close-settings', () => {
+        if (settingsModal) settingsModal.classList.remove('open');
+      });
 
       // Test Storage Connection Button
-      document.getElementById('btn-test-storage-conn').onclick = async () => {
-        const provider = document.getElementById('cfg-storage-provider').value;
-        const repo = document.getElementById('cfg-storage-repo').value.trim();
-        const token = document.getElementById('cfg-storage-token').value.trim();
+      setClickHandler('btn-test-storage-conn', async () => {
+        const provider = document.getElementById('cfg-storage-provider')?.value;
+        const repo = document.getElementById('cfg-storage-repo')?.value.trim();
+        const token = document.getElementById('cfg-storage-token')?.value.trim();
         if (!token) {
           showToast('ℹ️ No token entered. Inline storage fallback (<2MB) will be used.');
           return;
@@ -3433,7 +3565,7 @@
         showToast('⚡ Testing Git storage repository access...');
         try {
           if (provider === 'gita' || provider === 'gitlab') {
-            const enc = encodeURIComponent(repo);
+            const enc = encodeURIComponent(repo || '');
             const res = await fetch(`https://gita.sys.kth.se/api/v4/projects/${enc}`, {
               headers: { 'PRIVATE-TOKEN': token }
             });
@@ -3459,11 +3591,12 @@
         } catch (e) {
           showToast(`⚠️ Test error: ${e.message}`);
         }
-      };
+      });
 
       // Rollover Volume Button
-      document.getElementById('btn-rollover-storage').onclick = () => {
+      setClickHandler('btn-rollover-storage', () => {
         const repoInput = document.getElementById('cfg-storage-repo');
+        if (!repoInput) return;
         const cur = repoInput.value.trim() || BrowserGitStorage.getVolumeRepo(config.user.name, 1);
         const match = cur.match(/^(.+?)(?:-vol(\d+))?$/);
         if (match) {
@@ -3472,13 +3605,13 @@
           repoInput.value = `${base}-vol${nextIdx}`;
           showToast(`Switched active storage volume to: ${repoInput.value}`);
         }
-      };
+      });
 
       // Add Roster Member Button
-      document.getElementById('btn-add-roster-member').onclick = () => {
+      setClickHandler('btn-add-roster-member', () => {
         const userInput = document.getElementById('inp-add-member-user');
         const roleSel = document.getElementById('sel-add-member-role');
-        const username = (userInput.value || '').trim();
+        const username = (userInput?.value || '').trim();
         if (!username) return;
 
         if (!state.membersConfig) {
@@ -3486,61 +3619,74 @@
         }
         const cleanUser = username.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
         const existing = state.membersConfig.members.find(m => m.gitUsername === cleanUser || m.id === `user_${cleanUser}`);
+        const role = roleSel?.value || 'member';
         if (existing) {
-          existing.role = roleSel.value;
+          existing.role = role;
         } else {
           state.membersConfig.members.push({
             id: `user_${cleanUser}`,
             gitUsername: cleanUser,
             name: username,
-            role: roleSel.value,
+            role: role,
             storageRepo: BrowserGitStorage.getVolumeRepo(cleanUser, 1),
             joinedAt: Date.now()
           });
         }
-        userInput.value = '';
+        if (userInput) userInput.value = '';
         saveLocalCache();
         renderMembersRoster();
         pushFiles([{ relativePath: 'config/members.json', content: JSON.stringify(state.membersConfig, null, 2) }], config.user.id);
-        showToast(`Added member ${username} (${roleSel.value})`);
-      };
+        showToast(`Added member ${username} (${role})`);
+      });
+
+      const addMemberInput = document.getElementById('inp-add-member-user');
+      if (addMemberInput) {
+        addMemberInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const btn = document.getElementById('btn-add-roster-member');
+            if (btn) btn.click();
+          }
+        });
+      }
 
       // Generate 1-Click Invite Link Button
-      document.getElementById('btn-gen-invite-link').onclick = () => {
+      setClickHandler('btn-gen-invite-link', () => {
         const link = generateMobileSetupUrl();
         navigator.clipboard.writeText(link);
         showToast('🔗 1-Click Invite link copied to clipboard!');
-      };
+      });
 
       // Save Settings
-      document.getElementById('btn-save-settings').onclick = async () => {
-        config.user.name = document.getElementById('cfg-user-name').value || 'User';
-        config.user.id = document.getElementById('cfg-user-id').value || 'user_dev';
-        config.user.avatar = document.getElementById('cfg-avatar').value || '💻';
-        const repoStr = document.getElementById('cfg-repo').value || 'sysoce/git-chat';
+      setClickHandler('btn-save-settings', async () => {
+        config.user.name = document.getElementById('cfg-user-name')?.value || 'User';
+        config.user.id = document.getElementById('cfg-user-id')?.value || 'user_dev';
+        config.user.avatar = document.getElementById('cfg-avatar')?.value || '💻';
+        const repoStr = document.getElementById('cfg-repo')?.value || 'sysoce/git-chat';
         const [owner, repo] = repoStr.split('/');
         config.owner = owner || 'sysoce';
         config.repo = repo || 'git-chat';
-        config.branch = document.getElementById('cfg-branch').value || 'git-chat';
-        config.token = document.getElementById('cfg-token').value;
-        config.backendUrl = document.getElementById('cfg-backend-url').value.trim();
-        config.workspaceSecret = document.getElementById('cfg-workspace-secret').value.trim();
+        config.branch = document.getElementById('cfg-branch')?.value || 'git-chat';
+        config.token = document.getElementById('cfg-token')?.value || '';
+        config.backendUrl = document.getElementById('cfg-backend-url')?.value.trim() || '';
+        config.workspaceSecret = document.getElementById('cfg-workspace-secret')?.value.trim() || '';
 
         // Storage Settings
-        const storageProvider = document.getElementById('cfg-storage-provider').value;
-        const storageRepo = document.getElementById('cfg-storage-repo').value.trim();
-        const storageToken = document.getElementById('cfg-storage-token').value.trim();
+        const storageProvider = document.getElementById('cfg-storage-provider')?.value || 'github';
+        const storageRepo = document.getElementById('cfg-storage-repo')?.value.trim() || '';
+        const storageToken = document.getElementById('cfg-storage-token')?.value.trim() || '';
         localStorage.setItem('git_chat_storage_provider', storageProvider);
         localStorage.setItem('git_chat_storage_repo', storageRepo);
         localStorage.setItem('git_chat_storage_token', storageToken);
 
         // Membership Policy
-        if (state.membersConfig) {
-          state.membersConfig.membershipPolicy = document.getElementById('cfg-membership-policy').value;
+        const policyEl = document.getElementById('cfg-membership-policy');
+        if (state.membersConfig && policyEl) {
+          state.membersConfig.membershipPolicy = policyEl.value;
           pushFiles([{ relativePath: 'config/members.json', content: JSON.stringify(state.membersConfig, null, 2) }], config.user.id);
         }
 
-        const newPass = document.getElementById('cfg-vault-pass').value;
+        const newPass = document.getElementById('cfg-vault-pass')?.value;
         if (newPass) {
           vaultPassword = newPass;
           vaultKey = await CryptoVault.deriveKey(vaultPassword);
@@ -3552,13 +3698,12 @@
         renderSidebar();
         renderTimeline();
         checkS3Status();
-        settingsModal.classList.remove('open');
+        if (settingsModal) settingsModal.classList.remove('open');
         showToast('Settings saved successfully');
-      };
+      });
 
-
-      // Export JSON
-      document.getElementById('btn-export-json').onclick = () => {
+      // Export JSON Backup
+      setClickHandler('btn-export-json', () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
         const downloadAnchor = document.createElement('a');
         downloadAnchor.setAttribute("href", dataStr);
@@ -3566,61 +3711,70 @@
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();
-      };
+        showToast('💾 Workspace backup exported');
+      });
+
+      // Clear Cache & Reset
+      setClickHandler('btn-reset-cache', () => {
+        if (confirm('Clear local browser cache and reload? This will not delete remote git messages.')) {
+          localStorage.clear();
+          sessionStorage.clear();
+          location.reload();
+        }
+      });
 
       // Search Modal
       const searchModal = document.getElementById('search-modal');
       const searchInput = document.getElementById('search-query-input');
       const searchResults = document.getElementById('search-results-list');
-      document.getElementById('btn-open-search').onclick = () => {
-        searchModal.classList.add('open');
-        searchInput.value = '';
-        searchResults.innerHTML = '';
-        searchInput.focus();
-      };
-      document.getElementById('btn-close-search').onclick = () => searchModal.classList.remove('open');
-      searchInput.oninput = () => {
-        const q = searchInput.value.toLowerCase().trim();
-        searchResults.innerHTML = '';
-        if (!q) return;
-        const matches = state.messages.filter(m => (m.content || '').toLowerCase().includes(q));
-        for (const m of matches) {
-          const item = document.createElement('div');
-          item.style.padding = '8px';
-          item.style.background = 'var(--bg-main)';
-          item.style.borderRadius = '6px';
-          item.style.cursor = 'pointer';
-          item.innerHTML = `<b>${m.author.name}</b> in <i>#${state.channels[m.channelId]?.name || m.channelId}</i>: <div>${m.content}</div>`;
-          item.onclick = () => {
-            selectChannel(m.channelId);
-            searchModal.classList.remove('open');
-          };
-          searchResults.appendChild(item);
+      setClickHandler('btn-open-search', () => {
+        if (searchModal) searchModal.classList.add('open');
+        if (searchInput) {
+          searchInput.value = '';
+          searchInput.focus();
         }
-      };
+        if (searchResults) searchResults.innerHTML = '';
+      });
+      setClickHandler('btn-close-search', () => {
+        if (searchModal) searchModal.classList.remove('open');
+      });
+      if (searchInput && searchResults) {
+        searchInput.oninput = () => {
+          const q = searchInput.value.toLowerCase().trim();
+          searchResults.innerHTML = '';
+          if (!q) return;
+          const matches = state.messages.filter(m => (m.content || '').toLowerCase().includes(q));
+          if (matches.length === 0) {
+            searchResults.innerHTML = '<div style="color:var(--text-dim); padding:10px; text-align:center;">No matching messages found</div>';
+            return;
+          }
+          for (const m of matches) {
+            const item = document.createElement('div');
+            item.style.padding = '8px 10px';
+            item.style.background = 'var(--bg-main)';
+            item.style.borderRadius = '6px';
+            item.style.cursor = 'pointer';
+            item.style.border = '1px solid var(--border)';
+            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-weight:600; color:var(--text-heading);">${m.author?.name || 'Unknown'}</span> <span style="font-size:11px; color:var(--text-dim);">${new Date(m.timestamp).toLocaleDateString()}</span></div><div style="font-size:11px; color:var(--accent-blue); margin-bottom:4px;">#${state.channels[m.channelId]?.name || m.channelId}</div><div style="font-size:13px; color:var(--text-main);">${m.content}</div>`;
+            item.onclick = () => {
+              selectChannel(m.channelId);
+              if (searchModal) searchModal.classList.remove('open');
+            };
+            searchResults.appendChild(item);
+          }
+        };
+      }
 
       // Sync button
-      document.getElementById('btn-sync-now').onclick = () => syncFromLocalServer(true);
+      setClickHandler('btn-sync-now', () => syncFromLocalServer(true));
 
       // ==========================================
       // MOBILE INTERACTIONS & TOUCH GESTURES
       // ==========================================
       
       // Hamburger Drawer Menu
-      const mobMenuBtn = document.getElementById('btn-mobile-menu');
-      if (mobMenuBtn) mobMenuBtn.onclick = () => toggleSidebarDrawer();
-
-      const sidebarBackdrop = document.getElementById('sidebar-backdrop');
-      if (sidebarBackdrop) sidebarBackdrop.onclick = () => closeSidebarDrawer();
-
-      // Mobile Thread Back Button
-      const backThreadBtn = document.getElementById('btn-back-thread');
-      if (backThreadBtn) {
-        backThreadBtn.onclick = () => {
-          document.getElementById('thread-drawer').classList.remove('open');
-          activeThreadRootId = null;
-        };
-      }
+      setClickHandler('btn-mobile-menu', () => toggleSidebarDrawer());
+      setClickHandler('sidebar-backdrop', () => closeSidebarDrawer());
 
       // Mobile Header Overflow Menu
       const overflowBtn = document.getElementById('btn-mobile-overflow');
@@ -3633,41 +3787,66 @@
       }
 
       // Mobile Dropdown Actions
-      const mobSearchBtn = document.getElementById('btn-mob-search');
-      if (mobSearchBtn) {
-        mobSearchBtn.onclick = () => {
+      setClickHandler('btn-mob-search', () => {
+        if (overflowDropdown) overflowDropdown.classList.remove('open');
+        const sBtn = document.getElementById('btn-open-search');
+        if (sBtn) sBtn.click();
+      });
+      setClickHandler('btn-mob-sync', () => {
+        if (overflowDropdown) overflowDropdown.classList.remove('open');
+        syncFromLocalServer(true);
+      });
+      setClickHandler('btn-mob-s3', () => {
+        if (overflowDropdown) overflowDropdown.classList.remove('open');
+        checkS3Status();
+      });
+      setClickHandler('btn-mob-add-chan', () => {
+        if (overflowDropdown) overflowDropdown.classList.remove('open');
+        const acBtn = document.getElementById('btn-add-chan');
+        if (acBtn) acBtn.click();
+      });
+      setClickHandler('btn-mob-settings', () => {
+        if (overflowDropdown) overflowDropdown.classList.remove('open');
+        const stBtn = document.getElementById('btn-open-settings');
+        if (stBtn) stBtn.click();
+      });
+
+      // Modal Backdrop Click Dismissals
+      document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            if (modal.id === 'vault-modal' && isVaultLocked) return;
+            modal.classList.remove('open');
+          }
+        });
+      });
+
+      // Modal Sheet Handles Click to Dismiss
+      document.querySelectorAll('.modal-sheet-handle').forEach(handle => {
+        handle.addEventListener('click', () => {
+          const modal = handle.closest('.modal-overlay');
+          if (modal && !(modal.id === 'vault-modal' && isVaultLocked)) {
+            modal.classList.remove('open');
+          }
+        });
+      });
+
+      // Escape Key Handler to Close Modals / Drawers
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
           if (overflowDropdown) overflowDropdown.classList.remove('open');
-          document.getElementById('btn-open-search').click();
-        };
-      }
-      const mobSyncBtn = document.getElementById('btn-mob-sync');
-      if (mobSyncBtn) {
-        mobSyncBtn.onclick = () => {
-          if (overflowDropdown) overflowDropdown.classList.remove('open');
-          syncFromLocalServer(true);
-        };
-      }
-      const mobS3Btn = document.getElementById('btn-mob-s3');
-      if (mobS3Btn) {
-        mobS3Btn.onclick = () => {
-          if (overflowDropdown) overflowDropdown.classList.remove('open');
-          checkS3Status();
-        };
-      }
-      const mobAddChanBtn = document.getElementById('btn-mob-add-chan');
-      if (mobAddChanBtn) {
-        mobAddChanBtn.onclick = () => {
-          if (overflowDropdown) overflowDropdown.classList.remove('open');
-          document.getElementById('btn-add-chan').click();
-        };
-      }
-      const mobSettingsBtn = document.getElementById('btn-mob-settings');
-      if (mobSettingsBtn) {
-        mobSettingsBtn.onclick = () => {
-          if (overflowDropdown) overflowDropdown.classList.remove('open');
-          document.getElementById('btn-open-settings').click();
-        };
-      }
+          const threadDrawer = document.getElementById('thread-drawer');
+          if (threadDrawer && threadDrawer.classList.contains('open')) {
+            threadDrawer.classList.remove('open');
+            activeThreadRootId = null;
+          }
+          document.querySelectorAll('.modal-overlay.open').forEach(modal => {
+            if (modal.id === 'vault-modal' && isVaultLocked) return;
+            modal.classList.remove('open');
+          });
+          closeSidebarDrawer();
+        }
+      });
 
       // Global Dismiss Listeners
       document.addEventListener('click', (e) => {
