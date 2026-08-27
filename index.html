@@ -78,7 +78,7 @@
     .timeline-divider::before, .timeline-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
     .timeline-divider span { padding: 0 12px; }
 
-    .msg-group { display: flex; gap: 12px; position: relative; padding: 4px 8px; border-radius: 8px; transition: background 0.1s; }
+    .msg-group { display: flex; gap: 12px; position: relative; padding: 6px 10px; border-radius: 8px; transition: background 0.1s; }
     .msg-group:hover { background: var(--bg-hover); }
     .msg-avatar { width: 38px; height: 38px; border-radius: 6px; background: #2f343b; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
     .msg-body { flex: 1; min-width: 0; }
@@ -275,7 +275,6 @@
       <div style="margin-top:16px; text-align:center;">
         <label class="form-label">📱 Mobile Setup Link & Hash</label>
         <div class="qr-container" id="qr-target">
-          <!-- QR / Link -->
           <div id="qr-text" style="font-size:12px; color:#111; word-break:break-all;"></div>
         </div>
       </div>
@@ -338,6 +337,60 @@
       messages: [],
       events: []
     };
+
+    // Save and load state from localStorage cache
+    function saveLocalCache() {
+      try {
+        localStorage.setItem('git_chat_messages', JSON.stringify(state.messages));
+        localStorage.setItem('git_chat_events', JSON.stringify(state.events));
+        localStorage.setItem('git_chat_channels', JSON.stringify(state.channels));
+      } catch (e) {
+        console.warn('Failed to save state to localStorage', e);
+      }
+    }
+
+    function loadLocalCache() {
+      try {
+        const savedChannels = localStorage.getItem('git_chat_channels');
+        if (savedChannels) {
+          const parsedChans = JSON.parse(savedChannels);
+          if (parsedChans && typeof parsedChans === 'object') {
+            state.channels = { ...state.channels, ...parsedChans };
+          }
+        }
+
+        const savedMsgs = localStorage.getItem('git_chat_messages');
+        if (savedMsgs) {
+          const parsed = JSON.parse(savedMsgs);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            state.messages = parsed;
+          }
+        }
+
+        const savedEvents = localStorage.getItem('git_chat_events');
+        if (savedEvents) {
+          const parsedEv = JSON.parse(savedEvents);
+          if (Array.isArray(parsedEv)) {
+            state.events = parsedEv;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load state from localStorage', e);
+      }
+
+      // If state is still completely empty after loading cache, add default welcome message
+      if (state.messages.length === 0) {
+        state.messages.push({
+          id: 'msg_welcome_init_001',
+          channelId: 'chan_general',
+          author: { id: 'agent_supervisor', name: 'Supervisor Agent', avatar: '🤖', isBot: true },
+          content: `👋 **Welcome to git-chat!**\n\nThis app is running serverless from a **single HTML file** backed by your Git repository.\n- **Zero-Conflict Discrete Files**: Each message is an immutable atom.\n- **Strict Isolation**: Localhost users only push user data; system code on \`master\` cannot be overwritten.\n\nTry sending a message or ask \`@SupervisorAgent\`!`,
+          reactions: { '🚀': ['user_alice'] },
+          timestamp: Date.now()
+        });
+        saveLocalCache();
+      }
+    }
 
     // Load from URL hash or localStorage
     function initConfig() {
@@ -437,8 +490,8 @@
         let reactionsHtml = '<div class="reactions-row">';
         const reacts = msg.reactions || {};
         for (const [emoji, users] of Object.entries(reacts)) {
-          const isActive = users.includes(config.user.id);
-          reactionsHtml += `<div class="react-chip ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} ${users.length}</div>`;
+          const isActive = Array.isArray(users) && users.includes(config.user.id);
+          reactionsHtml += `<div class="react-chip ${isActive ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} ${Array.isArray(users) ? users.length : 1}</div>`;
         }
         reactionsHtml += '</div>';
 
@@ -488,12 +541,14 @@
 
       ClientDataIsolationGuard.validatePath(relativePath, config.user.id);
 
-      // Optimistic update
+      // Optimistic update & instant persistence to localStorage
       state.messages.push(newMsg);
+      saveLocalCache();
+
       if (threadRootId) renderThread();
       else renderTimeline();
 
-      // Push via local server bridge or GitHub API
+      // Push via local server bridge if available
       try {
         await fetch('/api/sync/push', {
           method: 'POST',
@@ -504,7 +559,7 @@
           })
         });
       } catch (err) {
-        console.log('Local bridge push skipped, running purely client-side');
+        // Standalone browser mode
       }
 
       // Check for Autonomous Agent mention or command
@@ -517,17 +572,30 @@
     function simulateAgentResponse(prompt, channelId, rootId) {
       setTimeout(async () => {
         const agentReply = {
-          id: `msg_${Date.now()}_agent`,
+          id: `msg_${Date.now()}_agent_${Math.random().toString(36).slice(2, 6)}`,
           channelId: channelId,
           threadRootId: rootId,
           author: { id: 'agent_supervisor', name: 'Supervisor Agent', avatar: '🤖', isBot: true },
-          content: `🤖 **Autonomous Agent Analysis**:\nI have processed your prompt \`"${prompt.slice(0, 50)}..."\`.\nAll git chat discrete files are strictly verified under \`refs/heads/git-chat\`. System code on \`master\` is 100% untouched.`,
+          content: `🤖 **SupervisorAgent Response**:\nI received your prompt: \`"${prompt.slice(0, 60)}..."\`.\nAll git-chat transactions are verified on branch \`refs/heads/git-chat\`. System code on \`master\` is 100% protected.`,
           timestamp: Date.now()
         };
         state.messages.push(agentReply);
+        saveLocalCache();
         renderTimeline();
         if (activeThreadRootId === rootId) renderThread();
-      }, 600);
+
+        const agentPath = `channels/${channelId}/threads/${rootId}/${agentReply.timestamp}_agent_supervisor_${agentReply.id}.json`;
+        try {
+          await fetch('/api/sync/push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Active-User': 'agent_supervisor' },
+            body: JSON.stringify({
+              activeUserId: 'agent_supervisor',
+              files: [{ relativePath: agentPath, content: JSON.stringify(agentReply, null, 2) }]
+            })
+          });
+        } catch (e) {}
+      }, 500);
     }
 
     // Thread Drawer
@@ -580,7 +648,7 @@
       const msg = state.messages.find(m => m.id === msgId);
       if (!msg) return;
       msg.reactions = msg.reactions || {};
-      const list = msg.reactions[emoji] || [];
+      const list = Array.isArray(msg.reactions[emoji]) ? msg.reactions[emoji] : [];
       const uid = config.user.id;
       if (list.includes(uid)) {
         msg.reactions[emoji] = list.filter(u => u !== uid);
@@ -588,7 +656,31 @@
       } else {
         msg.reactions[emoji] = [...list, uid];
       }
+      saveLocalCache();
       renderTimeline();
+
+      // Record event
+      const ev = {
+        id: `ev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        type: list.includes(uid) ? 'reaction_remove' : 'reaction_add',
+        channelId: msg.channelId,
+        authorId: uid,
+        targetMessageId: msgId,
+        emoji,
+        timestamp: Date.now()
+      };
+      state.events.push(ev);
+      saveLocalCache();
+
+      const evPath = `channels/${msg.channelId}/events/${ev.timestamp}_${uid}_${ev.type}_${ev.id}.json`;
+      fetch('/api/sync/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Active-User': uid },
+        body: JSON.stringify({
+          activeUserId: uid,
+          files: [{ relativePath: evPath, content: JSON.stringify(ev, null, 2) }]
+        })
+      }).catch(() => {});
     };
 
     // Pull Sync from Local Server
@@ -598,45 +690,57 @@
         if (res.ok) {
           const data = await res.json();
           if (data.files && data.files.length > 0) {
+            let changed = false;
             for (const f of data.files) {
               try {
                 const parsed = JSON.parse(f.content);
+                // Handle channel messages and threads
                 if (f.relativePath.includes('/messages/') || f.relativePath.includes('/threads/')) {
-                  if (!state.messages.some(m => m.id === parsed.id)) {
+                  const existingIdx = state.messages.findIndex(m => m.id === parsed.id);
+                  if (existingIdx === -1) {
                     state.messages.push(parsed);
+                    changed = true;
+                  } else {
+                    // Merge properties if newer
+                    state.messages[existingIdx] = {
+                      ...state.messages[existingIdx],
+                      ...parsed,
+                      reactions: { ...state.messages[existingIdx].reactions, ...parsed.reactions }
+                    };
+                  }
+                }
+                // Handle channel metadata
+                if (f.relativePath.match(/^channels\/([a-zA-Z0-9_-]+)\/meta\.json$/)) {
+                  if (!state.channels[parsed.id]) {
+                    state.channels[parsed.id] = parsed;
+                    changed = true;
                   }
                 }
               } catch {}
             }
-            renderTimeline();
+            if (changed) {
+              saveLocalCache();
+              renderSidebar();
+              renderTimeline();
+              if (activeThreadRootId) renderThread();
+            }
           }
         }
       } catch (e) {
-        console.log('Running in standalone browser mode (no server required)');
+        // Offline or standalone file:// mode
       }
-    }
-
-    // Initial default message if empty
-    if (state.messages.length === 0) {
-      state.messages.push({
-        id: 'msg_init_001',
-        channelId: 'chan_general',
-        author: { id: 'agent_supervisor', name: 'Supervisor Agent', avatar: '🤖', isBot: true },
-        content: `👋 **Welcome to git-chat!**\n\nThis app is running serverless from a **single HTML file** backed by your Git repository.\n- **Zero-Conflict Discrete Files**: Each message is an immutable atom.\n- **Strict Isolation**: Localhost users only push user data; system code on \`master\` cannot be overwritten.\n\nTry sending a message or ask \`@SupervisorAgent\`!`,
-        reactions: { '🚀': ['user_alice'] },
-        timestamp: Date.now()
-      });
     }
 
     // Setup Event Listeners
     window.addEventListener('DOMContentLoaded', () => {
       initConfig();
+      loadLocalCache();
       renderSidebar();
       renderTimeline();
       syncFromLocalServer();
 
       // Poll sync periodically
-      setInterval(syncFromLocalServer, 4000);
+      setInterval(syncFromLocalServer, 3000);
 
       // Composer Send
       const input = document.getElementById('message-input');
@@ -650,6 +754,19 @@
           e.preventDefault();
           sendBtn.click();
         }
+      });
+
+      // Toolbar buttons
+      document.querySelectorAll('.composer-toolbar .tool-btn').forEach(btn => {
+        btn.onclick = () => {
+          const fmt = btn.getAttribute('data-fmt');
+          if (fmt === 'bold') input.value += '**bold text**';
+          else if (fmt === 'italic') input.value += '*italic text*';
+          else if (fmt === 'code') input.value += '\n```\n// code snippet\n```\n';
+          else if (fmt === 'quote') input.value += '\n> quoted text\n';
+          else if (fmt === 'agent') input.value += '@SupervisorAgent ';
+          input.focus();
+        };
       });
 
       // Thread Composer Send
@@ -679,6 +796,9 @@
         const payload = btoa(JSON.stringify(config));
         document.getElementById('qr-text').textContent = window.location.origin + window.location.pathname + '#setup=' + payload;
         settingsModal.classList.add('open');
+      };
+      document.getElementById('btn-user-profile').onclick = () => {
+        document.getElementById('btn-open-settings').click();
       };
       document.getElementById('btn-close-settings').onclick = () => settingsModal.classList.remove('open');
       document.getElementById('btn-save-settings').onclick = () => {
@@ -725,6 +845,29 @@
       };
 
       document.getElementById('btn-sync-now').onclick = () => syncFromLocalServer();
+
+      // Add Channel button
+      document.getElementById('btn-add-chan').onclick = () => {
+        const name = prompt('Enter new channel name (e.g. dev, design):');
+        if (name && name.trim()) {
+          const cleanName = name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+          const id = `chan_${cleanName}`;
+          if (!state.channels[id]) {
+            state.channels[id] = { id, name: cleanName, topic: `Discussion for #${cleanName}` };
+            saveLocalCache();
+            selectChannel(id);
+            // Sync to git
+            fetch('/api/sync/push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
+              body: JSON.stringify({
+                activeUserId: config.user.id,
+                files: [{ relativePath: `channels/${id}/meta.json`, content: JSON.stringify(state.channels[id], null, 2) }]
+              })
+            }).catch(() => {});
+          }
+        }
+      };
     });
   </script>
 </body>
