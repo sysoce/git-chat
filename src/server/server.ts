@@ -127,6 +127,21 @@ export function startGitChatServer(options: ServerOptions): http.Server {
         // Detect remote git repo if configured
         const gitConfig = await detectGitConfig(workspaceRoot);
 
+        // Detect LAN IPv4 addresses for seamless mobile pairing
+        const ifaces = os.networkInterfaces();
+        const lanUrls: string[] = [];
+        for (const name in ifaces) {
+          const addrs = ifaces[name];
+          if (addrs) {
+            for (const net of addrs) {
+              if (net.family === 'IPv4' && !net.internal) {
+                lanUrls.push(`http://${net.address}:${port}`);
+              }
+            }
+          }
+        }
+        const primaryLanUrl = lanUrls[0] || `http://localhost:${port}`;
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: true,
@@ -135,6 +150,8 @@ export function startGitChatServer(options: ServerOptions): http.Server {
           email: gitUserEmail,
           avatar,
           isMobile,
+          lanUrls,
+          primaryLanUrl,
           remote: gitConfig.info ? `${gitConfig.info.owner}/${gitConfig.info.repo}` : undefined,
         }));
         return;

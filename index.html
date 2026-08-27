@@ -1158,6 +1158,11 @@
             <input class="form-input" id="cfg-backend-url" placeholder="http://localhost:4300" />
             <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">When opening directly from <code>file://</code>, Git-Chat connects to this server bridge for real-time LAN sync.</div>
           </div>
+          <div class="form-group">
+            <label class="form-label">Shared Workspace Encryption Secret [Optional]</label>
+            <input class="form-input" type="password" id="cfg-workspace-secret" placeholder="Defaults to repository identity" />
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Optional custom shared passphrase for team channels. If empty, uses repository identity.</div>
+          </div>
         </div>
 
         <!-- TAB 2: GIT-S3 STORAGE -->
@@ -1783,12 +1788,17 @@
     }
 
     async function getEncryptionKeyForChannel(channelId) {
-      if (isVaultLocked || !vaultPassword) return null;
+      if (isVaultLocked) return null;
+      const workspaceSecret = config.workspaceSecret || vaultPassword || `${config.owner}/${config.repo}`;
       const dmUsers = parseDmChannelUsers(channelId);
       if (dmUsers) {
-        return await CryptoVault.deriveDMKey(vaultPassword, dmUsers[0], dmUsers[1]);
+        const sorted = [...dmUsers].sort();
+        const dmSalt = `git-chat-dm-${config.owner}-${config.repo}-${sorted[0]}-${sorted[1]}`;
+        return await CryptoVault.deriveKey(workspaceSecret, dmSalt);
       }
-      return vaultKey;
+      // Public / Workspace Channel (e.g. chan_general, chan_engineering)
+      const chanSalt = `git-chat-chan-${config.owner}-${config.repo}-${channelId}`;
+      return await CryptoVault.deriveKey(workspaceSecret, chanSalt);
     }
 
     // ==========================================
@@ -1804,6 +1814,8 @@
       branch: 'git-chat',
       token: '',
       backendUrl: '',
+      lanUrl: '',
+      workspaceSecret: '',
       user: { id: 'user_dev', name: 'Developer', avatar: '💻', role: 'member' }
     };
 
@@ -1909,6 +1921,10 @@
         if (res.ok) {
           const data = await res.json();
           const isMobileClient = data.isMobile || /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+          if (data.primaryLanUrl) {
+            config.lanUrl = data.primaryLanUrl;
+          }
 
           if (data.remote && (!config.owner || config.owner === 'sysoce')) {
             const parts = data.remote.split('/');
@@ -2451,6 +2467,13 @@
         listEl.appendChild(item);
       }
 
+      const agentItem = document.getElementById('nav-agent-item');
+      if (agentItem) {
+        const agentDmId = getDmChannelId(config.user.id, 'agent_supervisor');
+        agentItem.className = `nav-item ${activeChannelId === agentDmId ? 'active' : ''}`;
+        agentItem.onclick = () => openDm('agent_supervisor');
+      }
+
       renderDmList();
 
       // Update Workspace & User info in sidebar
@@ -2467,7 +2490,7 @@
       if (!dmListEl) return;
       dmListEl.innerHTML = '';
 
-      const users = Object.values(state.users).filter(u => u.id !== config.user.id);
+      const users = Object.values(state.users).filter(u => u.id !== config.user.id && u.id !== 'agent_supervisor');
 
       if (users.length === 0) {
         dmListEl.innerHTML = `<div style="font-size:12px; color:var(--text-dim); padding:4px 10px;">No other users discovered yet</div>`;
@@ -2475,7 +2498,7 @@
       }
 
       for (const u of users) {
-        const isOnline = u.lastSeen && (Date.now() - u.lastSeen < 180000); // within 3m
+        const isOnline = u.lastSeen && (Date.now() - u.lastSeen < 300000); // within 5m
         const dmId = getDmChannelId(config.user.id, u.id);
         const isActive = activeChannelId === dmId;
 
@@ -2496,7 +2519,7 @@
     function openDm(targetUserId) {
       const dmId = getDmChannelId(config.user.id, targetUserId);
       const targetUser = state.users[targetUserId];
-      const targetName = targetUser ? targetUser.name : targetUserId;
+      const targetName = targetUser ? targetUser.name : (targetUserId === 'agent_supervisor' ? 'Supervisor Agent' : targetUserId);
 
       if (!state.channels[dmId]) {
         state.channels[dmId] = {
@@ -2559,8 +2582,11 @@
         let displayContent = msg.content;
         if (msg.encrypted) {
           if (!isVaultLocked && chanKey) {
-            const dec = await CryptoVault.decrypt(msg.encrypted, chanKey);
-            displayContent = dec || msg.content || '<span class="encrypted-placeholder">🔒 [Decryption failed - Incorrect Key]</span>';
+            let dec = await CryptoVault.decrypt(msg.encrypted, chanKey);
+            if (!dec && vaultKey && vaultKey !== chanKey) {
+              dec = await CryptoVault.decrypt(msg.encrypted, vaultKey);
+            }
+            displayContent = dec || '<span class="encrypted-placeholder">🔒 [Decryption failed - Incorrect Key]</span>';
           } else {
             displayContent = '<span class="encrypted-placeholder">🔒 [Encrypted Message • Unlock Vault to view]</span>';
           }
@@ -2822,10 +2848,24 @@
 
     // Process discrete chat files from either local server bridge or direct GitHub API
     function processSyncFile(relativePath, contentStr) {
-      try {
-        const parsed = typeof contentStr === 'string' ? JSON.parse(contentStr) : contentStr;
-        if (!parsed) return false;
+      if (!contentStr) return false;
+      let parsed;
+      if (typeof contentStr === 'string') {
+        const trimmed = contentStr.trim();
+        if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+          return false;
+        }
+        try {
+          parsed = JSON.parse(trimmed);
+        } catch {
+          return false;
+        }
+      } else {
+        parsed = contentStr;
+      }
+      if (!parsed || typeof parsed !== 'object') return false;
 
+      try {
         // User discovery: users/<userId>.json
         if (relativePath.match(/^users\/([a-zA-Z0-9_-]+)\.json$/)) {
           if (parsed.id) {
@@ -2863,8 +2903,25 @@
               id: parsed.author.id,
               name: parsed.author.name,
               avatar: parsed.author.avatar || '👤',
-              lastSeen: parsed.timestamp
+              lastSeen: parsed.timestamp || Date.now()
             };
+          }
+
+          // Auto-discover DM channel
+          const dmUsers = parseDmChannelUsers(parsed.channelId);
+          if (dmUsers && (dmUsers[0] === config.user.id || dmUsers[1] === config.user.id)) {
+            const peerId = dmUsers[0] === config.user.id ? dmUsers[1] : dmUsers[0];
+            const peerUser = state.users[peerId];
+            const peerName = peerUser ? peerUser.name : peerId;
+            if (!state.channels[parsed.channelId]) {
+              state.channels[parsed.channelId] = {
+                id: parsed.channelId,
+                name: peerName,
+                topic: `1-on-1 Direct Message conversation with @${peerName}`,
+                isDm: true,
+                targetUserId: peerId
+              };
+            }
           }
           return true;
         }
@@ -2904,7 +2961,14 @@
         const headers = { 'Accept': 'application/vnd.github.v3+json' };
         if (config.token) headers['Authorization'] = `token ${config.token}`;
 
-        const treeUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/git/trees/${branch}?recursive=1`;
+        // Get branch commit and tree SHA safely
+        const branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/${encodeURIComponent(branch)}`, { headers });
+        if (!branchRes.ok) return;
+        const branchData = await branchRes.json();
+        const treeSha = branchData.commit?.commit?.tree?.sha;
+        if (!treeSha) return;
+
+        const treeUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/git/trees/${treeSha}?recursive=1`;
         const treeRes = await fetch(treeUrl, { headers });
         if (!treeRes.ok) return;
 
@@ -2940,7 +3004,7 @@
         if (activeThreadRootId) renderThread();
         if (manual) showToast(`Synced ${count} items from GitHub (${config.owner}/${config.repo})`);
       } catch (e) {
-        console.warn('GitHub sync failed:', e);
+        // Safe catch
       }
     }
 
@@ -3045,10 +3109,19 @@
         owner: config.owner,
         repo: config.repo,
         branch: config.branch || 'git-chat',
-        password: vaultPassword
+        password: vaultPassword,
+        workspaceSecret: config.workspaceSecret || ''
       };
       const b64 = btoa(JSON.stringify(payload));
-      return window.location.origin + window.location.pathname + '#setup=' + b64;
+      let baseUrl = config.lanUrl || '';
+      if (!baseUrl) {
+        if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
+          baseUrl = 'http://localhost:4300';
+        } else {
+          baseUrl = window.location.origin + window.location.pathname;
+        }
+      }
+      return baseUrl.replace(/\/+$/, '') + '/#setup=' + b64;
     }
 
     function openMobileModal() {
@@ -3077,6 +3150,7 @@
           if (parsed.owner) config.owner = parsed.owner;
           if (parsed.repo) config.repo = parsed.repo;
           if (parsed.branch) config.branch = parsed.branch;
+          if (parsed.workspaceSecret) config.workspaceSecret = parsed.workspaceSecret;
           if (parsed.password) {
             vaultPassword = parsed.password;
             vaultKey = await CryptoVault.deriveKey(vaultPassword);
@@ -3336,6 +3410,7 @@
         document.getElementById('cfg-branch').value = config.branch || 'git-chat';
         document.getElementById('cfg-token').value = config.token || '';
         document.getElementById('cfg-backend-url').value = config.backendUrl || (window.location.protocol === 'file:' ? 'http://localhost:4300' : '');
+        document.getElementById('cfg-workspace-secret').value = config.workspaceSecret || '';
 
         // Storage & Access Tab fields
         updateStorageVolumeStatusDisplay();
@@ -3449,6 +3524,7 @@
         config.branch = document.getElementById('cfg-branch').value || 'git-chat';
         config.token = document.getElementById('cfg-token').value;
         config.backendUrl = document.getElementById('cfg-backend-url').value.trim();
+        config.workspaceSecret = document.getElementById('cfg-workspace-secret').value.trim();
 
         // Storage Settings
         const storageProvider = document.getElementById('cfg-storage-provider').value;
