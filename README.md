@@ -1,6 +1,6 @@
 # `git-chat` 💬
 
-> A zero-backend, single-file Slack clone with isolated Git data synchronization and autonomous AI agent teammates.
+> A zero-backend, single-file chat channel with isolated Git data synchronization and autonomous AI agent teammates.
 
 ---
 
