@@ -1,0 +1,35 @@
+{
+  "name": "git-chat",
+  "version": "1.0.0",
+  "description": "Zero-backend, single-file Slack clone with isolated Git data sync and autonomous agent support",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "git-chat": "./dist/cli/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/cli/cli.ts start",
+    "setup": "tsx src/cli/cli.ts setup",
+    "export": "tsx src/cli/cli.ts export",
+    "test": "tsx --test test/*.test.ts",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "git",
+    "chat",
+    "slack-clone",
+    "serverless",
+    "realtime",
+    "autonomous-agents",
+    "single-file",
+    "zero-backend"
+  ],
+  "author": "sysoce",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^20.17.19",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
