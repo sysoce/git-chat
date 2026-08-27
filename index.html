@@ -269,24 +269,36 @@
   <div class="modal-overlay" id="vault-modal">
     <div class="modal-card">
       <div class="modal-title">
-        <span>🔐 Vault Password & Identity</span>
+        <span>🔐 Workspace Vault Login</span>
       </div>
-      <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
-        git-chat protects your messages with <b>End-to-End Encryption (AES-GCM-256)</b>. Enter your vault password to unlock and decrypt your messages.
-      </p>
+      <div style="background:rgba(18, 100, 163, 0.12); border:1px solid var(--mention-border); border-radius:8px; padding:12px; margin-bottom:16px; font-size:13px; line-height:1.5;">
+        <b>🔑 How the Vault Works:</b><br/>
+        • <b>First time setting up?</b> Choose <u>any password you want</u> right now. It will encrypt your workspace using military-grade <b>AES-GCM-256</b>.<br/>
+        • <b>Returning user / teammate?</b> Re-enter your vault password to decrypt messages.
+      </div>
       <div class="form-group">
         <label class="form-label">Your Display Name</label>
-        <input class="form-input" id="vault-user-name" placeholder="e.g. Developer, Alice, John" />
+        <input class="form-input" id="vault-user-name" placeholder="e.g. Developer, Sysoce, John" />
       </div>
       <div class="form-group">
         <label class="form-label">Your Avatar Emoji</label>
         <input class="form-input" id="vault-user-avatar" value="💻" style="width:60px; text-align:center;" />
       </div>
       <div class="form-group">
-        <label class="form-label">Vault Encryption Password</label>
-        <input class="form-input" type="password" id="vault-password" placeholder="Enter vault password..." autofocus />
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label class="form-label" style="margin-bottom:0;">Vault Encryption Password</label>
+          <button type="button" id="btn-gen-pass" style="background:none; border:none; color:var(--accent-blue); font-size:12px; cursor:pointer; font-weight:600;">🎲 Generate Passphrase</button>
+        </div>
+        <div style="position:relative; display:flex; align-items:center;">
+          <input class="form-input" type="password" id="vault-password" placeholder="Choose or enter your vault password..." autofocus style="padding-right:40px;" />
+          <button type="button" id="btn-toggle-pwd-vis" style="position:absolute; right:8px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px;" title="Show/Hide Password">👁️</button>
+        </div>
       </div>
-      <button class="btn-primary" id="btn-unlock-vault">Unlock Vault 🔓</button>
+      <div style="margin:12px 0; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted);">
+        <input type="checkbox" id="chk-remember-vault" checked style="cursor:pointer;" />
+        <label for="chk-remember-vault" style="cursor:pointer; user-select:none;">Remember on this device until I lock</label>
+      </div>
+      <button class="btn-primary" id="btn-unlock-vault">Unlock & Enter Workspace 🔓</button>
     </div>
   </div>
 
@@ -938,8 +950,8 @@
         } catch {}
       }
 
-      // If user hasn't set up vault yet, open vault modal
-      const savedPass = sessionStorage.getItem('git_chat_vault_pass');
+      // Check for saved vault session
+      const savedPass = sessionStorage.getItem('git_chat_vault_pass') || localStorage.getItem('git_chat_saved_vault_pass');
       if (savedPass) {
         vaultPassword = savedPass;
         vaultKey = await CryptoVault.deriveKey(vaultPassword);
@@ -954,13 +966,30 @@
         document.getElementById('vault-modal').classList.add('open');
       }
 
+      // Passphrase Generator Button
+      document.getElementById('btn-gen-pass').onclick = () => {
+        const words = ['delta', 'cyber', 'orbit', 'falcon', 'matrix', 'beacon', 'galaxy', 'quantum', 'signal', 'vector', 'harbor', 'shadow', 'summit', 'aurora', 'nexus', 'stellar', 'plasma', 'zenith', 'pulse', 'echo'];
+        const generated = Array.from({ length: 4 }, () => words[Math.floor(Math.random() * words.length)]).join('-');
+        const pwdInput = document.getElementById('vault-password');
+        pwdInput.value = generated;
+        pwdInput.type = 'text';
+        showToast('Generated passphrase: ' + generated);
+      };
+
+      // Password Visibility Toggle
+      document.getElementById('btn-toggle-pwd-vis').onclick = () => {
+        const pwdInput = document.getElementById('vault-password');
+        pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
+      };
+
       // Vault Unlock Button
       document.getElementById('btn-unlock-vault').onclick = async () => {
         const pass = document.getElementById('vault-password').value;
         const name = document.getElementById('vault-user-name').value;
         const avatar = document.getElementById('vault-user-avatar').value;
+        const remember = document.getElementById('chk-remember-vault').checked;
         if (!pass) {
-          alert('Please enter a vault password');
+          alert('Please enter or generate a vault password');
           return;
         }
         vaultPassword = pass;
@@ -973,6 +1002,11 @@
         vaultKey = await CryptoVault.deriveKey(vaultPassword);
         isVaultLocked = false;
         sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+        if (remember) {
+          localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
+        } else {
+          localStorage.removeItem('git_chat_saved_vault_pass');
+        }
         saveLocalCache();
 
         document.getElementById('btn-vault-toggle').className = 'header-btn vault-unlocked';
@@ -991,6 +1025,7 @@
           isVaultLocked = true;
           vaultKey = null;
           sessionStorage.removeItem('git_chat_vault_pass');
+          localStorage.removeItem('git_chat_saved_vault_pass');
           document.getElementById('btn-vault-toggle').className = 'header-btn vault-locked';
           document.getElementById('btn-vault-toggle').textContent = '🔒 Vault Locked';
           renderTimeline();
