@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { createChatCommit, readChatBranchFiles, pushChatBranch } from '../backend/chatGitPlumbing';
 import { DataIsolationGuard } from '../security/dataIsolationGuard';
+import { S3Client } from '../storage/s3Client';
 
 export interface ServerOptions {
   port?: number;
@@ -14,6 +15,7 @@ export function startGitChatServer(options: ServerOptions): http.Server {
   const port = options.port || 4300;
   const host = options.host || '0.0.0.0';
   const workspaceRoot = options.workspaceRoot;
+  const s3Client = new S3Client();
 
   const server = http.createServer(async (req, res) => {
     // CORS headers
@@ -30,6 +32,68 @@ export function startGitChatServer(options: ServerOptions): http.Server {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
     try {
+      // API: S3 Health and Configuration
+      if (url.pathname === '/api/s3/status' && req.method === 'GET') {
+        const health = await s3Client.checkHealth();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, ...health }));
+        return;
+      }
+
+      // API: S3 Media & File Upload
+      if (url.pathname === '/api/s3/upload' && req.method === 'POST') {
+        let body = '';
+        for await (const chunk of req) {
+          body += chunk;
+        }
+        const data = JSON.parse(body || '{}');
+        const filename = data.filename || 'attachment.bin';
+        const mimeType = data.mimeType || 'application/octet-stream';
+        const base64Data = data.data || '';
+
+        if (!base64Data) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing file data in upload payload' }));
+          return;
+        }
+
+        const buffer = Buffer.from(base64Data, 'base64');
+        const uploadRes = await s3Client.uploadObject(filename, mimeType, buffer);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          attachment: {
+            name: uploadRes.name,
+            type: uploadRes.type,
+            size: uploadRes.size,
+            key: uploadRes.key,
+            url: uploadRes.url,
+          }
+        }));
+        return;
+      }
+
+      // API: S3 Media & File Retrieval
+      if (url.pathname.startsWith('/api/s3/file/') && req.method === 'GET') {
+        const rawKey = decodeURIComponent(url.pathname.replace('/api/s3/file/', ''));
+        const cleanKey = rawKey.replace(/^\/+/, '');
+
+        try {
+          const obj = await s3Client.getObject(cleanKey);
+          res.writeHead(200, {
+            'Content-Type': obj.contentType,
+            'Content-Length': obj.contentLength,
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Accept-Ranges': 'bytes'
+          });
+          res.end(obj.data);
+        } catch (s3Err: any) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `File not found in S3 storage: ${cleanKey}` }));
+        }
+        return;
+      }
       // API: Detect Local Git / System User Identity
       if (url.pathname === '/api/identity' && req.method === 'GET') {
         let gitUserName = '';

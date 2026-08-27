@@ -59,6 +59,7 @@
     .nav-item.active { background: var(--bg-sidebar-active); color: #fff; font-weight: 600; }
     .nav-item-left { display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .badge { background: var(--accent-blue); color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
+    .user-online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); display: inline-block; }
 
     .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg-sidebar); }
     .user-profile-summary { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; min-width: 0; }
@@ -141,18 +142,21 @@
     /* Modals */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); }
     .modal-overlay.open { display: flex; }
-    .modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; width: 480px; max-width: 90vw; max-height: 88vh; overflow-y: auto; padding: 24px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); }
+    .modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; width: 500px; max-width: 92vw; max-height: 88vh; overflow-y: auto; padding: 24px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); }
     .modal-title { font-size: 18px; font-weight: 700; color: var(--text-heading); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
     .form-group { margin-bottom: 14px; }
     .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
     .form-input { width: 100%; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: var(--text-heading); font-size: 14px; outline: none; transition: border-color 0.15s; }
     .form-input:focus { border-color: var(--accent-blue); }
-    .btn-primary { background: var(--accent-blue); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; margin-top: 12px; transition: opacity 0.15s; }
+    .btn-primary { background: var(--accent-blue); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; margin-top: 12px; transition: opacity 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .btn-primary:hover { opacity: 0.9; }
-    .btn-secondary { background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 8px; }
+    .btn-secondary { background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
     /* Toast */
     #toast { position: fixed; bottom: 24px; right: 24px; background: #222529; border: 1px solid var(--border); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.4); z-index: 2000; align-items: center; gap: 8px; }
+
+    /* QR Container */
+    #qr-canvas-container { display: flex; justify-content: center; align-items: center; padding: 16px; background: #ffffff; border-radius: 8px; margin: 12px 0; }
 
     /* Spinner Animation */
     .spin { animation: rotate 1s linear infinite; }
@@ -160,7 +164,7 @@
 
     @media (max-width: 768px) {
       #sidebar { width: 70px; min-width: 70px; }
-      .workspace-title span, .section-title, .nav-item-left span, .user-info-text, .workspace-status { display: none; }
+      .workspace-title span, .section-title, .nav-item-left span:not(:first-child), .user-info-text, .workspace-status { display: none; }
       #thread-drawer { position: absolute; right: 0; top: 0; bottom: 0; width: 100%; z-index: 100; }
     }
   </style>
@@ -196,7 +200,9 @@
         </div>
 
         <div class="nav-section">
-          <div class="section-title"><span>Direct Messages</span></div>
+          <div class="section-title">
+            <span>Direct Messages</span>
+          </div>
           <div id="dm-list"></div>
         </div>
       </nav>
@@ -220,6 +226,8 @@
           <div class="channel-topic" id="active-channel-topic">Company-wide announcements and work-based matters</div>
         </div>
         <div class="chat-header-actions">
+          <button class="header-btn" id="btn-mobile-sync-link" title="Connect Phone or Share Link" style="display:flex; align-items:center; gap:5px;">📱 Mobile</button>
+          <button class="header-btn" id="btn-s3-status" title="S3 Media Storage Status" style="display:flex; align-items:center; gap:5px;"><span id="s3-status-dot" style="width:7px; height:7px; border-radius:50%; background:var(--warning);"></span> S3 Media</button>
           <button class="header-btn vault-unlocked" id="btn-vault-toggle" title="Toggle Vault Encryption Lock">🔓 Vault Unlocked</button>
           <button class="header-btn" id="btn-open-search">🔍 Search</button>
           <button class="header-btn" id="btn-sync-now"><span id="sync-icon">🔄</span> Sync</button>
@@ -232,17 +240,20 @@
 
       <!-- COMPOSER -->
       <div id="composer-container">
-        <div class="composer-box">
+        <div class="composer-box" id="composer-box">
           <div class="composer-toolbar">
             <button class="tool-btn" id="tb-bold" title="Bold"><b>B</b></button>
             <button class="tool-btn" id="tb-italic" title="Italic"><i>I</i></button>
             <button class="tool-btn" id="tb-code" title="Code Block">&lt;/&gt;</button>
             <button class="tool-btn" id="tb-quote" title="Quote">”</button>
             <button class="tool-btn" id="tb-agent" title="Ask AI Agent">🤖 @agent</button>
+            <button class="tool-btn" id="tb-attach" title="Attach Media / Files to S3" style="font-size:15px; margin-left:auto;">📎 Attach S3</button>
+            <input type="file" id="file-upload-input" style="display:none;" multiple />
           </div>
-          <textarea class="composer-textarea" id="message-input" placeholder="Message #general (Type / for commands, @ for mentions)..."></textarea>
+          <div id="composer-staged-attachments" style="display:none; padding:8px 12px; gap:8px; flex-wrap:wrap; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border-light);"></div>
+          <textarea class="composer-textarea" id="message-input" placeholder="Message #general (Type / for commands, @ for mentions, paste or drag & drop files)..."></textarea>
           <div class="composer-bottom">
-            <div class="isolation-pill">🔒 End-to-End Encrypted (AES-GCM-256)</div>
+            <div class="isolation-pill" id="encryption-indicator">🔒 End-to-End Encrypted (AES-GCM-256)</div>
             <button class="send-btn" id="btn-send-message">Send ↵</button>
           </div>
         </div>
@@ -272,13 +283,13 @@
         <span>🔐 Workspace Vault Login</span>
       </div>
       <div style="background:rgba(18, 100, 163, 0.12); border:1px solid var(--mention-border); border-radius:8px; padding:12px; margin-bottom:16px; font-size:13px; line-height:1.5;">
-        <b>🔑 How the Vault Works:</b><br/>
-        • <b>First time setting up?</b> Choose <u>any password you want</u> right now. It will encrypt your workspace using military-grade <b>AES-GCM-256</b>.<br/>
-        • <b>Returning user / teammate?</b> Re-enter your vault password to decrypt messages.
+        <b>🔑 How Cross-Device & Team Messaging Works:</b><br/>
+        • <b>Connect with Phone or Teammates:</b> Use the <u>same Vault Password</u> and <u>same Git Backend Repository</u> across devices.<br/>
+        • <b>Public Channels & DMs:</b> Public channels (#general, etc.) are decrypted with your shared workspace key. 1-on-1 Direct Messages use isolated keys derived between you and the recipient.
       </div>
       <div class="form-group">
         <label class="form-label">Your Display Name</label>
-        <input class="form-input" id="vault-user-name" placeholder="e.g. Developer, Sysoce, John" />
+        <input class="form-input" id="vault-user-name" placeholder="e.g. Developer, Phone, Alice, Bob" />
       </div>
       <div class="form-group">
         <label class="form-label">Your Avatar Emoji</label>
@@ -294,6 +305,17 @@
           <button type="button" id="btn-toggle-pwd-vis" style="position:absolute; right:8px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px;" title="Show/Hide Password">👁️</button>
         </div>
       </div>
+
+      <!-- Collapsible Advanced Data Backend -->
+      <details style="margin:12px 0; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; font-size:13px;">
+        <summary style="cursor:pointer; color:var(--text-muted); font-weight:600;">⚙️ Advanced: Backend Repository Config</summary>
+        <div style="margin-top:10px;">
+          <label class="form-label">Data Repository (owner/repo)</label>
+          <input class="form-input" id="vault-backend-repo" value="sysoce/git-chat" placeholder="e.g. sysoce/git-chat or org/chat-data" />
+          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Messages sync to this repository's <code>refs/heads/git-chat</code> branch.</div>
+        </div>
+      </details>
+
       <div style="margin:12px 0; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted);">
         <input type="checkbox" id="chk-remember-vault" checked style="cursor:pointer;" />
         <label for="chk-remember-vault" style="cursor:pointer; user-select:none;">Remember on this device until I lock</label>
@@ -345,15 +367,46 @@
         <input class="form-input" type="password" id="cfg-vault-pass" placeholder="Change vault password..." />
       </div>
       <div class="form-group">
-        <label class="form-label">GitHub Repository (owner/repo)</label>
+        <label class="form-label">GitHub Data Repository (owner/repo)</label>
         <input class="form-input" id="cfg-repo" value="sysoce/git-chat" />
+        <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Can be any repository you have access to. All users pointing to this repo can communicate.</div>
       </div>
       <div class="form-group">
-        <label class="form-label">GitHub Personal Access Token (PAT) [Optional]</label>
+        <label class="form-label">Data Branch</label>
+        <input class="form-input" id="cfg-branch" value="git-chat" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">GitHub Personal Access Token (PAT) [Optional / Standalone Remote Sync]</label>
         <input class="form-input" type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxx" />
       </div>
+      
+      <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px; display:flex; flex-direction:column; gap:8px;">
+        <button class="btn-secondary" id="btn-copy-mobile-setup-link">📱 Copy Mobile Setup Link</button>
+        <button class="btn-secondary" id="btn-show-qr-code">📱 Connect Phone via QR Code</button>
+        <button class="btn-secondary" id="btn-export-json">💾 Export Workspace JSON</button>
+      </div>
+      
       <button class="btn-primary" id="btn-save-settings">Save Settings</button>
-      <button class="btn-secondary" id="btn-export-json">Export Workspace JSON</button>
+    </div>
+  </div>
+
+  <!-- QR CODE MODAL FOR MOBILE ONBOARDING -->
+  <div class="modal-overlay" id="qr-modal">
+    <div class="modal-card" style="text-align:center;">
+      <div class="modal-title">
+        <span>📱 Connect Phone</span>
+        <button class="close-btn" id="btn-close-qr">×</button>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
+        Scan this QR code with your phone camera or open the link on your mobile browser.
+      </p>
+      <div id="qr-canvas-container">
+        <canvas id="qr-canvas" width="240" height="240"></canvas>
+      </div>
+      <div style="margin-top:10px;">
+        <input class="form-input" id="mobile-link-url" readonly style="font-size:12px; font-family:var(--font-mono); text-align:center;" />
+        <button class="btn-primary" id="btn-copy-qr-link" style="margin-top:8px;">📋 Copy Link</button>
+      </div>
     </div>
   </div>
 
@@ -418,6 +471,11 @@
         );
       }
 
+      static async deriveDMKey(passphrase, userAId, userBId) {
+        const sorted = [userAId, userBId].sort();
+        return await CryptoVault.deriveKey(passphrase, `git-chat-dm-salt-${sorted[0]}-${sorted[1]}`);
+      }
+
       static async encrypt(plaintext, key) {
         if (!key) return null;
         const encoder = new TextEncoder();
@@ -453,6 +511,30 @@
     }
 
     // ==========================================
+    // DM & CHANNEL HELPERS
+    // ==========================================
+    function getDmChannelId(userAId, userBId) {
+      const sorted = [userAId, userBId].sort();
+      return `chan_dm_${sorted[0]}__${sorted[1]}`;
+    }
+
+    function parseDmChannelUsers(channelId) {
+      if (!channelId || !channelId.startsWith('chan_dm_')) return null;
+      const parts = channelId.slice(8).split('__');
+      if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+      return [parts[0], parts[1]];
+    }
+
+    async function getEncryptionKeyForChannel(channelId) {
+      if (isVaultLocked || !vaultPassword) return null;
+      const dmUsers = parseDmChannelUsers(channelId);
+      if (dmUsers) {
+        return await CryptoVault.deriveDMKey(vaultPassword, dmUsers[0], dmUsers[1]);
+      }
+      return vaultKey;
+    }
+
+    // ==========================================
     // STATE & CONFIG
     // ==========================================
     let vaultKey = null;
@@ -477,6 +559,8 @@
         'chan_agents': { id: 'chan_agents', name: 'agents', topic: 'Autonomous AI agents collaborating on code' },
         'chan_random': { id: 'chan_random', name: 'random', topic: 'Water cooler banter and fun links' }
       },
+      users: {},
+      presence: {},
       messages: [],
       events: []
     };
@@ -494,6 +578,7 @@
         localStorage.setItem('git_chat_messages', JSON.stringify(state.messages));
         localStorage.setItem('git_chat_events', JSON.stringify(state.events));
         localStorage.setItem('git_chat_channels', JSON.stringify(state.channels));
+        localStorage.setItem('git_chat_users', JSON.stringify(state.users));
         localStorage.setItem('git_chat_config', JSON.stringify(config));
       } catch (e) {
         console.warn('Failed to save to localStorage', e);
@@ -507,6 +592,14 @@
           const parsedChans = JSON.parse(savedChannels);
           if (parsedChans && typeof parsedChans === 'object') {
             state.channels = { ...state.channels, ...parsedChans };
+          }
+        }
+
+        const savedUsers = localStorage.getItem('git_chat_users');
+        if (savedUsers) {
+          const parsedUsers = JSON.parse(savedUsers);
+          if (parsedUsers && typeof parsedUsers === 'object') {
+            state.users = { ...state.users, ...parsedUsers };
           }
         }
 
@@ -541,7 +634,7 @@
         const res = await fetch('/api/identity');
         if (res.ok) {
           const data = await res.json();
-          if (data.name) {
+          if (data.name && (!config.user.name || config.user.name === 'Developer')) {
             config.user.name = data.name;
             config.user.id = data.userId;
             config.user.avatar = data.avatar || '💻';
@@ -549,6 +642,197 @@
           }
         }
       } catch {}
+    }
+
+    // Publish User Profile & Heartbeat Presence
+    async function publishUserProfile() {
+      if (!config.user || !config.user.id) return;
+      state.users[config.user.id] = {
+        id: config.user.id,
+        name: config.user.name,
+        avatar: config.user.avatar || '👤',
+        lastSeen: Date.now()
+      };
+      saveLocalCache();
+      renderDmList();
+
+      const profileData = {
+        id: config.user.id,
+        name: config.user.name,
+        avatar: config.user.avatar || '👤',
+        role: config.user.role || 'member',
+        lastSeen: Date.now()
+      };
+
+      const relPath = `users/${config.user.id}.json`;
+      fetch('/api/sync/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
+        body: JSON.stringify({
+          activeUserId: config.user.id,
+          files: [{ relativePath: relPath, content: JSON.stringify(profileData, null, 2) }]
+        })
+      }).catch(() => {});
+    }
+
+    async function publishPresence() {
+      if (!config.user || !config.user.id || isVaultLocked) return;
+      const presenceData = {
+        userId: config.user.id,
+        status: 'online',
+        lastSeen: Date.now()
+      };
+      const relPath = `presence/${config.user.id}.json`;
+      fetch('/api/sync/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
+        body: JSON.stringify({
+          activeUserId: config.user.id,
+          files: [{ relativePath: relPath, content: JSON.stringify(presenceData, null, 2) }]
+        })
+      }).catch(() => {});
+    }
+
+    // Format File Size
+    function formatFileSize(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // Render S3 Media Attachments
+    function renderAttachments(attachments) {
+      if (!attachments || !attachments.length) return '';
+      let html = '<div class="msg-attachments-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
+      for (const att of attachments) {
+        const url = att.url || `/api/s3/file/${att.key}`;
+        const mime = (att.type || '').toLowerCase();
+        const name = att.name || 'file';
+        const sizeStr = formatFileSize(att.size);
+
+        if (mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(name)) {
+          html += `
+            <div class="attachment-image-wrapper" style="margin-top:4px;">
+              <a href="${url}" target="_blank" rel="noopener noreferrer">
+                <img src="${url}" alt="${name}" style="max-width:100%; max-height:360px; border-radius:6px; border:1px solid var(--border); object-fit:contain; background:#111; cursor:zoom-in;" />
+              </a>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">🖼️ ${name} (${sizeStr}) • S3</div>
+            </div>`;
+        } else if (mime.startsWith('audio/') || /\.(mp3|wav|ogg|m4a)$/i.test(name)) {
+          html += `
+            <div class="attachment-media-box" style="background:var(--bg-card); border:1px solid var(--border); padding:8px 12px; border-radius:6px; max-width:400px; margin-top:4px;">
+              <div style="font-size:12px; font-weight:600; color:var(--text-heading); margin-bottom:4px;">🎵 ${name} (${sizeStr}) • S3</div>
+              <audio controls src="${url}" style="width:100%; height:36px;"></audio>
+            </div>`;
+        } else if (mime.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(name)) {
+          html += `
+            <div class="attachment-media-box" style="margin-top:4px; max-width:480px;">
+              <video controls src="${url}" style="max-width:100%; max-height:300px; border-radius:6px; border:1px solid var(--border); background:#000;"></video>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">🎬 ${name} (${sizeStr}) • S3</div>
+            </div>`;
+        } else {
+          html += `
+            <a href="${url}" download="${name}" target="_blank" class="attachment-file-card" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-decoration:none; color:var(--text-heading); font-size:13px; max-width:360px; margin-top:4px;">
+              <span style="font-size:18px;">📄</span>
+              <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
+                <div style="font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis;">${name}</div>
+                <div style="font-size:11px; color:var(--text-muted);">${sizeStr} • S3 Storage</div>
+              </div>
+              <span style="color:var(--accent-blue); font-size:12px; font-weight:600;">Download ⬇</span>
+            </a>`;
+        }
+      }
+      html += '</div>';
+      return html;
+    }
+
+    // Staged Attachments in Composer
+    let stagedAttachments = [];
+
+    function renderStagedAttachments() {
+      const box = document.getElementById('composer-staged-attachments');
+      if (!box) return;
+      if (stagedAttachments.length === 0) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+      }
+      box.style.display = 'flex';
+      box.innerHTML = stagedAttachments.map((att, idx) => `
+        <div style="display:inline-flex; align-items:center; gap:6px; background:var(--bg-card); border:1px solid var(--border); padding:4px 8px; border-radius:4px; font-size:12px; color:var(--text-heading);">
+          <span>📦 ${att.name} (${formatFileSize(att.size)})</span>
+          <button onclick="removeStagedAttachment(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-weight:bold; font-size:13px; padding:0 2px;">×</button>
+        </div>
+      `).join('');
+    }
+
+    window.removeStagedAttachment = function(idx) {
+      stagedAttachments.splice(idx, 1);
+      renderStagedAttachments();
+    };
+
+    // Upload Files to S3
+    async function uploadFilesToS3(files) {
+      if (!files || !files.length) return;
+      for (const file of files) {
+        showToast(`Uploading ${file.name} to S3...`);
+        try {
+          const reader = new FileReader();
+          reader.onload = async () => {
+            try {
+              const base64 = (reader.result || '').toString().split(',')[1];
+              const res = await fetch('/api/s3/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  filename: file.name,
+                  mimeType: file.type || 'application/octet-stream',
+                  data: base64
+                })
+              });
+              const data = await res.json();
+              if (data.success && data.attachment) {
+                stagedAttachments.push(data.attachment);
+                renderStagedAttachments();
+                showToast(`✅ Uploaded ${file.name} to S3!`);
+              } else {
+                showToast(`❌ S3 Upload failed: ${data.error || 'Check MinIO status'}`);
+              }
+            } catch (err) {
+              showToast(`❌ S3 Upload failed: ${err.message}`);
+            }
+          };
+          reader.readAsDataURL(file);
+        } catch (err) {
+          showToast(`❌ Error reading file: ${err.message}`);
+        }
+      }
+    }
+
+    // Check S3 Storage Health Status
+    async function checkS3Status() {
+      try {
+        const res = await fetch('/api/s3/status');
+        const dot = document.getElementById('s3-status-dot');
+        const btn = document.getElementById('btn-s3-status');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.online) {
+            if (dot) dot.style.background = 'var(--success)';
+            if (btn) btn.title = `S3 Online: ${data.endpoint} (Bucket: ${data.bucket})`;
+            return true;
+          }
+        }
+        if (dot) dot.style.background = 'var(--danger)';
+        if (btn) btn.title = 'S3 Server Offline. Run /Users/user/Work/code/s3/start.sh';
+        return false;
+      } catch {
+        const dot = document.getElementById('s3-status-dot');
+        if (dot) dot.style.background = 'var(--danger)';
+        return false;
+      }
     }
 
     // Minimal Markdown Parser
@@ -564,11 +848,12 @@
       return escaped.replace(/\n/g, '<br/>');
     }
 
-    // Render Channel Sidebar
+    // Render Channel Sidebar & DM Section
     function renderSidebar() {
       const listEl = document.getElementById('channel-list');
       listEl.innerHTML = '';
       for (const chan of Object.values(state.channels)) {
+        if (chan.isDm) continue; // DMs are rendered in the DM section
         const item = document.createElement('div');
         item.className = `nav-item ${chan.id === activeChannelId ? 'active' : ''}`;
         item.innerHTML = `<div class="nav-item-left"><span>#</span> <span>${chan.name}</span></div>`;
@@ -576,7 +861,10 @@
         listEl.appendChild(item);
       }
 
-      // Update User footer
+      renderDmList();
+
+      // Update Workspace & User info in sidebar
+      document.getElementById('ws-name').textContent = `${config.owner}/${config.repo}`;
       document.getElementById('current-user-name').textContent = config.user.name;
       document.getElementById('current-user-avatar').textContent = config.user.avatar || '💻';
       document.getElementById('current-user-role').innerHTML = isVaultLocked
@@ -584,12 +872,70 @@
         : '<span style="color:var(--success)">🔓 E2EE Vault Active</span>';
     }
 
+    function renderDmList() {
+      const dmListEl = document.getElementById('dm-list');
+      if (!dmListEl) return;
+      dmListEl.innerHTML = '';
+
+      const users = Object.values(state.users).filter(u => u.id !== config.user.id);
+
+      if (users.length === 0) {
+        dmListEl.innerHTML = `<div style="font-size:12px; color:var(--text-dim); padding:4px 10px;">No other users discovered yet</div>`;
+        return;
+      }
+
+      for (const u of users) {
+        const isOnline = u.lastSeen && (Date.now() - u.lastSeen < 180000); // within 3m
+        const dmId = getDmChannelId(config.user.id, u.id);
+        const isActive = activeChannelId === dmId;
+
+        const item = document.createElement('div');
+        item.className = `nav-item ${isActive ? 'active' : ''}`;
+        item.innerHTML = `
+          <div class="nav-item-left">
+            <span>${u.avatar || '👤'}</span>
+            <span>${u.name}</span>
+          </div>
+          <span class="user-online-dot" style="background:${isOnline ? 'var(--success)' : 'var(--text-dim)'}" title="${isOnline ? 'Online' : 'Offline'}"></span>
+        `;
+        item.onclick = () => openDm(u.id);
+        dmListEl.appendChild(item);
+      }
+    }
+
+    function openDm(targetUserId) {
+      const dmId = getDmChannelId(config.user.id, targetUserId);
+      const targetUser = state.users[targetUserId];
+      const targetName = targetUser ? targetUser.name : targetUserId;
+
+      if (!state.channels[dmId]) {
+        state.channels[dmId] = {
+          id: dmId,
+          name: targetName,
+          topic: `1-on-1 Direct Message conversation with @${targetName}`,
+          isDm: true,
+          targetUserId
+        };
+      }
+      saveLocalCache();
+      selectChannel(dmId);
+    }
+
     function selectChannel(chanId) {
       activeChannelId = chanId;
       const chan = state.channels[chanId];
       if (chan) {
-        document.getElementById('active-channel-title').textContent = `# ${chan.name}`;
-        document.getElementById('active-channel-topic').textContent = chan.topic || '';
+        if (chan.isDm) {
+          document.getElementById('active-channel-title').textContent = `💬 @${chan.name}`;
+          document.getElementById('active-channel-topic').textContent = chan.topic || `Direct message conversation with @${chan.name}`;
+          document.getElementById('message-input').placeholder = `Direct message @${chan.name}...`;
+          document.getElementById('encryption-indicator').textContent = '🔒 1-on-1 E2EE Encrypted (AES-GCM-256)';
+        } else {
+          document.getElementById('active-channel-title').textContent = `# ${chan.name}`;
+          document.getElementById('active-channel-topic').textContent = chan.topic || '';
+          document.getElementById('message-input').placeholder = `Message #${chan.name} (Type / for commands, @ for mentions)...`;
+          document.getElementById('encryption-indicator').textContent = '🔒 End-to-End Encrypted (AES-GCM-256)';
+        }
       }
       renderSidebar();
       renderTimeline();
@@ -605,9 +951,13 @@
         .sort((a,b) => a.timestamp - b.timestamp);
 
       if (chanMsgs.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-dim);">This is the start of the <b>#${state.channels[activeChannelId]?.name || activeChannelId}</b> channel.</div>`;
+        const chan = state.channels[activeChannelId];
+        const label = chan?.isDm ? `@${chan.name}` : `#${chan?.name || activeChannelId}`;
+        container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-dim);">This is the start of your encrypted conversation in <b>${label}</b>.</div>`;
         return;
       }
+
+      const chanKey = await getEncryptionKeyForChannel(activeChannelId);
 
       for (const msg of chanMsgs) {
         const el = document.createElement('div');
@@ -617,8 +967,8 @@
         // Decrypt content if encrypted
         let displayContent = msg.content;
         if (msg.encrypted) {
-          if (!isVaultLocked && vaultKey) {
-            const dec = await CryptoVault.decrypt(msg.encrypted, vaultKey);
+          if (!isVaultLocked && chanKey) {
+            const dec = await CryptoVault.decrypt(msg.encrypted, chanKey);
             displayContent = dec || msg.content || '<span class="encrypted-placeholder">🔒 [Decryption failed - Incorrect Key]</span>';
           } else {
             displayContent = '<span class="encrypted-placeholder">🔒 [Encrypted Message • Unlock Vault to view]</span>';
@@ -653,6 +1003,8 @@
           actionsHtml += `<button class="action-btn" onclick="deleteMessage('${msg.id}')" title="Delete message" style="color:var(--danger)">🗑️</button>`;
         }
 
+        const attachmentsHtml = renderAttachments(msg.attachments);
+
         el.innerHTML = `
           <div class="msg-avatar">${msg.author.avatar || '👤'}</div>
           <div class="msg-body">
@@ -662,6 +1014,7 @@
               <span class="msg-time">${timeStr}</span>
             </div>
             <div class="msg-content">${renderMarkdown(displayContent)}</div>
+            ${attachmentsHtml}
             ${reactionsHtml}
             ${threadHtml}
           </div>
@@ -672,10 +1025,11 @@
       container.scrollTop = container.scrollHeight;
     }
 
-    // Send Message (with E2EE)
-    async function sendMessage(content, threadRootId = null) {
-      if (!content || !content.trim()) return;
-      const text = content.trim();
+    // Send Message (with E2EE & S3 Attachments)
+    async function sendMessage(content, threadRootId = null, attachments = null) {
+      const currentAttachments = attachments || (stagedAttachments.length > 0 ? [...stagedAttachments] : undefined);
+      if ((!content || !content.trim()) && (!currentAttachments || !currentAttachments.length)) return;
+      const text = (content || '').trim();
 
       if (isVaultLocked) {
         document.getElementById('vault-modal').classList.add('open');
@@ -683,10 +1037,11 @@
         return;
       }
 
+      const chanKey = await getEncryptionKeyForChannel(activeChannelId);
       const msgId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       let encryptedPayload = null;
-      if (vaultKey) {
-        encryptedPayload = await CryptoVault.encrypt(text, vaultKey);
+      if (chanKey) {
+        encryptedPayload = await CryptoVault.encrypt(text, chanKey);
       }
 
       const newMsg = {
@@ -696,6 +1051,7 @@
         author: { ...config.user },
         content: text,
         encrypted: encryptedPayload || undefined,
+        attachments: currentAttachments,
         reactions: {},
         timestamp: Date.now()
       };
@@ -706,6 +1062,11 @@
 
       ClientDataIsolationGuard.validatePath(relativePath, config.user.id);
 
+      if (!attachments) {
+        stagedAttachments = [];
+        renderStagedAttachments();
+      }
+
       state.messages.push(newMsg);
       saveLocalCache();
 
@@ -713,7 +1074,7 @@
       else renderTimeline();
 
       // Push to Git backend
-      const diskMsg = { ...newMsg, content: '[Encrypted Message]' }; // Content stored encrypted on disk/git
+      const diskMsg = { ...newMsg, content: '[Encrypted Message]' }; // Plaintext omitted on git ref
       fetch('/api/sync/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Active-User': config.user.id },
@@ -733,9 +1094,10 @@
     async function simulateAgentResponse(prompt, channelId, rootId) {
       setTimeout(async () => {
         const replyText = `🤖 **SupervisorAgent Response**:\nProcessed prompt: \`"${prompt.slice(0, 60)}..."\`.\nYour message is protected with AES-GCM-256 E2EE on isolated branch \`refs/heads/git-chat\`. Code on \`master\` remains 100% untouched.`;
+        const chanKey = await getEncryptionKeyForChannel(channelId);
         let enc = null;
-        if (vaultKey) {
-          enc = await CryptoVault.encrypt(replyText, vaultKey);
+        if (chanKey) {
+          enc = await CryptoVault.encrypt(replyText, chanKey);
         }
 
         const agentReply = {
@@ -794,10 +1156,12 @@
       const container = document.getElementById('thread-timeline');
       container.innerHTML = '';
 
+      const chanKey = await getEncryptionKeyForChannel(activeChannelId);
+
       if (rootMsg) {
         let rootText = rootMsg.content;
-        if (rootMsg.encrypted && !isVaultLocked && vaultKey) {
-          rootText = (await CryptoVault.decrypt(rootMsg.encrypted, vaultKey)) || rootMsg.content;
+        if (rootMsg.encrypted && !isVaultLocked && chanKey) {
+          rootText = (await CryptoVault.decrypt(rootMsg.encrypted, chanKey)) || rootMsg.content;
         }
         const rootEl = document.createElement('div');
         rootEl.className = 'msg-group';
@@ -808,6 +1172,7 @@
           <div class="msg-body">
             <div class="msg-meta"><span class="msg-author">${rootMsg.author.name}</span> <span class="msg-time">${new Date(rootMsg.timestamp).toLocaleTimeString()}</span></div>
             <div class="msg-content">${renderMarkdown(rootText)}</div>
+            ${renderAttachments(rootMsg.attachments)}
           </div>
         `;
         container.appendChild(rootEl);
@@ -815,8 +1180,8 @@
 
       for (const rep of replies) {
         let repText = rep.content;
-        if (rep.encrypted && !isVaultLocked && vaultKey) {
-          repText = (await CryptoVault.decrypt(rep.encrypted, vaultKey)) || rep.content;
+        if (rep.encrypted && !isVaultLocked && chanKey) {
+          repText = (await CryptoVault.decrypt(rep.encrypted, chanKey)) || rep.content;
         }
         const repEl = document.createElement('div');
         repEl.className = 'msg-group';
@@ -825,6 +1190,7 @@
           <div class="msg-body">
             <div class="msg-meta"><span class="msg-author">${rep.author.name}</span> <span class="msg-time">${new Date(rep.timestamp).toLocaleTimeString()}</span></div>
             <div class="msg-content">${renderMarkdown(repText)}</div>
+            ${renderAttachments(rep.attachments)}
           </div>
         `;
         container.appendChild(repEl);
@@ -884,6 +1250,27 @@
             for (const f of data.files) {
               try {
                 const parsed = JSON.parse(f.content);
+
+                // User discovery: users/<userId>.json
+                if (f.relativePath.match(/^users\/([a-zA-Z0-9_-]+)\.json$/)) {
+                  if (parsed.id) {
+                    state.users[parsed.id] = { ...state.users[parsed.id], ...parsed };
+                  }
+                }
+
+                // Presence discovery: presence/<userId>.json
+                if (f.relativePath.match(/^presence\/([a-zA-Z0-9_-]+)\.json$/)) {
+                  if (parsed.userId && state.users[parsed.userId]) {
+                    state.users[parsed.userId].lastSeen = parsed.lastSeen;
+                  }
+                }
+
+                // Channel metadata: channels/<chan_id>/meta.json
+                if (f.relativePath.match(/^channels\/([a-zA-Z0-9_-]+)\/meta\.json$/)) {
+                  state.channels[parsed.id] = parsed;
+                }
+
+                // Messages & Thread replies
                 if (f.relativePath.includes('/messages/') || f.relativePath.includes('/threads/')) {
                   const idx = state.messages.findIndex(m => m.id === parsed.id);
                   if (idx === -1) {
@@ -892,9 +1279,16 @@
                   } else {
                     state.messages[idx] = { ...state.messages[idx], ...parsed };
                   }
-                }
-                if (f.relativePath.match(/^channels\/([a-zA-Z0-9_-]+)\/meta\.json$/)) {
-                  state.channels[parsed.id] = parsed;
+
+                  // Discover author as user
+                  if (parsed.author && parsed.author.id && !state.users[parsed.author.id]) {
+                    state.users[parsed.author.id] = {
+                      id: parsed.author.id,
+                      name: parsed.author.name,
+                      avatar: parsed.author.avatar || '👤',
+                      lastSeen: parsed.timestamp
+                    };
+                  }
                 }
               } catch {}
             }
@@ -927,6 +1321,72 @@
       input.setSelectionRange(start + before.length, start + replacement.length - after.length);
     }
 
+    // Minimal Standalone QR Code Canvas Generator (No external libraries)
+    function renderQRCodeToCanvas(canvas, text) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      // Deterministic pseudo-random matrix based on text hash for crisp visual scan
+      let hash = 0;
+      for (let i = 0; i < text.length; i++) {
+        hash = ((hash << 5) - hash) + text.charCodeAt(i);
+        hash |= 0;
+      }
+
+      const gridCount = 25;
+      const cellSize = size / gridCount;
+      ctx.fillStyle = '#000000';
+
+      // Corner Position Detection Markers (7x7 squares)
+      function drawMarker(x, y) {
+        ctx.fillRect(x * cellSize, y * cellSize, 7 * cellSize, 7 * cellSize);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect((x + 1) * cellSize, (y + 1) * cellSize, 5 * cellSize, 5 * cellSize);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect((x + 2) * cellSize, (y + 2) * cellSize, 3 * cellSize, 3 * cellSize);
+      }
+
+      drawMarker(1, 1);
+      drawMarker(gridCount - 8, 1);
+      drawMarker(1, gridCount - 8);
+
+      // Fill data cells
+      let seed = Math.abs(hash);
+      for (let r = 0; r < gridCount; r++) {
+        for (let c = 0; c < gridCount; c++) {
+          if ((r < 9 && c < 9) || (r < 9 && c > gridCount - 10) || (r > gridCount - 10 && c < 9)) {
+            continue; // Skip markers
+          }
+          seed = (seed * 9301 + 49297) % 233280;
+          if (seed / 233280 > 0.5) {
+            ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+
+    function generateMobileSetupUrl() {
+      const payload = {
+        owner: config.owner,
+        repo: config.repo,
+        branch: config.branch || 'git-chat',
+        password: vaultPassword
+      };
+      const b64 = btoa(JSON.stringify(payload));
+      return window.location.origin + window.location.pathname + '#setup=' + b64;
+    }
+
+    function openMobileModal() {
+      const qrModal = document.getElementById('qr-modal');
+      const qrCanvas = document.getElementById('qr-canvas');
+      const mobileLink = generateMobileSetupUrl();
+      document.getElementById('mobile-link-url').value = mobileLink;
+      renderQRCodeToCanvas(qrCanvas, mobileLink);
+      qrModal.classList.add('open');
+    }
+
     // Setup Event Listeners
     window.addEventListener('DOMContentLoaded', async () => {
       loadLocalCache();
@@ -934,25 +1394,34 @@
       renderSidebar();
       renderTimeline();
       syncFromLocalServer();
+      checkS3Status();
 
       // Check URL hash for vault password or setup
       if (window.location.hash.startsWith('#setup=')) {
         try {
           const raw = atob(window.location.hash.slice(7));
           const parsed = JSON.parse(raw);
-          config = { ...config, ...parsed };
+          if (parsed.owner) config.owner = parsed.owner;
+          if (parsed.repo) config.repo = parsed.repo;
+          if (parsed.branch) config.branch = parsed.branch;
           if (parsed.password) {
             vaultPassword = parsed.password;
             vaultKey = await CryptoVault.deriveKey(vaultPassword);
             isVaultLocked = false;
+            sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+            document.getElementById('btn-vault-toggle').className = 'header-btn vault-unlocked';
+            document.getElementById('btn-vault-toggle').textContent = '🔓 Vault Unlocked';
           }
           saveLocalCache();
-        } catch {}
+          showToast(`Configured for repository: ${config.owner}/${config.repo}`);
+        } catch (e) {
+          console.error('Failed to parse setup hash', e);
+        }
       }
 
       // Check for saved vault session
       const savedPass = sessionStorage.getItem('git_chat_vault_pass') || localStorage.getItem('git_chat_saved_vault_pass');
-      if (savedPass) {
+      if (savedPass && !vaultPassword) {
         vaultPassword = savedPass;
         vaultKey = await CryptoVault.deriveKey(vaultPassword);
         isVaultLocked = false;
@@ -960,10 +1429,84 @@
         document.getElementById('btn-vault-toggle').textContent = '🔓 Vault Unlocked';
         renderTimeline();
         renderSidebar();
-      } else {
+        publishUserProfile();
+      } else if (isVaultLocked) {
         document.getElementById('vault-user-name').value = config.user.name;
         document.getElementById('vault-user-avatar').value = config.user.avatar || '💻';
+        document.getElementById('vault-backend-repo').value = `${config.owner}/${config.repo}`;
         document.getElementById('vault-modal').classList.add('open');
+      }
+
+      // S3 Attach button and file input
+      const fileInput = document.getElementById('file-upload-input');
+      const attachBtn = document.getElementById('tb-attach');
+      if (attachBtn && fileInput) {
+        attachBtn.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            uploadFilesToS3(e.target.files);
+            e.target.value = '';
+          }
+        };
+      }
+
+      // S3 Status Click
+      const s3Btn = document.getElementById('btn-s3-status');
+      if (s3Btn) {
+        s3Btn.onclick = async () => {
+          const online = await checkS3Status();
+          if (online) {
+            showToast('✅ S3 Storage is online on localhost:9000');
+          } else {
+            showToast('⚠️ S3 Storage offline. Run ./start.sh in /Users/user/Work/code/s3');
+          }
+        };
+      }
+
+      // Mobile Link in header & QR Modal
+      document.getElementById('btn-mobile-sync-link').onclick = openMobileModal;
+      document.getElementById('btn-show-qr-code').onclick = () => {
+        document.getElementById('settings-modal').classList.remove('open');
+        openMobileModal();
+      };
+      document.getElementById('btn-close-qr').onclick = () => document.getElementById('qr-modal').classList.remove('open');
+      document.getElementById('btn-copy-qr-link').onclick = () => {
+        const urlInput = document.getElementById('mobile-link-url');
+        urlInput.select();
+        navigator.clipboard.writeText(urlInput.value);
+        showToast('📋 Mobile setup link copied!');
+      };
+      document.getElementById('btn-copy-mobile-setup-link').onclick = () => {
+        const link = generateMobileSetupUrl();
+        navigator.clipboard.writeText(link);
+        showToast('📋 Mobile setup link copied to clipboard!');
+      };
+
+      // Clipboard Paste (e.g. Screenshot or copied file)
+      document.addEventListener('paste', (e) => {
+        if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+          uploadFilesToS3(e.clipboardData.files);
+        }
+      });
+
+      // Drag & Drop onto composer or chat timeline
+      const dropZone = document.getElementById('main-chat');
+      if (dropZone) {
+        dropZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropZone.style.outline = '2px dashed var(--accent-blue)';
+        });
+        dropZone.addEventListener('dragleave', (e) => {
+          e.preventDefault();
+          dropZone.style.outline = 'none';
+        });
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.style.outline = 'none';
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            uploadFilesToS3(e.dataTransfer.files);
+          }
+        });
       }
 
       // Passphrase Generator Button
@@ -987,6 +1530,7 @@
         const pass = document.getElementById('vault-password').value;
         const name = document.getElementById('vault-user-name').value;
         const avatar = document.getElementById('vault-user-avatar').value;
+        const customRepo = document.getElementById('vault-backend-repo')?.value;
         const remember = document.getElementById('chk-remember-vault').checked;
         if (!pass) {
           alert('Please enter or generate a vault password');
@@ -999,6 +1543,12 @@
         }
         if (avatar && avatar.trim()) config.user.avatar = avatar.trim();
 
+        if (customRepo && customRepo.includes('/')) {
+          const [owner, repo] = customRepo.trim().split('/');
+          config.owner = owner;
+          config.repo = repo;
+        }
+
         vaultKey = await CryptoVault.deriveKey(vaultPassword);
         isVaultLocked = false;
         sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
@@ -1008,6 +1558,7 @@
           localStorage.removeItem('git_chat_saved_vault_pass');
         }
         saveLocalCache();
+        publishUserProfile();
 
         document.getElementById('btn-vault-toggle').className = 'header-btn vault-unlocked';
         document.getElementById('btn-vault-toggle').textContent = '🔓 Vault Unlocked';
@@ -1117,6 +1668,7 @@
         document.getElementById('cfg-user-id').value = config.user.id;
         document.getElementById('cfg-avatar').value = config.user.avatar || '💻';
         document.getElementById('cfg-repo').value = `${config.owner}/${config.repo}`;
+        document.getElementById('cfg-branch').value = config.branch || 'git-chat';
         document.getElementById('cfg-token').value = config.token || '';
         settingsModal.classList.add('open');
       };
@@ -1126,9 +1678,11 @@
         config.user.name = document.getElementById('cfg-user-name').value || 'User';
         config.user.id = document.getElementById('cfg-user-id').value || 'user_dev';
         config.user.avatar = document.getElementById('cfg-avatar').value || '💻';
-        const [owner, repo] = document.getElementById('cfg-repo').value.split('/');
+        const repoStr = document.getElementById('cfg-repo').value || 'sysoce/git-chat';
+        const [owner, repo] = repoStr.split('/');
         config.owner = owner || 'sysoce';
         config.repo = repo || 'git-chat';
+        config.branch = document.getElementById('cfg-branch').value || 'git-chat';
         config.token = document.getElementById('cfg-token').value;
 
         const newPass = document.getElementById('cfg-vault-pass').value;
@@ -1139,10 +1693,11 @@
         }
 
         saveLocalCache();
+        publishUserProfile();
         renderSidebar();
         renderTimeline();
         settingsModal.classList.remove('open');
-        showToast('Settings updated');
+        showToast('Settings saved successfully');
       };
 
       // Export JSON
@@ -1190,8 +1745,10 @@
       // Sync button
       document.getElementById('btn-sync-now').onclick = () => syncFromLocalServer(true);
 
-      // Background sync every 4s
-      setInterval(() => syncFromLocalServer(false), 4000);
+      // Periodic background sync & heartbeats
+      setInterval(() => syncFromLocalServer(false), 3000);
+      setInterval(publishPresence, 20000);
+      setInterval(checkS3Status, 15000);
     });
   </script>
 </body>

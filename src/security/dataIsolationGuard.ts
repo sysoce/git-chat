@@ -181,8 +181,8 @@ export class DataIsolationGuard {
       return true;
     }
 
-    // Case J: attachments/<hash>.<ext>
-    const attachMatch = cleanPath.match(/^attachments\/([a-f0-9]{32,64})\.([a-zA-Z0-9]+)$/);
+    // Case J: attachments/<key>.<ext>
+    const attachMatch = cleanPath.match(/^attachments\/([a-zA-Z0-9_.-]+)\.([a-zA-Z0-9]+)$/);
     if (attachMatch) {
       const ext = attachMatch[2]!.toLowerCase();
       if (!SAFE_ATTACHMENT_EXTENSIONS.has(ext)) {

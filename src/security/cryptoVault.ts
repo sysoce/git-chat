@@ -68,6 +68,19 @@ export async function deriveVaultKey(
 }
 
 /**
+ * Derives a 256-bit AES-GCM CryptoKey specifically for a 1-on-1 Direct Message conversation.
+ */
+export async function deriveDMKey(
+  passphrase: string,
+  userAId: string,
+  userBId: string
+): Promise<CryptoKey> {
+  const sorted = [userAId, userBId].sort();
+  const dmSalt = `git-chat-dm-salt-${sorted[0]}-${sorted[1]}`;
+  return deriveVaultKey(passphrase, dmSalt);
+}
+
+/**
  * Encrypts a plaintext string into an EncryptedPayload using AES-GCM-256.
  */
 export async function encryptContent(
