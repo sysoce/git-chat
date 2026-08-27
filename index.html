@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="theme-color" content="#19171d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -42,6 +42,7 @@
       --safe-bottom: env(safe-area-inset-bottom, 0px);
       --safe-left: env(safe-area-inset-left, 0px);
       --safe-right: env(safe-area-inset-right, 0px);
+      --app-height: 100dvh;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -50,9 +51,13 @@
       background: var(--bg-main);
       color: var(--text-main);
       height: 100%;
-      height: 100dvh;
+      height: var(--app-height, 100dvh);
       overflow: hidden;
       overscroll-behavior-y: none;
+      position: fixed;
+      width: 100vw;
+      left: 0;
+      top: 0;
     }
 
     /* Main Container */
@@ -60,9 +65,20 @@
       display: flex;
       width: 100vw;
       height: 100%;
-      height: 100dvh;
+      height: var(--app-height, 100dvh);
       overflow: hidden;
       position: relative;
+    }
+
+    #main-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      height: var(--app-height, 100dvh);
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
     }
 
     /* Sidebar Mobile Backdrop */
@@ -834,6 +850,8 @@
         left: 0;
         top: 0;
         bottom: 0;
+        height: 100%;
+        height: var(--app-height, 100dvh);
         width: 84vw;
         max-width: 320px;
         transform: translateX(-100%);
@@ -862,7 +880,7 @@
         width: 100vw;
         min-width: 100vw;
         height: 100%;
-        height: 100dvh;
+        height: var(--app-height, 100dvh);
         z-index: 700;
         transform: translateX(100%);
         transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
@@ -872,6 +890,11 @@
       #thread-drawer.open {
         transform: translateX(0);
         pointer-events: auto;
+      }
+
+      /* Mobile Composer padding */
+      #composer-container {
+        padding: 0 10px calc(8px + var(--safe-bottom)) 10px;
       }
 
       /* Modals as Native Bottom Sheets on Mobile */
@@ -884,6 +907,7 @@
         max-width: 100%;
         border-radius: 20px 20px 0 0;
         max-height: 88vh;
+        max-height: calc(var(--app-height, 100dvh) * 0.88);
         padding: 20px 18px calc(24px + var(--safe-bottom)) 18px;
         border-bottom: none;
         animation: slideUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1048,40 +1072,42 @@
         • <b>Connect Phone or Computer:</b> Enter the <u>same Vault Password</u> and <u>same Git Backend Repo</u> across your devices.<br/>
         • <b>End-to-End Encryption:</b> Messages in common channels & 1-on-1 DMs are encrypted and isolated on <code>refs/heads/git-chat</code>.
       </div>
-      <div class="form-group">
-        <label class="form-label">Your Display Name</label>
-        <input class="form-input" id="vault-user-name" placeholder="e.g. Phone, Alice, Bob, Developer" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Your Avatar Emoji</label>
-        <input class="form-input" id="vault-user-avatar" value="📱" style="width:70px; text-align:center;" />
-      </div>
-      <div class="form-group">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <label class="form-label" style="margin-bottom:0;">Vault Encryption Password</label>
-          <button type="button" id="btn-gen-pass" style="background:none; border:none; color:var(--accent-blue); font-size:12px; cursor:pointer; font-weight:600;">🎲 Generate</button>
+      <form id="vault-login-form" onsubmit="return false;" autocomplete="on">
+        <div class="form-group">
+          <label class="form-label" for="vault-user-name">Your Display Name</label>
+          <input class="form-input" id="vault-user-name" name="username" autocomplete="username" placeholder="e.g. Phone, Alice, Bob, Developer" />
         </div>
-        <div style="position:relative; display:flex; align-items:center;">
-          <input class="form-input" type="password" id="vault-password" placeholder="Choose or enter vault password..." autofocus style="padding-right:44px;" />
-          <button type="button" id="btn-toggle-pwd-vis" style="position:absolute; right:10px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; padding:6px;" title="Show/Hide Password">👁️</button>
+        <div class="form-group">
+          <label class="form-label" for="vault-user-avatar">Your Avatar Emoji</label>
+          <input class="form-input" id="vault-user-avatar" name="avatar" value="📱" style="width:70px; text-align:center;" />
         </div>
-      </div>
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label class="form-label" for="vault-password" style="margin-bottom:0;">Vault Encryption Password</label>
+            <button type="button" id="btn-gen-pass" style="background:none; border:none; color:var(--accent-blue); font-size:12px; cursor:pointer; font-weight:600;">🎲 Generate</button>
+          </div>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input class="form-input" type="password" id="vault-password" name="password" autocomplete="current-password" placeholder="Choose or enter vault password..." autofocus style="padding-right:44px;" />
+            <button type="button" id="btn-toggle-pwd-vis" style="position:absolute; right:10px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; padding:6px;" title="Show/Hide Password">👁️</button>
+          </div>
+        </div>
 
-      <!-- Collapsible Advanced Data Backend -->
-      <details style="margin:12px 0; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:13px;">
-        <summary style="cursor:pointer; color:var(--text-muted); font-weight:600;">⚙️ Advanced: Backend Repository Config</summary>
-        <div style="margin-top:10px;">
-          <label class="form-label">Data Repository (owner/repo)</label>
-          <input class="form-input" id="vault-backend-repo" value="sysoce/git-chat" placeholder="e.g. sysoce/git-chat or org/chat-data" />
-          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Messages sync to this repository's <code>refs/heads/git-chat</code> branch.</div>
-        </div>
-      </details>
+        <!-- Collapsible Advanced Data Backend -->
+        <details style="margin:12px 0; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:13px;">
+          <summary style="cursor:pointer; color:var(--text-muted); font-weight:600;">⚙️ Advanced: Backend Repository Config</summary>
+          <div style="margin-top:10px;">
+            <label class="form-label" for="vault-backend-repo">Data Repository (owner/repo)</label>
+            <input class="form-input" id="vault-backend-repo" name="repository" value="sysoce/git-chat" placeholder="e.g. sysoce/git-chat or org/chat-data" />
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Messages sync to this repository's <code>refs/heads/git-chat</code> branch.</div>
+          </div>
+        </details>
 
-      <div style="margin:12px 0; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted);">
-        <input type="checkbox" id="chk-remember-vault" checked style="width:18px; height:18px; cursor:pointer;" />
-        <label for="chk-remember-vault" style="cursor:pointer; user-select:none;">Remember on this device</label>
-      </div>
-      <button class="btn-primary" id="btn-unlock-vault">Unlock & Enter Workspace 🔓</button>
+        <div style="margin:12px 0; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted);">
+          <input type="checkbox" id="chk-remember-vault" name="remember" checked style="width:18px; height:18px; cursor:pointer;" />
+          <label for="chk-remember-vault" style="cursor:pointer; user-select:none;">Remember on this device</label>
+        </div>
+        <button type="submit" class="btn-primary" id="btn-unlock-vault">Unlock & Enter Workspace 🔓</button>
+      </form>
     </div>
   </div>
 
@@ -1137,8 +1163,8 @@
             <input class="form-input" id="cfg-avatar" value="💻" style="width:70px; text-align:center;" />
           </div>
           <div class="form-group">
-            <label class="form-label">Vault Password</label>
-            <input class="form-input" type="password" id="cfg-vault-pass" placeholder="Change vault password..." />
+            <label class="form-label" for="cfg-vault-pass">Vault Password</label>
+            <input class="form-input" type="password" id="cfg-vault-pass" name="password" autocomplete="current-password" placeholder="Change vault password..." />
           </div>
           <div class="form-group">
             <label class="form-label">Git Data Repository (owner/repo)</label>
@@ -2581,14 +2607,35 @@
       renderTimeline();
     }
 
-    // Render Timeline Messages
-    async function renderTimeline() {
+    // In-memory plaintext cache for decrypted AES-GCM-256 messages (eliminates lag on mobile)
+    const decryptedMessageCache = new Map();
+    let lastRenderedChannelId = null;
+    let lastRenderedChecksum = '';
+
+    function getMsgDecryptCacheKey(msg, isVaultLocked, keyId) {
+      if (!msg.encrypted) return null;
+      const cipher = msg.encrypted.ciphertext || JSON.stringify(msg.encrypted);
+      return `${msg.id}_${isVaultLocked ? 'locked' : 'unlocked'}_${keyId}_${cipher}`;
+    }
+
+    // Render Timeline Messages with High Performance Caching & Diffing
+    async function renderTimeline(force = false) {
       const container = document.getElementById('timeline-container');
-      container.innerHTML = '';
+      if (!container) return;
 
       const chanMsgs = state.messages
         .filter(m => m.channelId === activeChannelId && !m.threadRootId)
         .sort((a,b) => a.timestamp - b.timestamp);
+
+      const isScrolledToBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 60;
+
+      // Smart dirty check: avoid re-creating DOM and decrypting if state for this channel hasn't changed
+      const checksum = `${activeChannelId}_${chanMsgs.length}_${isVaultLocked}_${chanMsgs[chanMsgs.length - 1]?.id || ''}_${JSON.stringify(chanMsgs.map(m => Object.keys(m.reactions || {}).length))}`;
+      if (!force && activeChannelId === lastRenderedChannelId && checksum === lastRenderedChecksum) {
+        return;
+      }
+      lastRenderedChannelId = activeChannelId;
+      lastRenderedChecksum = checksum;
 
       if (chanMsgs.length === 0) {
         const chan = state.channels[activeChannelId];
@@ -2598,21 +2645,30 @@
       }
 
       const chanKey = await getEncryptionKeyForChannel(activeChannelId);
+      const keyId = chanKey ? activeChannelId : 'none';
+      const fragment = document.createDocumentFragment();
 
       for (const msg of chanMsgs) {
         const el = document.createElement('div');
         el.className = 'msg-group';
+        el.dataset.msgId = msg.id;
         const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        // Decrypt content if encrypted
+        // Fast In-Memory Cached Decryption
         let displayContent = msg.content;
         if (msg.encrypted) {
           if (!isVaultLocked && chanKey) {
-            let dec = await CryptoVault.decrypt(msg.encrypted, chanKey);
-            if (!dec && vaultKey && vaultKey !== chanKey) {
-              dec = await CryptoVault.decrypt(msg.encrypted, vaultKey);
+            const cacheKey = getMsgDecryptCacheKey(msg, isVaultLocked, keyId);
+            if (cacheKey && decryptedMessageCache.has(cacheKey)) {
+              displayContent = decryptedMessageCache.get(cacheKey);
+            } else {
+              let dec = await CryptoVault.decrypt(msg.encrypted, chanKey);
+              if (!dec && vaultKey && vaultKey !== chanKey) {
+                dec = await CryptoVault.decrypt(msg.encrypted, vaultKey);
+              }
+              displayContent = dec || '<span class="encrypted-placeholder">🔒 [Decryption failed - Incorrect Key]</span>';
+              if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
             }
-            displayContent = dec || '<span class="encrypted-placeholder">🔒 [Decryption failed - Incorrect Key]</span>';
           } else {
             displayContent = '<span class="encrypted-placeholder">🔒 [Encrypted Message • Unlock Vault to view]</span>';
           }
@@ -2676,9 +2732,15 @@
           }
         };
 
-        container.appendChild(el);
+        fragment.appendChild(el);
       }
-      container.scrollTop = container.scrollHeight;
+
+      container.innerHTML = '';
+      container.appendChild(fragment);
+
+      if (isScrolledToBottom || force) {
+        container.scrollTop = container.scrollHeight;
+      }
     }
 
     // Send Message (with E2EE & S3 Attachments)
@@ -2829,14 +2891,26 @@
       const rootMsg = state.messages.find(m => m.id === activeThreadRootId);
       const replies = state.messages.filter(m => m.threadRootId === activeThreadRootId).sort((a,b) => a.timestamp - b.timestamp);
       const container = document.getElementById('thread-timeline');
-      container.innerHTML = '';
+      if (!container) return;
 
       const chanKey = await getEncryptionKeyForChannel(activeChannelId);
+      const keyId = chanKey ? activeChannelId : 'none';
+      const fragment = document.createDocumentFragment();
 
       if (rootMsg) {
         let rootText = rootMsg.content;
         if (rootMsg.encrypted && !isVaultLocked && chanKey) {
-          rootText = (await CryptoVault.decrypt(rootMsg.encrypted, chanKey)) || rootMsg.content;
+          const cacheKey = getMsgDecryptCacheKey(rootMsg, isVaultLocked, keyId);
+          if (cacheKey && decryptedMessageCache.has(cacheKey)) {
+            rootText = decryptedMessageCache.get(cacheKey);
+          } else {
+            let dec = await CryptoVault.decrypt(rootMsg.encrypted, chanKey);
+            if (!dec && vaultKey && vaultKey !== chanKey) {
+              dec = await CryptoVault.decrypt(rootMsg.encrypted, vaultKey);
+            }
+            rootText = dec || rootMsg.content;
+            if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
+          }
         }
         const rootEl = document.createElement('div');
         rootEl.className = 'msg-group';
@@ -2850,13 +2924,23 @@
             ${renderAttachments(rootMsg.attachments)}
           </div>
         `;
-        container.appendChild(rootEl);
+        fragment.appendChild(rootEl);
       }
 
       for (const rep of replies) {
         let repText = rep.content;
         if (rep.encrypted && !isVaultLocked && chanKey) {
-          repText = (await CryptoVault.decrypt(rep.encrypted, chanKey)) || rep.content;
+          const cacheKey = getMsgDecryptCacheKey(rep, isVaultLocked, keyId);
+          if (cacheKey && decryptedMessageCache.has(cacheKey)) {
+            repText = decryptedMessageCache.get(cacheKey);
+          } else {
+            let dec = await CryptoVault.decrypt(rep.encrypted, chanKey);
+            if (!dec && vaultKey && vaultKey !== chanKey) {
+              dec = await CryptoVault.decrypt(rep.encrypted, vaultKey);
+            }
+            repText = dec || rep.content;
+            if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
+          }
         }
         const repEl = document.createElement('div');
         repEl.className = 'msg-group';
@@ -2868,8 +2952,11 @@
             ${renderAttachments(rep.attachments)}
           </div>
         `;
-        container.appendChild(repEl);
+        fragment.appendChild(repEl);
       }
+
+      container.innerHTML = '';
+      container.appendChild(fragment);
       container.scrollTop = container.scrollHeight;
     }
 
@@ -2928,32 +3015,52 @@
         // User discovery: users/<userId>.json
         if (relativePath.match(/^users\/([a-zA-Z0-9_-]+)\.json$/)) {
           if (parsed.id) {
-            state.users[parsed.id] = { ...state.users[parsed.id], ...parsed };
-            return true;
+            const existing = state.users[parsed.id];
+            if (!existing || existing.name !== parsed.name || existing.avatar !== parsed.avatar) {
+              state.users[parsed.id] = { ...state.users[parsed.id], ...parsed };
+              return true;
+            }
           }
+          return false;
         }
 
         // Presence discovery: presence/<userId>.json
         if (relativePath.match(/^presence\/([a-zA-Z0-9_-]+)\.json$/)) {
           if (parsed.userId && state.users[parsed.userId]) {
-            state.users[parsed.userId].lastSeen = parsed.lastSeen;
-            return true;
+            if (state.users[parsed.userId].lastSeen !== parsed.lastSeen) {
+              state.users[parsed.userId].lastSeen = parsed.lastSeen;
+              return true;
+            }
           }
+          return false;
         }
 
         // Channel metadata: channels/<chan_id>/meta.json
         if (relativePath.match(/^channels\/([a-zA-Z0-9_-]+)\/meta\.json$/)) {
-          state.channels[parsed.id] = { ...state.channels[parsed.id], ...parsed };
-          return true;
+          const existing = state.channels[parsed.id];
+          if (!existing || existing.name !== parsed.name || existing.topic !== parsed.topic) {
+            state.channels[parsed.id] = { ...state.channels[parsed.id], ...parsed };
+            return true;
+          }
+          return false;
         }
 
         // Messages & Thread replies: channels/<chan_id>/messages/ or channels/<chan_id>/threads/
         if (relativePath.includes('/messages/') || relativePath.includes('/threads/')) {
           const idx = state.messages.findIndex(m => m.id === parsed.id);
+          let isChanged = false;
           if (idx === -1) {
             state.messages.push(parsed);
+            isChanged = true;
           } else {
-            state.messages[idx] = { ...state.messages[idx], ...parsed };
+            const existing = state.messages[idx];
+            if (existing.timestamp !== parsed.timestamp || 
+                existing.content !== parsed.content || 
+                JSON.stringify(existing.reactions || {}) !== JSON.stringify(parsed.reactions || {}) ||
+                JSON.stringify(existing.attachments || []) !== JSON.stringify(parsed.attachments || [])) {
+              state.messages[idx] = { ...existing, ...parsed };
+              isChanged = true;
+            }
           }
 
           // Discover author as user
@@ -2964,6 +3071,7 @@
               avatar: parsed.author.avatar || '👤',
               lastSeen: parsed.timestamp || Date.now()
             };
+            isChanged = true;
           }
 
           // Auto-discover DM channel
@@ -2980,13 +3088,15 @@
                 isDm: true,
                 targetUserId: peerId
               };
+              isChanged = true;
             }
           }
-          return true;
+          return isChanged;
         }
 
         // Reaction and delete events
         if (relativePath.includes('/events/')) {
+          let eventHandled = false;
           if (parsed.type === 'reaction_add') {
             const targetMsg = state.messages.find(m => m.id === parsed.targetMessageId);
             if (targetMsg) {
@@ -2994,17 +3104,25 @@
               targetMsg.reactions[parsed.emoji] = targetMsg.reactions[parsed.emoji] || [];
               if (!targetMsg.reactions[parsed.emoji].includes(parsed.authorId)) {
                 targetMsg.reactions[parsed.emoji].push(parsed.authorId);
+                eventHandled = true;
               }
             }
           } else if (parsed.type === 'reaction_remove') {
             const targetMsg = state.messages.find(m => m.id === parsed.targetMessageId);
             if (targetMsg && targetMsg.reactions && targetMsg.reactions[parsed.emoji]) {
-              targetMsg.reactions[parsed.emoji] = targetMsg.reactions[parsed.emoji].filter(u => u !== parsed.authorId);
+              if (targetMsg.reactions[parsed.emoji].includes(parsed.authorId)) {
+                targetMsg.reactions[parsed.emoji] = targetMsg.reactions[parsed.emoji].filter(u => u !== parsed.authorId);
+                eventHandled = true;
+              }
             }
           } else if (parsed.type === 'message_delete') {
+            const beforeLen = state.messages.length;
             state.messages = state.messages.filter(m => m.id !== parsed.targetMessageId && m.threadRootId !== parsed.targetMessageId);
+            if (state.messages.length !== beforeLen) {
+              eventHandled = true;
+            }
           }
-          return true;
+          return eventHandled;
         }
       } catch (err) {
         console.warn('Failed to parse sync file:', relativePath, err);
@@ -3197,11 +3315,16 @@ Minimum version required to store current data is: `+i+`.
             vaultKey = await CryptoVault.deriveKey(vaultPassword);
             isVaultLocked = false;
             sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+            localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(vaultPassword).catch(() => {});
+            }
             const vaultBtn = document.getElementById('btn-vault-toggle');
             if (vaultBtn) {
               vaultBtn.className = 'header-btn vault-unlocked';
               vaultBtn.textContent = '🔓 Vault Unlocked';
             }
+            showToast(`📱 Workspace paired! Vault password copied to clipboard.`);
           }
           saveLocalCache();
           showToast(`Configured for repository: ${config.owner}/${config.repo}`);
@@ -3221,7 +3344,7 @@ Minimum version required to store current data is: `+i+`.
           vaultBtn.className = 'header-btn vault-unlocked';
           vaultBtn.textContent = '🔓 Vault Unlocked';
         }
-        renderTimeline();
+        renderTimeline(true);
         renderSidebar();
         publishUserProfile();
       } else if (isVaultLocked) {
@@ -3234,6 +3357,66 @@ Minimum version required to store current data is: `+i+`.
         const vModal = document.getElementById('vault-modal');
         if (vModal) vModal.classList.add('open');
       }
+
+      // Mobile Virtual Keyboard and Visual Viewport Sync
+      function initVisualViewportHandler() {
+        const updateViewport = () => {
+          if (window.visualViewport) {
+            const vh = window.visualViewport.height;
+            document.documentElement.style.setProperty('--app-height', `${vh}px`);
+            
+            const isKeyboardOpen = (window.innerHeight - vh) > 100;
+            if (isKeyboardOpen) {
+              const timeline = document.getElementById('timeline-container');
+              if (timeline) {
+                timeline.scrollTop = timeline.scrollHeight;
+              }
+              const threadTimeline = document.getElementById('thread-timeline');
+              if (threadTimeline) {
+                threadTimeline.scrollTop = threadTimeline.scrollHeight;
+              }
+            }
+          }
+        };
+
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', updateViewport);
+          window.visualViewport.addEventListener('scroll', updateViewport);
+        }
+        window.addEventListener('resize', updateViewport);
+        updateViewport();
+
+        // Keep composer in view on focus & auto-grow
+        const msgInput = document.getElementById('message-input');
+        if (msgInput) {
+          msgInput.addEventListener('focus', () => {
+            setTimeout(() => {
+              updateViewport();
+              const timeline = document.getElementById('timeline-container');
+              if (timeline) timeline.scrollTop = timeline.scrollHeight;
+            }, 300);
+          });
+          msgInput.addEventListener('input', () => {
+            msgInput.style.height = 'auto';
+            msgInput.style.height = Math.min(msgInput.scrollHeight, 140) + 'px';
+          });
+        }
+        const threadInput = document.getElementById('thread-input');
+        if (threadInput) {
+          threadInput.addEventListener('focus', () => {
+            setTimeout(() => {
+              updateViewport();
+              const tTimeline = document.getElementById('thread-timeline');
+              if (tTimeline) tTimeline.scrollTop = tTimeline.scrollHeight;
+            }, 300);
+          });
+          threadInput.addEventListener('input', () => {
+            threadInput.style.height = 'auto';
+            threadInput.style.height = Math.min(threadInput.scrollHeight, 140) + 'px';
+          });
+        }
+      }
+      initVisualViewportHandler();
 
       // S3 Attach button and file input
       const fileInput = document.getElementById('file-upload-input');
@@ -3310,7 +3493,7 @@ Minimum version required to store current data is: `+i+`.
         });
       }
 
-      // Passphrase Generator Button
+      // Passphrase Generator Button (with auto-copy and notice)
       setClickHandler('btn-gen-pass', () => {
         const words = ['delta', 'cyber', 'orbit', 'falcon', 'matrix', 'beacon', 'galaxy', 'quantum', 'signal', 'vector', 'harbor', 'shadow', 'summit', 'aurora', 'nexus', 'stellar', 'plasma', 'zenith', 'pulse', 'echo'];
         const generated = Array.from({ length: 4 }, () => words[Math.floor(Math.random() * words.length)]).join('-');
@@ -3319,7 +3502,24 @@ Minimum version required to store current data is: `+i+`.
           pwdInput.value = generated;
           pwdInput.type = 'text';
         }
-        showToast('Generated passphrase: ' + generated);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(generated).catch(() => {});
+        }
+        showToast(`🎲 Generated & copied passphrase to clipboard: ${generated}`);
+      });
+
+      // Dedicated Copy Password Button in Vault Modal
+      setClickHandler('btn-copy-vault-pwd', () => {
+        const pwdInput = document.getElementById('vault-password');
+        const pass = pwdInput ? pwdInput.value : vaultPassword;
+        if (pass) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(pass).catch(() => {});
+          }
+          showToast('📋 Vault password copied to clipboard!');
+        } else {
+          showToast('⚠️ No password entered yet');
+        }
       });
 
       // Password Visibility Toggle
@@ -3330,8 +3530,9 @@ Minimum version required to store current data is: `+i+`.
         }
       });
 
-      // Vault Unlock Button
-      setClickHandler('btn-unlock-vault', async () => {
+      // Vault Unlock Handler (with auto-copy and notice)
+      const handleVaultUnlock = async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
         const pass = document.getElementById('vault-password')?.value;
         const name = document.getElementById('vault-user-name')?.value;
         const avatar = document.getElementById('vault-user-avatar')?.value;
@@ -3365,6 +3566,11 @@ Minimum version required to store current data is: `+i+`.
         saveLocalCache();
         publishUserProfile();
 
+        // Auto-copy password to clipboard on login & display notice
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(vaultPassword).catch(() => {});
+        }
+
         const vaultBtn = document.getElementById('btn-vault-toggle');
         if (vaultBtn) {
           vaultBtn.className = 'header-btn vault-unlocked';
@@ -3373,20 +3579,14 @@ Minimum version required to store current data is: `+i+`.
         const vModal = document.getElementById('vault-modal');
         if (vModal) vModal.classList.remove('open');
         renderSidebar();
-        renderTimeline();
-        showToast(`Vault unlocked! Welcome, ${config.user.name}`);
-      });
+        renderTimeline(true);
+        showToast(`🔓 Vault unlocked & password copied to clipboard! Welcome, ${config.user.name}`);
+      };
 
-      // Vault input Enter key
-      const vaultPassInput = document.getElementById('vault-password');
-      if (vaultPassInput) {
-        vaultPassInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            const btn = document.getElementById('btn-unlock-vault');
-            if (btn) btn.click();
-          }
-        });
+      setClickHandler('btn-unlock-vault', handleVaultUnlock);
+      const vaultLoginForm = document.getElementById('vault-login-form');
+      if (vaultLoginForm) {
+        vaultLoginForm.addEventListener('submit', handleVaultUnlock);
       }
 
       // Vault Toggle Button in header
@@ -3404,7 +3604,7 @@ Minimum version required to store current data is: `+i+`.
             vaultBtn.className = 'header-btn vault-locked';
             vaultBtn.textContent = '🔒 Vault Locked';
           }
-          renderTimeline();
+          renderTimeline(true);
           renderSidebar();
           showToast('Vault locked. Message contents hidden.');
         }
