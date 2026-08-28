@@ -200,6 +200,21 @@
         No server required. Open the standalone file anywhere.
       </p>
     </div>
+    <!-- Active Pre-Configuration Card -->
+    <div class="card-section" id="active-setup-card" style="display:none; border-color: rgba(35, 134, 54, 0.5); background: rgba(35, 134, 54, 0.08);">
+      <div class="section-title" style="color: #3fb950;">
+        ✅ Pre-Configured Workspace Detected
+      </div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+        The downloaded file will come pre-configured with your vault password and repository settings. Open it anywhere locally to start chatting immediately.
+      </p>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:12px; font-family:monospace; background:rgba(0,0,0,0.25); padding:10px; border-radius:6px; border:1px solid var(--border-color);">
+        <div><span style="color:var(--text-muted)">Repo:</span> <b id="setup-repo-display" style="color:#58a6ff;">sysoce/git-chat</b></div>
+        <div><span style="color:var(--text-muted)">Branch:</span> <b id="setup-branch-display">git-chat</b></div>
+        <div><span style="color:var(--text-muted)">Vault:</span> <b id="setup-vault-display" style="color:#3fb950;">●●●●●●●● (Embedded)</b></div>
+        <div><span style="color:var(--text-muted)">Bridge:</span> <b id="setup-bridge-display" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; max-width:140px; vertical-align:bottom;">http://192.168.1.111:4300</b></div>
+      </div>
+    </div>
 
     <!-- Quick Action Buttons -->
     <div class="actions">
@@ -230,6 +245,22 @@
       </div>
     </div>
 
+    <!-- Firefox Android Quick Links -->
+    <div class="card-section" style="margin-top:14px;">
+      <div class="section-title">
+        🦊 Firefox Android Quick Open
+      </div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">
+        After downloading, open Firefox on Android and enter this local address:
+      </p>
+      <div class="url-input-group">
+        <input class="url-input" id="firefox-url-display" value="file:///storage/emulated/0/Download/git-chat.html" readonly />
+        <button class="btn btn-secondary" id="btn-copy-firefox-url" style="padding:8px 12px; font-size:12px;">
+          📋 Copy
+        </button>
+      </div>
+    </div>
+
     <!-- 3-Step Setup Guide -->
     <div class="card-section" style="margin-top:14px;">
       <div class="section-title">
@@ -242,11 +273,11 @@
         </div>
         <div class="step-item">
           <div class="step-num">2</div>
-          <div><b>Enter Vault Password:</b> Enter your vault encryption password to decrypt and read messages.</div>
+          <div><b>Instant Unlocking:</b> Pre-configured downloads auto-unlock your vault and connect to your workspace immediately.</div>
         </div>
         <div class="step-item">
           <div class="step-num">3</div>
-          <div><b>Sync Directly with GitHub:</b> Pulls discrete message commits via Git. For serverless direct push, enter a GitHub Personal Access Token in Settings.</div>
+          <div><b>Sync Seamlessly:</b> Syncs directly via LAN relay bridge on local Wi-Fi, and Git commits on GitHub / remote.</div>
         </div>
       </div>
     </div>
@@ -282,9 +313,73 @@
       }
     }
 
+    function getActiveSetup() {
+      // 1. Check hash
+      const fromHash = parseSetupHash();
+      if (fromHash) return fromHash;
+
+      // 2. Check local/session storage (e.g. when accessing on LAN server)
+      try {
+        const savedPass = sessionStorage.getItem('git_chat_vault_pass') || localStorage.getItem('git_chat_saved_vault_pass') || '';
+        let savedCfg = {};
+        try {
+          savedCfg = JSON.parse(localStorage.getItem('git_chat_config') || '{}');
+        } catch {}
+
+        if (savedPass || savedCfg.owner || savedCfg.repo) {
+          return {
+            owner: savedCfg.owner || 'sysoce',
+            repo: savedCfg.repo || 'git-chat',
+            branch: savedCfg.branch || 'git-chat',
+            password: savedPass,
+            workspaceSecret: savedCfg.workspaceSecret || '',
+            backendUrl: (savedCfg.lanUrl || (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://192.168.1.111:4300')).replace(/\/+$/, ''),
+            user: savedCfg.user || { id: 'user_dev', name: 'User', avatar: '💻' }
+          };
+        }
+      } catch {}
+
+      return null;
+    }
+
+    function injectSetupIntoHtmlBundle(htmlContent, setupPayload) {
+      if (!setupPayload) return htmlContent;
+      const scriptBlock = '<script id="embedded-setup-config" type="application/json">\n' + JSON.stringify(setupPayload, null, 2) + '\n<' + '/script>';
+      const tagRegex = new RegExp('<script\\s+id=["\']embedded-setup-config["\']\\s+type=["\']application\\/json["\']>([\\s\\S]*?)<' + '\\/script>', 'i');
+      if (tagRegex.test(htmlContent)) {
+        return htmlContent.replace(tagRegex, scriptBlock);
+      }
+      const headIdx = htmlContent.toLowerCase().indexOf('</head>');
+      if (headIdx !== -1) {
+        return htmlContent.slice(0, headIdx) + '  ' + scriptBlock + '\n' + htmlContent.slice(headIdx);
+      }
+      return scriptBlock + '\n' + htmlContent;
+    }
+
     function initDownloadPage() {
-      const setup = parseSetupHash();
+      const setup = getActiveSetup();
       const currentHash = window.location.hash || '';
+
+      // Update Active Setup Card UI if setup is present
+      if (setup) {
+        const activeCard = document.getElementById('active-setup-card');
+        if (activeCard) activeCard.style.display = 'block';
+
+        const repoDisplay = document.getElementById('setup-repo-display');
+        if (repoDisplay) repoDisplay.textContent = `${setup.owner || 'sysoce'}/${setup.repo || 'git-chat'}`;
+
+        const branchDisplay = document.getElementById('setup-branch-display');
+        if (branchDisplay) branchDisplay.textContent = setup.branch || 'git-chat';
+
+        const vaultDisplay = document.getElementById('setup-vault-display');
+        if (vaultDisplay) {
+          vaultDisplay.textContent = setup.password ? '●●●●●●●● (Embedded)' : 'Not Set';
+          vaultDisplay.style.color = setup.password ? '#3fb950' : '#8b949e';
+        }
+
+        const bridgeDisplay = document.getElementById('setup-bridge-display');
+        if (bridgeDisplay) bridgeDisplay.textContent = setup.backendUrl || 'None';
+      }
 
       // Update launch web link
       const launchBtn = document.getElementById('btn-launch-web');
@@ -292,14 +387,19 @@
         launchBtn.href = 'index.html' + currentHash;
       }
 
-      // Download Bundle Button
+      // Download Bundle Button (Bakes setup into file)
       const dlBtn = document.getElementById('btn-download-bundle');
       if (dlBtn) {
         dlBtn.onclick = async () => {
           try {
+            const activeSetup = getActiveSetup();
             const res = await fetch('index.html');
             if (!res.ok) throw new Error('Failed to fetch bundle');
-            const blob = await res.blob();
+            let htmlText = await res.text();
+            if (activeSetup) {
+              htmlText = injectSetupIntoHtmlBundle(htmlText, activeSetup);
+            }
+            const blob = new Blob([htmlText], { type: 'text/html;charset=utf-8' });
             const blobUrl = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = blobUrl;
@@ -308,7 +408,7 @@
             a.click();
             a.remove();
             setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-            showToast('📥 Download started: git-chat.html');
+            showToast(activeSetup?.password ? '📥 Downloaded pre-configured git-chat.html (Vault ready!)' : '📥 Download started: git-chat.html');
           } catch (e) {
             // Fallback direct navigation
             window.location.href = 'index.html';
@@ -341,6 +441,17 @@
             navigator.clipboard.writeText(mobileUrl).catch(() => {});
           }
           showToast('📋 Mobile setup URL copied to clipboard!');
+        };
+      }
+
+      const copyFirefoxBtn = document.getElementById('btn-copy-firefox-url');
+      if (copyFirefoxBtn) {
+        copyFirefoxBtn.onclick = () => {
+          const ffUrl = document.getElementById('firefox-url-display')?.value || 'file:///storage/emulated/0/Download/git-chat.html';
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(ffUrl).catch(() => {});
+          }
+          showToast('🦊 Firefox Android address copied to clipboard!');
         };
       }
     }
