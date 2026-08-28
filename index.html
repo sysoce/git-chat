@@ -3307,86 +3307,114 @@ Minimum version required to store current data is: `+i+`.
       }
     }
 
-    // Setup Event Listeners
-    window.addEventListener('DOMContentLoaded', async () => {
-      // Sync Version Badges immediately on load
-      document.querySelectorAll('.ws-version-badge').forEach(el => { el.textContent = `v${CLIENT_VERSION}`; });
-      const setVerEl = document.getElementById('settings-client-version');
-      if (setVerEl) setVerEl.textContent = `v${CLIENT_VERSION}`;
+    // ==========================================
+    // UI EVENT HANDLERS & MODAL MANAGEMENT
+    // ==========================================
 
-      try {
-        loadLocalCache();
-        await detectIdentity();
-        renderSidebar();
-        renderTimeline();
-        syncFromLocalServer();
-        checkS3Status();
-      } catch (err) {
-        console.warn('Initial startup notice:', err);
+    function openVaultModal() {
+      const vModal = document.getElementById('vault-modal');
+      if (vModal) {
+        vModal.classList.add('open');
+        const pwdInput = document.getElementById('vault-password');
+        if (pwdInput) setTimeout(() => pwdInput.focus(), 50);
+      }
+    }
+    window.openVaultModal = openVaultModal;
+
+    async function handleVaultUnlock(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const pass = document.getElementById('vault-password')?.value;
+      const name = document.getElementById('vault-user-name')?.value;
+      const avatar = document.getElementById('vault-user-avatar')?.value;
+      const customRepo = document.getElementById('vault-backend-repo')?.value;
+      const remember = document.getElementById('chk-remember-vault')?.checked;
+      if (!pass) {
+        alert('Please enter or generate a vault password');
+        return;
+      }
+      vaultPassword = pass;
+      if (name && name.trim()) {
+        config.user.name = name.trim();
+        config.user.id = `user_${name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')}`;
+      }
+      if (avatar && avatar.trim()) config.user.avatar = avatar.trim();
+
+      if (customRepo && customRepo.includes('/')) {
+        const [owner, repo] = customRepo.trim().split('/');
+        config.owner = owner;
+        config.repo = repo;
       }
 
-      // Check URL hash for vault password or setup
-      if (window.location.hash.startsWith('#setup=')) {
-        try {
-          const raw = atob(window.location.hash.slice(7));
-          const parsed = JSON.parse(raw);
-          if (parsed.owner) config.owner = parsed.owner;
-          if (parsed.repo) config.repo = parsed.repo;
-          if (parsed.branch) config.branch = parsed.branch;
-          if (parsed.workspaceSecret) config.workspaceSecret = parsed.workspaceSecret;
-          if (parsed.password) {
-            vaultPassword = parsed.password;
-            vaultKey = await CryptoVault.deriveKey(vaultPassword);
-            isVaultLocked = false;
-            sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
-            localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(vaultPassword).catch(() => {});
-            }
-            const vaultBtn = document.getElementById('btn-vault-toggle');
-            if (vaultBtn) {
-              vaultBtn.className = 'header-btn vault-unlocked';
-              vaultBtn.textContent = '🔓 Vault Unlocked';
-            }
-            showToast(`📱 Workspace paired! Vault password copied to clipboard.`);
-          }
-          saveLocalCache();
-          showToast(`Configured for repository: ${config.owner}/${config.repo}`);
-        } catch (e) {
-          console.error('Failed to parse setup hash', e);
-        }
+      vaultKey = await CryptoVault.deriveKey(vaultPassword);
+      isVaultLocked = false;
+      decryptedMessageCache.clear();
+      lastRenderedChecksum = '';
+      sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+      if (remember) {
+        localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
+      } else {
+        localStorage.removeItem('git_chat_saved_vault_pass');
+      }
+      saveLocalCache();
+      publishUserProfile();
+
+      // Auto-copy password to clipboard on login & display notice
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(vaultPassword).catch(() => {});
       }
 
-      // Check for saved vault session
-      const savedPass = sessionStorage.getItem('git_chat_vault_pass') || localStorage.getItem('git_chat_saved_vault_pass');
-      if (savedPass && !vaultPassword) {
-        vaultPassword = savedPass;
-        vaultKey = await CryptoVault.deriveKey(vaultPassword);
-        isVaultLocked = false;
-        const vaultBtn = document.getElementById('btn-vault-toggle');
-        if (vaultBtn) {
-          vaultBtn.className = 'header-btn vault-unlocked';
-          vaultBtn.textContent = '🔓 Vault Unlocked';
-        }
-        renderTimeline(true);
-        renderSidebar();
-        publishUserProfile();
-      } else if (isVaultLocked) {
-        const uName = document.getElementById('vault-user-name');
-        if (uName) uName.value = config.user.name;
-        const uAvatar = document.getElementById('vault-user-avatar');
-        if (uAvatar) uAvatar.value = config.user.avatar || (/Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? '📱' : '💻');
-        const uRepo = document.getElementById('vault-backend-repo');
-        if (uRepo) uRepo.value = `${config.owner}/${config.repo}`;
-        const vModal = document.getElementById('vault-modal');
-        if (vModal) vModal.classList.add('open');
+      const vaultBtn = document.getElementById('btn-vault-toggle');
+      if (vaultBtn) {
+        vaultBtn.className = 'header-btn vault-unlocked';
+        vaultBtn.textContent = '🔓 Vault Unlocked';
       }
+      const vModal = document.getElementById('vault-modal');
+      if (vModal) vModal.classList.remove('open');
+      renderSidebar();
+      renderTimeline(true);
+      showToast(`🔓 Vault unlocked & password copied to clipboard! Welcome, ${config.user.name}`);
+    }
+    window.handleVaultUnlock = handleVaultUnlock;
 
-      // Mobile Virtual Keyboard and Visual Viewport Sync
-      function initVisualViewportHandler() {
-        const updateViewport = () => {
-          if (window.visualViewport) {
-            const vh = window.visualViewport.height;
+    function openSettingsHandler() {
+      const uName = document.getElementById('cfg-user-name');
+      if (uName) uName.value = config.user.name;
+      const uId = document.getElementById('cfg-user-id');
+      if (uId) uId.value = config.user.id;
+      const uAvatar = document.getElementById('cfg-avatar');
+      if (uAvatar) uAvatar.value = config.user.avatar || '💻';
+      const uRepo = document.getElementById('cfg-repo');
+      if (uRepo) uRepo.value = `${config.owner}/${config.repo}`;
+      const uBranch = document.getElementById('cfg-branch');
+      if (uBranch) uBranch.value = config.branch || 'git-chat';
+      const uToken = document.getElementById('cfg-token');
+      if (uToken) uToken.value = config.token || '';
+      const uBackend = document.getElementById('cfg-backend-url');
+      if (uBackend) uBackend.value = config.backendUrl || (window.location.protocol === 'file:' ? 'http://localhost:4300' : '');
+      const uSecret = document.getElementById('cfg-workspace-secret');
+      if (uSecret) uSecret.value = config.workspaceSecret || '';
+      const autoUpChk = document.getElementById('cfg-auto-update-enabled');
+      if (autoUpChk) autoUpChk.checked = isAutoUpdateEnabled();
+      const verSpan = document.getElementById('settings-client-version');
+      if (verSpan) verSpan.textContent = `v${CLIENT_VERSION}`;
+
+      // Storage & Access Tab fields
+      updateStorageVolumeStatusDisplay();
+      renderMembersRoster();
+      if (typeof window.switchSettingsTab === 'function') window.switchSettingsTab('general');
+      const settingsModal = document.getElementById('settings-modal');
+      if (settingsModal) settingsModal.classList.add('open');
+    }
+    window.openSettingsHandler = openSettingsHandler;
+
+    // Mobile Virtual Keyboard and Visual Viewport Sync
+    function initVisualViewportHandler() {
+      let lastVh = 0;
+      const updateViewport = () => {
+        if (window.visualViewport) {
+          const vh = Math.round(window.visualViewport.height);
+          if (Math.abs(vh - lastVh) >= 1) {
+            lastVh = vh;
             document.documentElement.style.setProperty('--app-height', `${vh}px`);
             
             const isKeyboardOpen = (window.innerHeight - vh) > 100;
@@ -3401,45 +3429,49 @@ Minimum version required to store current data is: `+i+`.
               }
             }
           }
-        };
+        }
+      };
 
-        if (window.visualViewport) {
-          window.visualViewport.addEventListener('resize', updateViewport);
-          window.visualViewport.addEventListener('scroll', updateViewport);
-        }
-        window.addEventListener('resize', updateViewport);
-        updateViewport();
-
-        // Keep composer in view on focus & auto-grow
-        const msgInput = document.getElementById('message-input');
-        if (msgInput) {
-          msgInput.addEventListener('focus', () => {
-            setTimeout(() => {
-              updateViewport();
-              const timeline = document.getElementById('timeline-container');
-              if (timeline) timeline.scrollTop = timeline.scrollHeight;
-            }, 300);
-          });
-          msgInput.addEventListener('input', () => {
-            msgInput.style.height = 'auto';
-            msgInput.style.height = Math.min(msgInput.scrollHeight, 140) + 'px';
-          });
-        }
-        const threadInput = document.getElementById('thread-input');
-        if (threadInput) {
-          threadInput.addEventListener('focus', () => {
-            setTimeout(() => {
-              updateViewport();
-              const tTimeline = document.getElementById('thread-timeline');
-              if (tTimeline) tTimeline.scrollTop = tTimeline.scrollHeight;
-            }, 300);
-          });
-          threadInput.addEventListener('input', () => {
-            threadInput.style.height = 'auto';
-            threadInput.style.height = Math.min(threadInput.scrollHeight, 140) + 'px';
-          });
-        }
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', updateViewport);
+        window.visualViewport.addEventListener('scroll', updateViewport);
       }
+      window.addEventListener('resize', updateViewport);
+      updateViewport();
+
+      // Keep composer in view on focus & auto-grow
+      const msgInput = document.getElementById('message-input');
+      if (msgInput) {
+        msgInput.addEventListener('focus', () => {
+          setTimeout(() => {
+            updateViewport();
+            const timeline = document.getElementById('timeline-container');
+            if (timeline) timeline.scrollTop = timeline.scrollHeight;
+          }, 300);
+        });
+        msgInput.addEventListener('input', () => {
+          msgInput.style.height = 'auto';
+          msgInput.style.height = Math.min(msgInput.scrollHeight, 140) + 'px';
+        });
+      }
+      const threadInput = document.getElementById('thread-input');
+      if (threadInput) {
+        threadInput.addEventListener('focus', () => {
+          setTimeout(() => {
+            updateViewport();
+            const tTimeline = document.getElementById('thread-timeline');
+            if (tTimeline) tTimeline.scrollTop = tTimeline.scrollHeight;
+          }, 300);
+        });
+        threadInput.addEventListener('input', () => {
+          threadInput.style.height = 'auto';
+          threadInput.style.height = Math.min(threadInput.scrollHeight, 140) + 'px';
+        });
+      }
+    }
+
+    // Synchronously bind all UI click and input events
+    function bindEventListeners() {
       initVisualViewportHandler();
 
       // S3 Attach button and file input
@@ -3465,39 +3497,27 @@ Minimum version required to store current data is: `+i+`.
         }
       });
 
-      // Mobile Link in header & QR Modal
+      // Mobile Connect Modal (QR Code & Direct Setup Link)
       setClickHandler('btn-mobile-sync-link', openMobileModal);
-      setClickHandler('btn-show-qr-code', () => {
-        const sModal = document.getElementById('settings-modal');
-        if (sModal) sModal.classList.remove('open');
-        openMobileModal();
-      });
       setClickHandler('btn-close-qr', () => {
         const qrModal = document.getElementById('qr-modal');
         if (qrModal) qrModal.classList.remove('open');
       });
-      setClickHandler('btn-copy-qr-link', () => {
-        const urlInput = document.getElementById('mobile-link-url');
-        if (urlInput) {
-          urlInput.select();
-          navigator.clipboard.writeText(urlInput.value);
-          showToast('📋 Mobile setup link copied!');
-        }
-      });
-      setClickHandler('btn-copy-mobile-setup-link', () => {
+
+      setClickHandler('btn-copy-mobile-link', () => {
         const link = generateMobileSetupUrl();
         navigator.clipboard.writeText(link);
         showToast('📋 Mobile setup link copied to clipboard!');
       });
 
-      // Clipboard Paste (e.g. Screenshot or copied file)
+      // Clipboard Paste
       document.addEventListener('paste', (e) => {
         if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
           uploadFilesToS3(e.clipboardData.files);
         }
       });
 
-      // Drag & Drop onto composer or chat timeline
+      // Drag & Drop
       const dropZone = document.getElementById('main-chat');
       if (dropZone) {
         dropZone.addEventListener('dragover', (e) => {
@@ -3517,7 +3537,7 @@ Minimum version required to store current data is: `+i+`.
         });
       }
 
-      // Passphrase Generator Button (with auto-copy and notice)
+      // Passphrase Generator Button
       setClickHandler('btn-gen-pass', () => {
         const words = ['delta', 'cyber', 'orbit', 'falcon', 'matrix', 'beacon', 'galaxy', 'quantum', 'signal', 'vector', 'harbor', 'shadow', 'summit', 'aurora', 'nexus', 'stellar', 'plasma', 'zenith', 'pulse', 'echo'];
         const generated = Array.from({ length: 4 }, () => words[Math.floor(Math.random() * words.length)]).join('-');
@@ -3554,58 +3574,18 @@ Minimum version required to store current data is: `+i+`.
         }
       });
 
-      // Vault Unlock Handler (with auto-copy and notice)
-      const handleVaultUnlock = async (e) => {
-        if (e && e.preventDefault) e.preventDefault();
-        const pass = document.getElementById('vault-password')?.value;
-        const name = document.getElementById('vault-user-name')?.value;
-        const avatar = document.getElementById('vault-user-avatar')?.value;
-        const customRepo = document.getElementById('vault-backend-repo')?.value;
-        const remember = document.getElementById('chk-remember-vault')?.checked;
-        if (!pass) {
-          alert('Please enter or generate a vault password');
-          return;
-        }
-        vaultPassword = pass;
-        if (name && name.trim()) {
-          config.user.name = name.trim();
-          config.user.id = `user_${name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')}`;
-        }
-        if (avatar && avatar.trim()) config.user.avatar = avatar.trim();
-
-        if (customRepo && customRepo.includes('/')) {
-          const [owner, repo] = customRepo.trim().split('/');
-          config.owner = owner;
-          config.repo = repo;
-        }
-
-        vaultKey = await CryptoVault.deriveKey(vaultPassword);
-        isVaultLocked = false;
-        sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
-        if (remember) {
-          localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
-        } else {
-          localStorage.removeItem('git_chat_saved_vault_pass');
-        }
-        saveLocalCache();
-        publishUserProfile();
-
-        // Auto-copy password to clipboard on login & display notice
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(vaultPassword).catch(() => {});
-        }
-
-        const vaultBtn = document.getElementById('btn-vault-toggle');
-        if (vaultBtn) {
-          vaultBtn.className = 'header-btn vault-unlocked';
-          vaultBtn.textContent = '🔓 Vault Unlocked';
-        }
-        const vModal = document.getElementById('vault-modal');
-        if (vModal) vModal.classList.remove('open');
-        renderSidebar();
-        renderTimeline(true);
-        showToast(`🔓 Vault unlocked & password copied to clipboard! Welcome, ${config.user.name}`);
-      };
+      // Media Viewer Dialog Event Listeners
+      const mediaDlg = document.getElementById('media-viewer-dialog');
+      if (mediaDlg) {
+        mediaDlg.addEventListener('click', (e) => {
+          if (e.target === mediaDlg) closeMediaViewer();
+        });
+        mediaDlg.addEventListener('cancel', () => {
+          closeMediaViewer();
+        });
+        const closeBtn = document.getElementById('btn-close-media-viewer');
+        if (closeBtn) closeBtn.onclick = closeMediaViewer;
+      }
 
       setClickHandler('btn-unlock-vault', handleVaultUnlock);
       const vaultLoginForm = document.getElementById('vault-login-form');
@@ -3613,14 +3593,15 @@ Minimum version required to store current data is: `+i+`.
         vaultLoginForm.addEventListener('submit', handleVaultUnlock);
       }
 
-      // Vault Toggle Button in header
+      // Vault Toggle
       setClickHandler('btn-vault-toggle', () => {
         if (isVaultLocked) {
-          const vModal = document.getElementById('vault-modal');
-          if (vModal) vModal.classList.add('open');
+          openVaultModal();
         } else {
           isVaultLocked = true;
           vaultKey = null;
+          decryptedMessageCache.clear();
+          lastRenderedChecksum = '';
           sessionStorage.removeItem('git_chat_vault_pass');
           localStorage.removeItem('git_chat_saved_vault_pass');
           const vaultBtn = document.getElementById('btn-vault-toggle');
@@ -3735,35 +3716,52 @@ Minimum version required to store current data is: `+i+`.
 
       // Settings Modal
       const settingsModal = document.getElementById('settings-modal');
-      const openSettingsHandler = () => {
-        const uName = document.getElementById('cfg-user-name');
-        if (uName) uName.value = config.user.name;
-        const uId = document.getElementById('cfg-user-id');
-        if (uId) uId.value = config.user.id;
-        const uAvatar = document.getElementById('cfg-avatar');
-        if (uAvatar) uAvatar.value = config.user.avatar || '💻';
-        const uRepo = document.getElementById('cfg-repo');
-        if (uRepo) uRepo.value = `${config.owner}/${config.repo}`;
-        const uBranch = document.getElementById('cfg-branch');
-        if (uBranch) uBranch.value = config.branch || 'git-chat';
-        const uToken = document.getElementById('cfg-token');
-        if (uToken) uToken.value = config.token || '';
-        const uBackend = document.getElementById('cfg-backend-url');
-        if (uBackend) uBackend.value = config.backendUrl || (window.location.protocol === 'file:' ? 'http://localhost:4300' : '');
-        const uSecret = document.getElementById('cfg-workspace-secret');
-        if (uSecret) uSecret.value = config.workspaceSecret || '';
-
-        // Storage & Access Tab fields
-        updateStorageVolumeStatusDisplay();
-        renderMembersRoster();
-        switchSettingsTab('general');
-        if (settingsModal) settingsModal.classList.add('open');
-      };
-
       setClickHandler('btn-open-settings', openSettingsHandler);
       setClickHandler('btn-user-profile', openSettingsHandler);
       setClickHandler('btn-close-settings', () => {
         if (settingsModal) settingsModal.classList.remove('open');
+      });
+
+      // Auto-Update & Update Modal Listeners
+      const autoUpToggle = document.getElementById('toggle-auto-update');
+      if (autoUpToggle) {
+        autoUpToggle.onchange = () => setAutoUpdateEnabled(autoUpToggle.checked);
+      }
+      const cfgAutoUpToggle = document.getElementById('cfg-auto-update-enabled');
+      if (cfgAutoUpToggle) {
+        cfgAutoUpToggle.onchange = () => setAutoUpdateEnabled(cfgAutoUpToggle.checked);
+      }
+      setClickHandler('btn-check-updates-now', () => checkForUpdates(true));
+      setClickHandler('btn-download-bundle-now', () => {
+        triggerBundleDownload('/download', 'git-chat.html');
+        showToast('Downloaded git-chat.html');
+      });
+      setClickHandler('btn-manual-download-update', () => {
+        triggerBundleDownload('/download', 'git-chat.html');
+        openUpdateModal(updateState.availableVersion, true);
+        showToast('Downloaded updated git-chat.html');
+      });
+      setClickHandler('btn-close-update-modal', closeUpdateModal);
+      setClickHandler('btn-dismiss-update', closeUpdateModal);
+
+      // Firefox Link Copy Action
+      setClickHandler('btn-copy-firefox-link', () => {
+        const copyBtn = document.getElementById('btn-copy-firefox-link');
+        const textToCopy = copyBtn?.getAttribute('data-copy-text') || FIREFOX_PRIMARY_PATH;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            if (copyBtn) {
+              const orig = copyBtn.textContent;
+              copyBtn.textContent = '✅ Copied!';
+              setTimeout(() => { copyBtn.textContent = orig; }, 2000);
+            }
+            showToast('Copied Firefox path to clipboard');
+          }).catch(() => {
+            showToast(`Firefox Path: ${textToCopy}`);
+          });
+        } else {
+          showToast(`Firefox Path: ${textToCopy}`);
+        }
       });
 
       // Test Storage Connection Button
@@ -3870,6 +3868,55 @@ Minimum version required to store current data is: `+i+`.
         showToast('🔗 1-Click Invite link copied to clipboard!');
       });
 
+      // Notification and Muting Handlers
+      setClickHandler('btn-channel-mute-toggle', () => {
+        toggleCurrentChannelMute();
+      });
+
+      setClickHandler('btn-mob-mute', () => {
+        toggleCurrentChannelMute();
+        const mobMenu = document.getElementById('mobile-menu-dropdown');
+        if (mobMenu) mobMenu.classList.remove('open');
+      });
+
+      setClickHandler('btn-request-notif-perm', async () => {
+        await requestNotificationPermission();
+      });
+
+      setClickHandler('btn-test-notification', () => {
+        sendTestNotification();
+      });
+
+      const notifGlobalModeSelect = document.getElementById('cfg-notif-global-mode');
+      if (notifGlobalModeSelect) {
+        notifGlobalModeSelect.addEventListener('change', (e) => {
+          notificationConfig.globalMode = e.target.value;
+          saveNotificationConfig();
+          showToast(`🔔 Notification mode set to: ${e.target.value}`);
+        });
+      }
+
+      const notifSoundCheckbox = document.getElementById('cfg-notif-sound');
+      if (notifSoundCheckbox) {
+        notifSoundCheckbox.addEventListener('change', (e) => {
+          notificationConfig.soundEnabled = e.target.checked;
+          saveNotificationConfig();
+          if (notificationConfig.soundEnabled) {
+            playNotificationSound();
+          }
+          showToast(`🔊 Sound chime ${e.target.checked ? 'enabled' : 'muted'}`);
+        });
+      }
+
+      const notifBypassCheckbox = document.getElementById('cfg-notif-mention-bypass');
+      if (notifBypassCheckbox) {
+        notifBypassCheckbox.addEventListener('change', (e) => {
+          notificationConfig.mentionsBypassMute = e.target.checked;
+          saveNotificationConfig();
+          showToast(`@mentions override ${e.target.checked ? 'enabled' : 'disabled'}`);
+        });
+      }
+
       // Save Settings
       setClickHandler('btn-save-settings', async () => {
         config.user.name = document.getElementById('cfg-user-name')?.value || 'User';
@@ -3892,6 +3939,15 @@ Minimum version required to store current data is: `+i+`.
         localStorage.setItem('git_chat_storage_repo', storageRepo);
         localStorage.setItem('git_chat_storage_token', storageToken);
 
+        // Notification Settings Sync
+        const notifMode = document.getElementById('cfg-notif-global-mode')?.value;
+        if (notifMode) notificationConfig.globalMode = notifMode;
+        const notifSound = document.getElementById('cfg-notif-sound');
+        if (notifSound) notificationConfig.soundEnabled = notifSound.checked;
+        const notifBypass = document.getElementById('cfg-notif-mention-bypass');
+        if (notifBypass) notificationConfig.mentionsBypassMute = notifBypass.checked;
+        saveNotificationConfig();
+
         // Membership Policy
         const policyEl = document.getElementById('cfg-membership-policy');
         if (state.membersConfig && policyEl) {
@@ -3906,10 +3962,13 @@ Minimum version required to store current data is: `+i+`.
           sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
         }
 
+        decryptedMessageCache.clear();
+        lastRenderedChecksum = '';
         saveLocalCache();
         publishUserProfile();
+        updateChannelMuteUI();
         renderSidebar();
-        renderTimeline();
+        renderTimeline(true);
         checkS3Status();
         if (settingsModal) settingsModal.classList.remove('open');
         showToast('Settings saved successfully');
@@ -3952,23 +4011,34 @@ Minimum version required to store current data is: `+i+`.
         if (searchModal) searchModal.classList.remove('open');
       });
       if (searchInput && searchResults) {
-        searchInput.oninput = () => {
+        searchInput.oninput = async () => {
           const q = searchInput.value.toLowerCase().trim();
           searchResults.innerHTML = '';
           if (!q) return;
-          const matches = state.messages.filter(m => (m.content || '').toLowerCase().includes(q));
+          const matches = [];
+          for (const m of state.messages) {
+            let text = m.content || '';
+            if (m.encrypted && !isVaultLocked) {
+              const dec = await decryptMessage(m, m.channelId);
+              if (dec) text = dec;
+            }
+            if (text && text.toLowerCase().includes(q)) {
+              matches.push({ msg: m, text });
+            }
+          }
           if (matches.length === 0) {
             searchResults.innerHTML = '<div style="color:var(--text-dim); padding:10px; text-align:center;">No matching messages found</div>';
             return;
           }
-          for (const m of matches) {
+          for (const match of matches) {
+            const m = match.msg;
             const item = document.createElement('div');
             item.style.padding = '8px 10px';
             item.style.background = 'var(--bg-main)';
             item.style.borderRadius = '6px';
             item.style.cursor = 'pointer';
             item.style.border = '1px solid var(--border)';
-            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-weight:600; color:var(--text-heading);">${m.author?.name || 'Unknown'}</span> <span style="font-size:11px; color:var(--text-dim);">${new Date(m.timestamp).toLocaleDateString()}</span></div><div style="font-size:11px; color:var(--accent-blue); margin-bottom:4px;">#${state.channels[m.channelId]?.name || m.channelId}</div><div style="font-size:13px; color:var(--text-main);">${m.content}</div>`;
+            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-weight:600; color:var(--text-heading);">${m.author?.name || 'Unknown'}</span> <span style="font-size:11px; color:var(--text-dim);">${new Date(m.timestamp).toLocaleDateString()}</span></div><div style="font-size:11px; color:var(--accent-blue); margin-bottom:4px;">#${state.channels[m.channelId]?.name || m.channelId}</div><div style="font-size:13px; color:var(--text-main);">${renderMarkdown(match.text)}</div>`;
             item.onclick = () => {
               selectChannel(m.channelId);
               if (searchModal) searchModal.classList.remove('open');
@@ -4110,12 +4180,149 @@ Minimum version required to store current data is: `+i+`.
           }
         }
       }
+    }
 
-      // Periodic background sync & heartbeats
-      setInterval(() => syncFromLocalServer(false), 3000);
-      setInterval(publishPresence, 20000);
-      setInterval(checkS3Status, 15000);
-    });
+    // Initialize Vault Session & Setup Hash
+    async function initVaultSession() {
+      // Check URL hash for vault password or setup
+      if (window.location.hash.startsWith('#setup=')) {
+        try {
+          const raw = atob(window.location.hash.slice(7));
+          const parsed = JSON.parse(raw);
+          if (parsed.owner) config.owner = parsed.owner;
+          if (parsed.repo) config.repo = parsed.repo;
+          if (parsed.branch) config.branch = parsed.branch;
+          if (parsed.workspaceSecret) config.workspaceSecret = parsed.workspaceSecret;
+          if (parsed.backendUrl) config.backendUrl = parsed.backendUrl;
+          if (parsed.token) config.token = parsed.token;
+          if (parsed.password) {
+            vaultPassword = parsed.password;
+            vaultKey = await CryptoVault.deriveKey(vaultPassword);
+            isVaultLocked = false;
+            sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+            localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(vaultPassword).catch(() => {});
+            }
+            const vaultBtn = document.getElementById('btn-vault-toggle');
+            if (vaultBtn) {
+              vaultBtn.className = 'header-btn vault-unlocked';
+              vaultBtn.textContent = '🔓 Vault Unlocked';
+            }
+            showToast('📱 Workspace paired! Vault password applied.');
+          }
+          saveLocalCache();
+          showToast(`Configured for ${config.backendUrl || `${config.owner}/${config.repo}`}`);
+          syncFromLocalServer();
+        } catch (e) {
+          console.error('Failed to parse setup hash', e);
+        }
+      }
+
+      // Check for saved vault session
+      const savedPass = sessionStorage.getItem('git_chat_vault_pass') || localStorage.getItem('git_chat_saved_vault_pass');
+      if (savedPass && !vaultPassword) {
+        vaultPassword = savedPass;
+        try {
+          vaultKey = await CryptoVault.deriveKey(vaultPassword);
+          isVaultLocked = false;
+          const vaultBtn = document.getElementById('btn-vault-toggle');
+          if (vaultBtn) {
+            vaultBtn.className = 'header-btn vault-unlocked';
+            vaultBtn.textContent = '🔓 Vault Unlocked';
+          }
+          renderTimeline(true);
+          renderSidebar();
+          publishUserProfile();
+        } catch (e) {
+          console.error('Failed to derive key from saved vault pass', e);
+        }
+      } else if (isVaultLocked) {
+        const uName = document.getElementById('vault-user-name');
+        if (uName) uName.value = config.user.name;
+        const uAvatar = document.getElementById('vault-user-avatar');
+        if (uAvatar) uAvatar.value = config.user.avatar || (/Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? '📱' : '💻');
+        const uRepo = document.getElementById('vault-backend-repo');
+        if (uRepo) uRepo.value = `${config.owner}/${config.repo}`;
+        const vModal = document.getElementById('vault-modal');
+        if (vModal) vModal.classList.add('open');
+      }
+    }
+
+    // Unified Application Bootstrap
+    async function initApp() {
+      // Sync Version Badges
+      document.querySelectorAll('.ws-version-badge').forEach(el => { el.textContent = `v${CLIENT_VERSION}`; });
+      const curVerEl = document.getElementById('update-current-version');
+      if (curVerEl) curVerEl.textContent = `v${CLIENT_VERSION}`;
+      const setVerEl = document.getElementById('settings-client-version');
+      if (setVerEl) setVerEl.textContent = `v${CLIENT_VERSION}`;
+
+      try {
+        loadLocalCache();
+      } catch (e) {
+        console.warn('loadLocalCache failed', e);
+      }
+      try {
+        loadNotificationConfig();
+      } catch (e) {
+        console.warn('loadNotificationConfig failed', e);
+      }
+
+      // Populate notified message IDs cache with existing loaded messages to avoid notification storms on boot
+      if (Array.isArray(state.messages)) {
+        for (const m of state.messages) {
+          if (m && m.id) notifiedMessageIds.add(m.id);
+        }
+      }
+
+      // Synchronously bind all UI click and input events immediately
+      try {
+        bindEventListeners();
+      } catch (e) {
+        console.error('bindEventListeners failed', e);
+      }
+
+      // Initial synchronous UI render
+      try {
+        renderSidebar(true);
+        updateChannelMuteUI();
+        renderTimeline(true);
+      } catch (e) {
+        console.error('Initial render failed', e);
+      }
+
+      // Restore vault session or open modal
+      try {
+        await initVaultSession();
+      } catch (e) {
+        console.warn('initVaultSession failed', e);
+      }
+
+      // Non-blocking asynchronous network/backend discovery
+      detectIdentity().then(() => {
+        renderSidebar();
+      }).catch(() => {});
+
+      syncFromLocalServer().catch(() => {});
+      checkS3Status().catch(() => {});
+      checkForUpdates(false).catch(() => {});
+
+      // Periodic background sync & heartbeats (ensure registered only once)
+      if (!window.__gitChatIntervalsStarted) {
+        window.__gitChatIntervalsStarted = true;
+        setInterval(() => syncFromLocalServer(false), 3000);
+        setInterval(publishPresence, 20000);
+        setInterval(checkS3Status, 15000);
+        setInterval(() => checkForUpdates(false), 30000);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
   </script>
 </body>
 </html>
