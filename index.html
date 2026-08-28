@@ -3150,11 +3150,11 @@
               if (!dec && vaultKey && vaultKey !== chanKey) {
                 dec = await CryptoVault.decrypt(msg.encrypted, vaultKey);
               }
-              displayContent = dec || '<span class="encrypted-placeholder">🔒 [Decryption failed - Incorrect Key]</span>';
+              displayContent = dec || '🔒 *[Decryption failed - Incorrect Key]*';
               if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
             }
           } else {
-            displayContent = '<span class="encrypted-placeholder">🔒 [Encrypted Message • Unlock Vault to view]</span>';
+            displayContent = '🔒 *[Encrypted Message • Unlock Vault to view]*';
           }
         }
 
@@ -3747,20 +3747,25 @@ Minimum version required to store current data is: `+i+`.
       let baseUrl = config.lanUrl || '';
       if (!baseUrl) {
         if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
-          baseUrl = 'http://localhost:4300';
+          baseUrl = 'http://192.168.1.111:4300';
         } else {
           baseUrl = window.location.origin + window.location.pathname;
         }
       }
       const payload = {
-        owner: config.owner,
-        repo: config.repo,
+        owner: config.owner || 'sysoce',
+        repo: config.repo || 'git-chat',
         branch: config.branch || 'git-chat',
-        password: vaultPassword,
+        password: vaultPassword || '',
         workspaceSecret: config.workspaceSecret || '',
         backendUrl: baseUrl.replace(/\/+$/, '')
       };
-      const b64 = btoa(JSON.stringify(payload));
+      let b64 = '';
+      try {
+        b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+      } catch {
+        b64 = btoa(JSON.stringify(payload));
+      }
       return baseUrl.replace(/\/+$/, '') + '/#setup=' + b64;
     }
 
@@ -3949,6 +3954,9 @@ Minimum version required to store current data is: `+i+`.
           threadInput.style.height = 'auto';
           threadInput.style.height = Math.min(threadInput.scrollHeight, 140) + 'px';
         });
+      }
+    }
+
     const FIREFOX_PRIMARY_PATH = 'file:///sdcard/Download/git-chat.html';
     const FIREFOX_SDCARD_PATH = 'file:///storage/emulated/0/Download/git-chat.html';
 
