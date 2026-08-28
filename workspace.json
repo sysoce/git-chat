@@ -2,7 +2,7 @@
   "name": "Git-Chat Workspace",
   "description": "Serverless Slack powered by Git data sync",
   "defaultChannelId": "chan_general",
-  "createdAt": 1787929462753,
+  "createdAt": 1787929544299,
   "version": "1.0.0",
   "channels": [
     {
