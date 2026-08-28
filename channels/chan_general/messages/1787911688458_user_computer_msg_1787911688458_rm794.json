@@ -1,0 +1,28 @@
+{
+  "id": "msg_1787911688458_rm794",
+  "channelId": "chan_general",
+  "author": {
+    "id": "user_computer",
+    "name": "Computer",
+    "avatar": "💻",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "0Ghqr58ONXogdzj/",
+    "ciphertext": "j6MrAY3SCivZgsX0lFqh550L2RdgiOciFNZQj5ED8g=="
+  },
+  "attachments": [
+    {
+      "name": "Screenshot 2026-08-10 at 14.28.21.png",
+      "type": "image/png",
+      "size": 2994579,
+      "key": "attachments/1787911682022_screenshot_2026-08-10_at_14_28_2_09852b3a1c44.png",
+      "url": "/api/s3/file/attachments/1787911682022_screenshot_2026-08-10_at_14_28_2_09852b3a1c44.png"
+    }
+  ],
+  "reactions": {},
+  "timestamp": 1787911688458
+}
