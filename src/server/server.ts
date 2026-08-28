@@ -5,6 +5,7 @@ import { createChatCommit, readChatBranchFiles, pushChatBranch, detectGitConfig 
 import { DataIsolationGuard } from '../security/dataIsolationGuard';
 import { S3Client } from '../storage/s3Client';
 import { injectSetupIntoHtml, EmbeddedSetupPayload } from '../engine/setupInjector';
+import { SseEmitter } from './sseEmitter';
 
 export interface ServerOptions {
   port?: number;
@@ -17,6 +18,7 @@ export function startGitChatServer(options: ServerOptions): http.Server {
   const host = options.host || '0.0.0.0';
   const workspaceRoot = options.workspaceRoot;
   const s3Client = new S3Client();
+  const sseEmitter = new SseEmitter();
 
   // In-memory live relay buffer for instant multi-client discrete file sync
   const liveRelayFiles = new Map<string, string>();
@@ -49,6 +51,12 @@ export function startGitChatServer(options: ServerOptions): http.Server {
           'Cache-Control': 'no-store',
         });
         res.end(JSON.stringify({ version: pkgVer, downloadUrl: '/download' }));
+        return;
+      }
+
+      // API: Real-Time Server-Sent Events (SSE) Stream
+      if (url.pathname === '/api/events' && req.method === 'GET') {
+        sseEmitter.addClient(res);
         return;
       }
 
@@ -305,10 +313,11 @@ export function startGitChatServer(options: ServerOptions): http.Server {
           DataIsolationGuard.validateWritePath(f.relativePath, activeUserId);
         }
 
-        // 1. Immediately store in live memory relay for instant pull by other connected devices
+        // 1. Immediately store in live memory relay and broadcast over SSE for instant real-time sync
         for (const f of files) {
           liveRelayFiles.set(f.relativePath, f.content);
         }
+        sseEmitter.broadcastFiles(files);
 
         // 2. Persist to git branch refs/heads/git-chat
         const commitRes = await createChatCommit({

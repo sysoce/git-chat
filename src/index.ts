@@ -15,4 +15,7 @@ export * from './engine/updateManager';
 export * from './engine/updateModal';
 export * from './engine/liveMeshClient';
 export * from './engine/liveMeshRelay';
+export * from './server/tunnel';
+export * from './server/sseEmitter';
+export * from './storage/gitSyncEngine';
 

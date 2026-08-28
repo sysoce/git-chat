@@ -1,4 +1,4 @@
-export const CLIENT_VERSION = '1.0.5';
+export const CLIENT_VERSION = '1.0.6';
 
 export function parseSemver(ver: string): [number, number, number] {
   if (!ver || typeof ver !== 'string') return [0, 0, 0];

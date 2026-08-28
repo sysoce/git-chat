@@ -67,9 +67,11 @@ export async function resetWorkspace(workspaceRoot: string, port = 4300): Promis
   };
 
   const encodedPayload = Buffer.from(JSON.stringify(setupPayload)).toString("base64");
-  const setupUrl = lanUrl + "/#setup=" + encodedPayload;
+  const githubPagesUrl = `https://${owner}.github.io/git-chat/#setup=${encodedPayload}`;
+  const mobileUrl = `${lanUrl}/#setup=${encodedPayload}`;
+  const setupUrl = githubPagesUrl;
   const qrMatrix = generateQrMatrix(setupUrl);
   const qrTerminal = renderQrToTerminal(qrMatrix);
 
-  return { remoteUrl, owner, repo, branch, setupUrl, qrTerminal };
+  return { remoteUrl, owner, repo, branch, setupUrl, githubPagesUrl, mobileUrl, qrTerminal };
 }

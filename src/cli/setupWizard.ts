@@ -1,18 +1,30 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import * as os from 'node:os';
 import { detectGitConfig, createChatCommit } from '../backend/chatGitPlumbing';
 import { generateQrMatrix } from '../qr/qrEncoder';
 import { renderQrToTerminal } from '../qr/qrRenderer';
+import { startTunnel } from '../server/tunnel';
 import type { ChatWorkspaceConfig, ChatUser, ChatMessage } from '../types/chat';
 
 const execFileAsync = promisify(execFile);
 
+export interface SetupOptions {
+  workspaceRoot?: string;
+  port?: number;
+  enableTunnel?: boolean;
+  password?: string;
+}
+
 export interface SetupResult {
   remoteUrl: string;
-  owner?: string;
-  repo?: string;
+  owner: string;
+  repo: string;
   branch: string;
   setupUrl: string;
+  githubPagesUrl: string;
+  mobileUrl: string;
+  tunnelUrl?: string;
   qrTerminal: string;
 }
 
@@ -27,75 +39,27 @@ export async function detectGitHubToken(): Promise<string | undefined> {
   }
 }
 
-export async function runSetupWizard(workspaceRoot: string, port = 4300): Promise<SetupResult> {
+export async function runSetupWizard(options: SetupOptions | string = {}): Promise<SetupResult> {
+  const opts: SetupOptions = typeof options === 'string' ? { workspaceRoot: options } : options;
+  const workspaceRoot = opts.workspaceRoot || process.cwd();
+  const port = opts.port || 4300;
   const gitConfig = await detectGitConfig(workspaceRoot);
   const token = await detectGitHubToken();
-  const remoteUrl = gitConfig.remoteUrl || 'git@github.com:sysoce/git-chat.git';
   const owner = gitConfig.info?.owner || 'sysoce';
-  const repo = gitConfig.info?.repo || 'git-chat';
-  const branch = 'git-chat';
+  const repo = 'chat-data';
+  const branch = 'master';
+  const remoteUrl = gitConfig.remoteUrl || `git@github.com:${owner}/${repo}.git`;
 
-  // 1. Prepare default workspace configuration
-  const workspaceConfig: ChatWorkspaceConfig = {
-    name: 'Git-Chat Workspace',
-    description: 'Serverless Slack powered by Git data sync',
-    defaultChannelId: 'chan_general',
-    createdAt: Date.now(),
-    version: '1.0.0',
-    channels: [
-      { id: 'chan_general', name: 'general', topic: 'Company-wide announcements and work-based matters', isPrivate: false },
-      { id: 'chan_talk_to_a_human', name: 'Talk to a Human', topic: 'Always-open direct channel with Human', isPrivate: false },
-      { id: 'chan_engineering', name: 'engineering', topic: 'Architecture, PRs, CI/CD, and technical discussions', isPrivate: false },
-      { id: 'chan_random', name: 'random', topic: 'Non-work banter, water cooler chats, and fun links', isPrivate: false },
-    ],
-  };
-
-  const adminUser: ChatUser = { id: 'user_admin', name: 'Admin', avatar: '⚡', role: 'admin' };
-  const agentUser: ChatUser = { id: 'agent_human', name: 'Human', avatar: '👤', role: 'agent', isBot: true };
-
-  const welcomeMessage: ChatMessage = {
-    id: 'msg_welcome_001',
-    channelId: 'chan_general',
-    author: { id: 'agent_human', name: 'Human', avatar: '👤', isBot: true },
-    content: `👋 **Welcome to git-chat!**\n\nSynced peer-to-peer over branch \`refs/heads/${branch}\` with discrete zero-conflict updates.`,
-    timestamp: Date.now(),
-  };
-
-  const humanChanWelcomeMessage: ChatMessage = {
-    id: 'msg_human_welcome_001',
-    channelId: 'chan_talk_to_a_human',
-    author: { id: 'agent_human', name: 'Human', avatar: '👤', isBot: true },
-    content: `👋 Hello! I am **Human**, your built-in autonomous AI partner. Ask me anything here or in any channel!`,
-    timestamp: Date.now(),
-  };
-
-  const stagedFiles = [
-    { relativePath: 'workspace.json', content: JSON.stringify(workspaceConfig, null, 2) },
-    { relativePath: 'users/user_admin.json', content: JSON.stringify(adminUser, null, 2) },
-    { relativePath: 'users/agent_human.json', content: JSON.stringify(agentUser, null, 2) },
-    { relativePath: 'presence/user_admin.json', content: JSON.stringify({ userId: 'user_admin', status: 'online', emoji: '💻', lastSeen: Date.now() }, null, 2) },
-    { relativePath: 'presence/agent_human.json', content: JSON.stringify({ userId: 'agent_human', status: 'online', emoji: '👤', lastSeen: Date.now(), currentTask: 'Active in #Talk to a Human' }, null, 2) },
-    ...workspaceConfig.channels.map(c => ({ relativePath: `channels/${c.id}/meta.json`, content: JSON.stringify(c, null, 2) })),
-    { relativePath: `channels/chan_general/messages/${Date.now()}_agent_human_msg-001.json`, content: JSON.stringify(welcomeMessage, null, 2) },
-    { relativePath: `channels/chan_talk_to_a_human/messages/${Date.now()}_agent_human_msg-002.json`, content: JSON.stringify(humanChanWelcomeMessage, null, 2) },
-  ];
-
-  // 2. Commit initial workspace onto refs/heads/git-chat with isolated staging
-  try {
-    await createChatCommit({
-      workspaceRoot,
-      activeUserId: 'user_admin',
-      branch,
-      files: stagedFiles,
-      message: 'chore: initialize git-chat workspace structure with default channels',
-      isWorkspaceInit: true,
-    });
-  } catch (err: any) {
-    // If local git commit fails (e.g. non-git environment), continue to payload creation
+  // Start public tunnel if requested
+  let tunnelUrl: string | undefined;
+  if (opts.enableTunnel) {
+    try {
+      const tun = await startTunnel(port);
+      if (tun) tunnelUrl = tun.url;
+    } catch {}
   }
 
-  // 3. Detect LAN IPv4 for cross-device mobile pairing
-  const os = await import('node:os');
+  // Detect LAN IPv4
   const ifaces = os.networkInterfaces();
   let lanUrl = `http://localhost:${port}`;
   for (const name in ifaces) {
@@ -107,19 +71,24 @@ export async function runSetupWizard(workspaceRoot: string, port = 4300): Promis
     }
   }
 
+  const bestBackendUrl = (tunnelUrl || lanUrl).replace(/\/+$/, '');
   const setupPayload = {
     owner,
     repo,
     branch,
     token: token || '',
+    password: opts.password || 'git-chat-open',
+    workspaceSecret: 'git-chat-open',
+    backendUrl: bestBackendUrl,
     remoteUrl,
-    backendUrl: lanUrl,
   };
 
   const encodedPayload = Buffer.from(JSON.stringify(setupPayload)).toString('base64');
-  const setupUrl = `${lanUrl}/#setup=${encodedPayload}`;
+  const githubPagesUrl = `https://${owner}.github.io/git-chat/#setup=${encodedPayload}`;
+  const mobileUrl = `${bestBackendUrl}/#setup=${encodedPayload}`;
+  const setupUrl = githubPagesUrl;
 
-  const qrMatrix = generateQrMatrix(setupUrl);
+  const qrMatrix = generateQrMatrix(githubPagesUrl || mobileUrl);
   const qrTerminal = renderQrToTerminal(qrMatrix);
 
   return {
@@ -128,6 +97,9 @@ export async function runSetupWizard(workspaceRoot: string, port = 4300): Promis
     repo,
     branch,
     setupUrl,
+    githubPagesUrl,
+    mobileUrl,
+    tunnelUrl,
     qrTerminal,
   };
 }

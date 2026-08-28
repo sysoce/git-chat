@@ -2150,10 +2150,54 @@
       }
     }
 
+    let liveSseSource = null;
+    function initLiveSse() {
+      if (liveSseSource) {
+        try { liveSseSource.close(); } catch {}
+        liveSseSource = null;
+      }
+      const baseUrl = (config.backendUrl || (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : '')).replace(/\/+$/, '');
+      if (!baseUrl && window.location.protocol === 'file:') return;
+      const sseUrl = baseUrl ? `${baseUrl}/api/events` : '/api/events';
+
+      try {
+        liveSseSource = new EventSource(sseUrl);
+        liveSseSource.onopen = () => {
+          const badge = document.getElementById('mesh-status-indicator');
+          if (badge) {
+            badge.textContent = '🟢 Live Stream';
+            badge.style.color = '#10b981';
+            badge.title = 'Live Server-Sent Event stream active (sub-second sync)';
+          }
+        };
+        liveSseSource.addEventListener('sync_files', (evt) => {
+          try {
+            const data = JSON.parse(evt.data);
+            if (data.files && Array.isArray(data.files)) {
+              let updated = false;
+              for (const f of data.files) {
+                if (processSyncFile(f.relativePath, f.content)) updated = true;
+              }
+              if (updated) {
+                saveLocalCache();
+                renderSidebar();
+                renderTimeline();
+                if (activeThreadRootId) renderThread();
+              }
+            }
+          } catch (err) {
+            console.warn('SSE message parse error:', err);
+          }
+        });
+      } catch (err) {
+        console.warn('Could not initialize SSE stream:', err);
+      }
+    }
+
     // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.5';
+    const CLIENT_VERSION = '1.0.6';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -2277,6 +2321,9 @@
         localStorage.setItem('git_chat_channels', JSON.stringify(state.channels));
         localStorage.setItem('git_chat_users', JSON.stringify(state.users));
         localStorage.setItem('git_chat_config', JSON.stringify(config));
+        if (config.token) {
+          localStorage.setItem('git_chat_token', config.token);
+        }
       } catch (e) {
         console.warn('Failed to save to localStorage', e);
       }
@@ -2337,6 +2384,10 @@
         const savedCfg = localStorage.getItem('git_chat_config');
         if (savedCfg) {
           config = { ...config, ...JSON.parse(savedCfg) };
+        }
+        const savedToken = localStorage.getItem('git_chat_token');
+        if (savedToken && !config.token) {
+          config.token = savedToken;
         }
       } catch (e) {
         console.warn('Failed to load state from localStorage', e);
@@ -4001,19 +4052,31 @@
       return false;
     }
 
-    // Direct GitHub REST API Sync (for standalone zero-backend mode)
+    // Direct GitHub REST API Sync (for standalone zero-backend mode with ETag caching)
+    let lastGitHubTreeSha = '';
+    let lastGitHubEtag = '';
+
     async function syncFromGitHub(manual = false) {
       if (!config.owner || !config.repo) return;
       try {
         const branch = config.branch || 'master';
         const token = (config.token || '').trim();
-        const headers = { 'Accept': 'application/vnd.github.v3+json' };
+        const headers = {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'git-chat-web'
+        };
         if (token) {
           headers['Authorization'] = token.startsWith('github_pat_') || token.startsWith('ghp_') ? `Bearer ${token}` : `token ${token}`;
+        }
+        if (lastGitHubEtag && !manual) {
+          headers['If-None-Match'] = lastGitHubEtag;
         }
 
         // Get branch commit and tree SHA safely
         let branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/${encodeURIComponent(branch)}`, { headers });
+        if (branchRes.status === 304 && !manual) {
+          return; // Not modified, save rate limit
+        }
         if (!branchRes.ok && branch !== 'master' && branch !== 'main') {
           branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/master`, { headers });
           if (!branchRes.ok) {
@@ -4021,9 +4084,14 @@
           }
         }
         if (!branchRes.ok) return;
+
+        const newEtag = branchRes.headers.get('etag');
+        if (newEtag) lastGitHubEtag = newEtag;
+
         const branchData = await branchRes.json();
         const treeSha = branchData.commit?.commit?.tree?.sha;
         if (!treeSha) return;
+        if (treeSha === lastGitHubTreeSha && !manual) return; // Tree unchanged
 
         const treeUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/git/trees/${treeSha}?recursive=1`;
         const treeRes = await fetch(treeUrl, { headers });
@@ -4031,6 +4099,8 @@
 
         const treeData = await treeRes.json();
         if (!treeData.tree || !Array.isArray(treeData.tree)) return;
+
+        lastGitHubTreeSha = treeSha;
 
         const chatBlobs = treeData.tree.filter(item => 
           item.type === 'blob' && (
@@ -4377,6 +4447,7 @@ Minimum version required to store current data is: `+i+`.
       renderTimeline(true);
       showToast(`🔓 Vault unlocked & password copied to clipboard! Welcome, ${config.user.name}`);
       initLiveMesh();
+      initLiveSse();
       syncFromLocalServer(false).catch(() => {});
       syncFromGitHub(false).catch(() => {});
     }
@@ -5058,6 +5129,7 @@ Minimum version required to store current data is: `+i+`.
         saveLocalCache();
         publishUserProfile();
         initLiveMesh();
+        initLiveSse();
         updateChannelMuteUI();
         renderSidebar();
         renderTimeline(true);
@@ -5364,6 +5436,7 @@ Minimum version required to store current data is: `+i+`.
           saveLocalCache();
           showToast(`Configured for ${config.backendUrl || `${config.owner}/${config.repo}`}`);
           initLiveMesh();
+          initLiveSse();
           syncFromLocalServer();
         } catch (e) {
           console.error('Failed to parse setup hash', e);
@@ -5387,6 +5460,7 @@ Minimum version required to store current data is: `+i+`.
           renderSidebar();
           publishUserProfile();
           initLiveMesh();
+          initLiveSse();
         } catch (e) {
           console.error('Failed to derive key from saved vault pass', e);
         }
@@ -5429,8 +5503,9 @@ Minimum version required to store current data is: `+i+`.
         }
       }
 
-      // Initialize Zero-Server Live Mesh Relay
+      // Initialize Zero-Server Live Mesh Relay & Live SSE Stream
       initLiveMesh();
+      initLiveSse();
 
       // Synchronously bind all UI click and input events immediately
       try {
