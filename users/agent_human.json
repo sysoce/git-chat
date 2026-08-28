@@ -1,0 +1,7 @@
+{
+  "id": "agent_human",
+  "name": "Human",
+  "avatar": "👤",
+  "role": "agent",
+  "isBot": true
+}

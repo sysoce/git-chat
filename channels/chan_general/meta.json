@@ -1,6 +1,6 @@
 {
   "id": "chan_general",
   "name": "general",
-  "topic": "General team discussion",
-  "createdAt": 1787910577475
+  "topic": "Company-wide announcements and work-based matters",
+  "isPrivate": false
 }

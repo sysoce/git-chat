@@ -1,6 +1,33 @@
 {
-  "id": "sysoce/git-chat",
   "name": "Git-Chat Workspace",
-  "policy": "open",
-  "createdAt": 1787910577475
+  "description": "Serverless Slack powered by Git data sync",
+  "defaultChannelId": "chan_general",
+  "createdAt": 1787929219154,
+  "version": "1.0.0",
+  "channels": [
+    {
+      "id": "chan_general",
+      "name": "general",
+      "topic": "Company-wide announcements and work-based matters",
+      "isPrivate": false
+    },
+    {
+      "id": "chan_talk_to_a_human",
+      "name": "Talk to a Human",
+      "topic": "Always-open direct channel with Human",
+      "isPrivate": false
+    },
+    {
+      "id": "chan_engineering",
+      "name": "engineering",
+      "topic": "Architecture, PRs, CI/CD, and technical discussions",
+      "isPrivate": false
+    },
+    {
+      "id": "chan_random",
+      "name": "random",
+      "topic": "Non-work banter, water cooler chats, and fun links",
+      "isPrivate": false
+    }
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "id": "chan_random",
   "name": "random",
-  "topic": "Casual banter and random thoughts",
-  "createdAt": 1787910577475
+  "topic": "Non-work banter, water cooler chats, and fun links",
+  "isPrivate": false
 }

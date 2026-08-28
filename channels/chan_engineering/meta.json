@@ -1,6 +1,6 @@
 {
   "id": "chan_engineering",
   "name": "engineering",
-  "topic": "Engineering and architectural discussions",
-  "createdAt": 1787910577475
+  "topic": "Architecture, PRs, CI/CD, and technical discussions",
+  "isPrivate": false
 }
