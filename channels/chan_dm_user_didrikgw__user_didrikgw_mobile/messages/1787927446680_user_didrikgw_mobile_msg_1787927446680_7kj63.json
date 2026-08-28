@@ -1,0 +1,19 @@
+{
+  "id": "msg_1787927446680_7kj63",
+  "channelId": "chan_dm_user_didrikgw__user_didrikgw_mobile",
+  "author": {
+    "id": "user_didrikgw_mobile",
+    "name": "didrikgw (Mobile)",
+    "avatar": "📱",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "khLZ0pkMEAo0goNF",
+    "ciphertext": "zzM5CJh4W4AV9P35fYDTHwMjaO13HvcsQHsmVUXDgzxCjZhZuJTlMa756e/kDNCDl86thggO2gVAW1eb4e040IUkWCSx26AfwpZBeoiRdx60sg=="
+  },
+  "reactions": {},
+  "timestamp": 1787927446680
+}
