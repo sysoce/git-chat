@@ -1,0 +1,19 @@
+{
+  "id": "msg_1787925740739_wkvxz",
+  "channelId": "chan_dm_user_developer__user_didrikgw__mobile_",
+  "author": {
+    "id": "user_developer",
+    "name": "Developer",
+    "avatar": "💻",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "Z9ZZYgj3HGhlFgqu",
+    "ciphertext": "tVI0mn0OVMgrB7SOvHxy5SlwRuBK"
+  },
+  "reactions": {},
+  "timestamp": 1787925740739
+}
