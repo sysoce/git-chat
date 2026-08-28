@@ -1,0 +1,19 @@
+{
+  "id": "msg_1787932650526_cyd84",
+  "channelId": "chan_general",
+  "author": {
+    "id": "user_bob",
+    "name": "Bob",
+    "avatar": "👨‍💻",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "gcjLF207uiUW6CbQ",
+    "ciphertext": "Zu5/2UjAGHCKWnsDZhUY85vjfu6u2Q2tAQ2zS9tivdq40WyXESBVAGKLw5gbtwCGolA0fFaKkJXbLOz5T9G8qWK+4uG2ldgEjF8FtrDA/74S3yKhQq9lG52yxWXiGGQw/uVcFnGQGBz2DrsLau+VojfFEt3R0UmCIcS4YwUw"
+  },
+  "reactions": {},
+  "timestamp": 1787932650526
+}
