@@ -1,0 +1,19 @@
+{
+  "id": "msg_1787930057765_5cwk4",
+  "channelId": "chan_dm_user_comp__user_developer",
+  "author": {
+    "id": "user_developer",
+    "name": "Developer",
+    "avatar": "💻",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "Z/zXI9juJYUPawzo",
+    "ciphertext": "uNR+wSYFsczA7cUy4kJqYuC6kw=="
+  },
+  "reactions": {},
+  "timestamp": 1787930057767
+}
