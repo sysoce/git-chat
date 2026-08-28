@@ -1,0 +1,19 @@
+{
+  "id": "msg_1787931207334_kny5g",
+  "channelId": "chan_general",
+  "author": {
+    "id": "user_didrikgw",
+    "name": "didrikgw (Desktop)",
+    "avatar": "💻",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "RBbz3dk1fkx9PSWn",
+    "ciphertext": "VUNfkPZill0eWQ8xgZHSM9Wir19app9tmS31UkemY2SrZUTTxxMjfv/6lqsls/zfVTO9sRaIC+QVvgVQCxNIgAYvpg=="
+  },
+  "reactions": {},
+  "timestamp": 1787931207334
+}
