@@ -6,3 +6,5 @@ dist/
 *.log
 .agent/cache/
 dist-standalone/
+test/artifacts/
+test/e2e/

@@ -1145,6 +1145,7 @@
         <button class="tab-btn active" id="stab-general" onclick="switchSettingsTab('general')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-sidebar-active); color:#fff; cursor:pointer;">⚙️ Workspace</button>
         <button class="tab-btn" id="stab-storage" onclick="switchSettingsTab('storage')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:pointer;">📦 Git-S3 Storage</button>
         <button class="tab-btn" id="stab-access" onclick="switchSettingsTab('access')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:pointer;">👥 Access & Members</button>
+        <button class="tab-btn" id="stab-notifications" onclick="switchSettingsTab('notifications')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:pointer;">🔔 Notifications</button>
       </div>
 
       <div id="settings-tab-content" style="overflow-y:auto; flex:1; padding-right:4px;">
@@ -1257,6 +1258,59 @@
           </div>
           <div style="margin-top:12px;">
             <button class="btn-secondary" id="btn-gen-invite-link" style="width:100%;">🔗 Generate 1-Click Invite Link</button>
+          </div>
+        </div>
+
+        <!-- TAB 4: NOTIFICATIONS & MUTING -->
+        <div id="sec-notifications" style="display:none;">
+          <div style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+            Configure browser push notifications, sound alerts, and channel muting preferences.
+          </div>
+          
+          <!-- Push Permission Status & Request -->
+          <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:600; font-size:13px; color:var(--text-heading);">Web Push Notifications</div>
+                <div id="notif-permission-status-text" style="font-size:11px; color:var(--text-muted); margin-top:2px;">Status: Checking...</div>
+              </div>
+              <button class="btn-secondary" id="btn-request-notif-perm" style="padding:5px 12px; font-size:12px;">Enable Push</button>
+            </div>
+          </div>
+
+          <!-- Global Notification Mode -->
+          <div class="form-group">
+            <label class="form-label">Notification Frequency</label>
+            <select class="form-input" id="cfg-notif-global-mode">
+              <option value="all">🟢 All Messages (Notify on all messages in unmuted channels)</option>
+              <option value="mentions">🟡 Mentions & Direct Messages Only</option>
+              <option value="nothing">🔴 Muted / Do Not Disturb (No notifications)</option>
+            </select>
+          </div>
+
+          <!-- Toggles: Sound Alerts & Mention Bypass -->
+          <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; color:var(--text-main);">
+              <input type="checkbox" id="cfg-notif-sound" style="width:16px; height:16px; accent-color:var(--accent-blue);" />
+              <span>Play audio chime for new notifications</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; color:var(--text-main);">
+              <input type="checkbox" id="cfg-notif-mention-bypass" style="width:16px; height:16px; accent-color:var(--accent-blue);" />
+              <span>Direct @mentions always notify even if channel is muted</span>
+            </label>
+          </div>
+
+          <!-- Muted Channels Management -->
+          <div style="margin-top:12px;">
+            <label class="form-label">Muted Channels & Direct Messages</label>
+            <div id="muted-channels-list-container" style="max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); padding:6px; display:flex; flex-direction:column; gap:4px; font-size:12px;">
+              <div style="color:var(--text-muted); padding:8px; text-align:center;">No channels are currently muted.</div>
+            </div>
+          </div>
+
+          <!-- Test Notification Button -->
+          <div style="margin-top:14px;">
+            <button class="btn-secondary" id="btn-test-notification" style="width:100%;">🔔 Send Test Notification & Chime</button>
           </div>
         </div>
       </div>
@@ -1812,7 +1866,7 @@
     // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.0';
+    const CLIENT_VERSION = '1.0.1';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -1895,6 +1949,8 @@
       messages: [],
       events: []
     };
+    window.state = state;
+    window.config = config;
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -2393,18 +2449,36 @@
       document.getElementById('sec-general').style.display = tabName === 'general' ? 'block' : 'none';
       document.getElementById('sec-storage').style.display = tabName === 'storage' ? 'block' : 'none';
       document.getElementById('sec-access').style.display = tabName === 'access' ? 'block' : 'none';
+      const secNotif = document.getElementById('sec-notifications');
+      if (secNotif) secNotif.style.display = tabName === 'notifications' ? 'block' : 'none';
 
-      document.getElementById('stab-general').style.background = tabName === 'general' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
-      document.getElementById('stab-general').style.color = tabName === 'general' ? '#fff' : 'var(--text-muted)';
+      const stabGen = document.getElementById('stab-general');
+      if (stabGen) {
+        stabGen.style.background = tabName === 'general' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+        stabGen.style.color = tabName === 'general' ? '#fff' : 'var(--text-muted)';
+      }
 
-      document.getElementById('stab-storage').style.background = tabName === 'storage' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
-      document.getElementById('stab-storage').style.color = tabName === 'storage' ? '#fff' : 'var(--text-muted)';
+      const stabStor = document.getElementById('stab-storage');
+      if (stabStor) {
+        stabStor.style.background = tabName === 'storage' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+        stabStor.style.color = tabName === 'storage' ? '#fff' : 'var(--text-muted)';
+      }
 
-      document.getElementById('stab-access').style.background = tabName === 'access' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
-      document.getElementById('stab-access').style.color = tabName === 'access' ? '#fff' : 'var(--text-muted)';
+      const stabAcc = document.getElementById('stab-access');
+      if (stabAcc) {
+        stabAcc.style.background = tabName === 'access' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+        stabAcc.style.color = tabName === 'access' ? '#fff' : 'var(--text-muted)';
+      }
+
+      const stabNotif = document.getElementById('stab-notifications');
+      if (stabNotif) {
+        stabNotif.style.background = tabName === 'notifications' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+        stabNotif.style.color = tabName === 'notifications' ? '#fff' : 'var(--text-muted)';
+      }
 
       if (tabName === 'access') renderMembersRoster();
       if (tabName === 'storage') updateStorageVolumeStatusDisplay();
+      if (tabName === 'notifications') renderNotificationsSettingsTab();
     };
 
     // Access & Member Roster Management
@@ -2478,6 +2552,387 @@
     }
 
 
+    // ==========================================
+    // NOTIFICATION & MUTING ENGINE
+    // ==========================================
+    const DEFAULT_NOTIFICATION_CONFIG = {
+      enabled: false,
+      soundEnabled: true,
+      globalMode: 'all',
+      mentionsBypassMute: true,
+      mutedChannelIds: [],
+      mutedUserIds: []
+    };
+
+    let notificationConfig = { ...DEFAULT_NOTIFICATION_CONFIG };
+    const notifiedMessageIds = new Set();
+    const appBootTimestamp = Date.now();
+
+    function loadNotificationConfig() {
+      try {
+        const raw = localStorage.getItem('git_chat_notification_config');
+        if (raw) {
+          notificationConfig = { ...DEFAULT_NOTIFICATION_CONFIG, ...JSON.parse(raw) };
+        }
+      } catch (e) {
+        notificationConfig = { ...DEFAULT_NOTIFICATION_CONFIG };
+      }
+    }
+
+    function saveNotificationConfig() {
+      try {
+        localStorage.setItem('git_chat_notification_config', JSON.stringify(notificationConfig));
+      } catch (e) {}
+    }
+
+    function isMentioned(content, currentUserId, currentUserName) {
+      if (!content) return false;
+      const lower = content.toLowerCase();
+      const nameRegex = new RegExp(`@${(currentUserName || '').toLowerCase()}\\b`, 'i');
+      const idRegex = new RegExp(`@${(currentUserId || '').toLowerCase()}\\b`, 'i');
+
+      if (nameRegex.test(lower) || idRegex.test(lower)) return true;
+      if (/\b@(everyone|channel|here)\b/i.test(lower)) return true;
+      if (currentUserId === 'user_human_agent' && (/\b@human\b/i.test(lower) || /\/human\b/i.test(lower))) {
+        return true;
+      }
+      return false;
+    }
+
+    function isChannelMuted(channelId, notifCfg) {
+      const cfg = notifCfg || notificationConfig;
+      return Boolean(cfg.mutedChannelIds && cfg.mutedChannelIds.includes(channelId));
+    }
+
+    function toggleChannelMute(channelId, notifCfg) {
+      const cfg = notifCfg || notificationConfig;
+      const currentList = cfg.mutedChannelIds || [];
+      const nextList = currentList.includes(channelId)
+        ? currentList.filter(id => id !== channelId)
+        : [...currentList, channelId];
+      return {
+        ...cfg,
+        mutedChannelIds: nextList
+      };
+    }
+
+    function shouldNotifyMessage(msg, currentUserId, currentUserName, notifCfg) {
+      const cfg = notifCfg || notificationConfig;
+      if (!msg || msg.author?.id === currentUserId) {
+        return { notify: false, reason: 'none', sound: false };
+      }
+      if (cfg.globalMode === 'nothing') {
+        return { notify: false, reason: 'none', sound: false };
+      }
+      if (cfg.mutedUserIds?.includes(msg.author?.id)) {
+        return { notify: false, reason: 'none', sound: false };
+      }
+
+      const mentioned = isMentioned(msg.content, currentUserId, currentUserName);
+      const dmUsers = parseDmChannelUsers(msg.channelId);
+      const isDm = Boolean(dmUsers && dmUsers.includes(currentUserId));
+      const channelMuted = isChannelMuted(msg.channelId, cfg);
+
+      if (channelMuted) {
+        if (mentioned && cfg.mentionsBypassMute) {
+          return { notify: true, reason: 'mention', sound: cfg.soundEnabled };
+        }
+        return { notify: false, reason: 'none', sound: false };
+      }
+
+      if (cfg.globalMode === 'mentions') {
+        if (mentioned) {
+          return { notify: true, reason: 'mention', sound: cfg.soundEnabled };
+        }
+        if (isDm) {
+          return { notify: true, reason: 'dm', sound: cfg.soundEnabled };
+        }
+        return { notify: false, reason: 'none', sound: false };
+      }
+
+      return {
+        notify: true,
+        reason: mentioned ? 'mention' : isDm ? 'dm' : 'all',
+        sound: cfg.soundEnabled
+      };
+    }
+
+    function formatNotificationPreview(msg, channelName) {
+      const isDm = msg.channelId.startsWith('chan_dm_');
+      const cleanName = channelName ? channelName.replace(/^#/, '') : msg.channelId;
+      const authorName = msg.author?.name || 'User';
+      const title = isDm ? `${authorName} (Direct Message)` : `#${cleanName} • ${authorName}`;
+
+      let body = (msg.content || '').replace(/\s+/g, ' ').trim();
+      if (!body && msg.attachments && msg.attachments.length > 0) {
+        body = `[Attachment: ${msg.attachments[0].name}]`;
+      }
+      if (body.length > 150) {
+        body = body.slice(0, 147) + '...';
+      }
+
+      return {
+        title,
+        body,
+        channelId: msg.channelId,
+        messageId: msg.id,
+        threadRootId: msg.threadRootId,
+        avatar: msg.author?.avatar
+      };
+    }
+
+    // Synthesized Web Audio Chime (2-Tone Sine Wave Chime: D5 -> A5)
+    let audioCtx = null;
+    function playNotificationSound() {
+      if (!notificationConfig.soundEnabled) return;
+      try {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtxClass) return;
+        if (!audioCtx) {
+          audioCtx = new AudioCtxClass();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const now = audioCtx.currentTime;
+
+        // Tone 1: 587.33 Hz (D5)
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now);
+        gain1.gain.setValueAtTime(0, now);
+        gain1.gain.linearRampToValueAtTime(0.12, now + 0.01);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.13);
+
+        // Tone 2: 880 Hz (A5)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, now + 0.08);
+        gain2.gain.setValueAtTime(0, now + 0.08);
+        gain2.gain.linearRampToValueAtTime(0.15, now + 0.09);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.08);
+        osc2.stop(now + 0.3);
+      } catch (err) {
+        console.warn('Audio chime playback failed:', err);
+      }
+    }
+
+    // Web Notifications Dispatcher
+    async function sendPushNotification(preview) {
+      if (!notificationConfig.enabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+        return;
+      }
+      try {
+        const notif = new Notification(preview.title, {
+          body: preview.body,
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💬</text></svg>',
+          tag: `git-chat-${preview.messageId}`
+        });
+        notif.onclick = () => {
+          window.focus();
+          selectChannel(preview.channelId);
+          if (preview.threadRootId) {
+            openThread(preview.threadRootId);
+          }
+          notif.close();
+        };
+      } catch (e) {
+        console.warn('Push notification delivery error:', e);
+      }
+    }
+
+    async function notifyMessageIfEligible(msg) {
+      if (!msg || msg.author?.id === config.user.id) return;
+      if (notifiedMessageIds.has(msg.id)) return;
+      notifiedMessageIds.add(msg.id);
+
+      // Skip old messages loaded before this session
+      if (msg.timestamp && msg.timestamp < appBootTimestamp - 10000) return;
+
+      let content = msg.content;
+      if ((!content || content === '[Encrypted Message]') && msg.encrypted && !isVaultLocked) {
+        try {
+          const chanKey = await getEncryptionKeyForChannel(msg.channelId);
+          if (chanKey) {
+            content = await CryptoVault.decrypt(msg.encrypted, chanKey);
+          }
+        } catch {}
+      }
+
+      const resolvedMsg = { ...msg, content: content || '[Encrypted Message]' };
+      const decision = shouldNotifyMessage(resolvedMsg, config.user.id, config.user.name, notificationConfig);
+      if (!decision.notify) return;
+
+      const chan = state.channels[msg.channelId];
+      const channelName = chan ? chan.name : msg.channelId;
+      const preview = formatNotificationPreview(resolvedMsg, channelName);
+
+      sendPushNotification(preview);
+      if (decision.sound) {
+        playNotificationSound();
+      }
+    }
+
+    function toggleCurrentChannelMute() {
+      const isMuted = isChannelMuted(activeChannelId, notificationConfig);
+      notificationConfig = toggleChannelMute(activeChannelId, notificationConfig);
+      saveNotificationConfig();
+      updateChannelMuteUI();
+      renderSidebar();
+      renderNotificationsSettingsTab();
+      const chan = state.channels[activeChannelId];
+      const chanName = chan ? chan.name : activeChannelId;
+      if (!isMuted) {
+        showToast(`🔕 Muted notifications for #${chanName}`);
+      } else {
+        showToast(`🔔 Unmuted notifications for #${chanName}`);
+      }
+    }
+
+    function updateChannelMuteUI() {
+      const isMuted = isChannelMuted(activeChannelId, notificationConfig);
+      const chan = state.channels[activeChannelId];
+      const chanName = chan ? chan.name : activeChannelId;
+      const btn = document.getElementById('btn-channel-mute-toggle');
+      if (btn) {
+        if (isMuted) {
+          btn.innerHTML = `🔕<span class="desktop-only"> Unmute</span>`;
+          btn.title = `Unmute notifications for #${chanName}`;
+          btn.style.color = 'var(--text-muted)';
+          btn.style.opacity = '0.85';
+        } else {
+          btn.innerHTML = `🔔<span class="desktop-only"> Mute</span>`;
+          btn.title = `Mute notifications for #${chanName}`;
+          btn.style.color = '';
+          btn.style.opacity = '1';
+        }
+      }
+
+      const mobBtn = document.getElementById('btn-mob-mute');
+      if (mobBtn) {
+        mobBtn.innerHTML = isMuted ? `🔔 Unmute Channel` : `🔕 Mute Channel`;
+      }
+    }
+
+    async function requestNotificationPermission() {
+      if (typeof Notification === 'undefined') {
+        showToast('Push Notifications are not supported in this browser environment.');
+        return;
+      }
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          notificationConfig.enabled = true;
+          saveNotificationConfig();
+          showToast('🔔 Push Notifications enabled!');
+          playNotificationSound();
+        } else if (perm === 'denied') {
+          notificationConfig.enabled = false;
+          saveNotificationConfig();
+          showToast('🚫 Notifications blocked in browser permissions.');
+        }
+        renderNotificationsSettingsTab();
+      } catch (e) {
+        console.warn('Error requesting notification permission:', e);
+      }
+    }
+
+    function sendTestNotification() {
+      playNotificationSound();
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        sendPushNotification({
+          title: '💬 Git-Chat Test Notification',
+          body: 'Push notifications and audio chime are working perfectly!',
+          channelId: activeChannelId,
+          messageId: 'test_' + Date.now()
+        });
+        showToast('🔔 Test notification dispatched');
+      } else {
+        showToast('🔔 Played audio chime (Push permissions not yet enabled)');
+      }
+    }
+
+    function renderNotificationsSettingsTab() {
+      const statusText = document.getElementById('notif-permission-status-text');
+      const reqBtn = document.getElementById('btn-request-notif-perm');
+      if (statusText && reqBtn) {
+        if (typeof Notification === 'undefined') {
+          statusText.innerHTML = '<span style="color:var(--text-dim)">Unsupported in this browser</span>';
+          reqBtn.disabled = true;
+        } else if (Notification.permission === 'granted') {
+          statusText.innerHTML = '<span style="color:var(--success)">✅ Enabled (Permission Granted)</span>';
+          reqBtn.textContent = 'Active 🔔';
+          reqBtn.disabled = true;
+          reqBtn.style.opacity = '0.7';
+        } else if (Notification.permission === 'denied') {
+          statusText.innerHTML = '<span style="color:var(--danger)">🚫 Blocked in Browser Settings</span>';
+          reqBtn.textContent = 'Blocked';
+          reqBtn.disabled = true;
+          reqBtn.style.opacity = '0.7';
+        } else {
+          statusText.innerHTML = '<span style="color:var(--warning)">⚠️ Not Yet Granted</span>';
+          reqBtn.textContent = 'Enable Push';
+          reqBtn.disabled = false;
+          reqBtn.style.opacity = '1';
+        }
+      }
+
+      const globalModeSelect = document.getElementById('cfg-notif-global-mode');
+      if (globalModeSelect) {
+        globalModeSelect.value = notificationConfig.globalMode || 'all';
+      }
+
+      const soundCheck = document.getElementById('cfg-notif-sound');
+      if (soundCheck) {
+        soundCheck.checked = Boolean(notificationConfig.soundEnabled);
+      }
+
+      const bypassCheck = document.getElementById('cfg-notif-mention-bypass');
+      if (bypassCheck) {
+        bypassCheck.checked = Boolean(notificationConfig.mentionsBypassMute);
+      }
+
+      const mutedContainer = document.getElementById('muted-channels-list-container');
+      if (mutedContainer) {
+        const mutedIds = notificationConfig.mutedChannelIds || [];
+        if (mutedIds.length === 0) {
+          mutedContainer.innerHTML = '<div style="color:var(--text-muted); padding:8px; text-align:center;">No channels or DMs are currently muted.</div>';
+        } else {
+          mutedContainer.innerHTML = mutedIds.map(id => {
+            const chan = state.channels[id];
+            const name = chan ? (chan.isDm ? `@${chan.name}` : `#${chan.name}`) : id;
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 8px; background:var(--bg-card-subtle); border-radius:4px; margin-bottom:4px;">
+                <span style="font-weight:500;">🔕 ${name}</span>
+                <button class="btn-secondary" onclick="unmuteSpecificChannel('${id}')" style="padding:2px 8px; font-size:11px;">Unmute</button>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    window.unmuteSpecificChannel = function(channelId) {
+      if (notificationConfig.mutedChannelIds && notificationConfig.mutedChannelIds.includes(channelId)) {
+        notificationConfig = toggleChannelMute(channelId, notificationConfig);
+        saveNotificationConfig();
+        updateChannelMuteUI();
+        renderSidebar();
+        renderNotificationsSettingsTab();
+        const chan = state.channels[channelId];
+        showToast(`🔔 Unmuted #${chan ? chan.name : channelId}`);
+      }
+    };
+
     // Minimal Markdown Parser
     function renderMarkdown(text) {
       if (!text) return '';
@@ -2520,22 +2975,29 @@
     // Render Channel Sidebar & DM Section
     function renderSidebar() {
       const listEl = document.getElementById('channel-list');
-      listEl.innerHTML = '';
-      for (const chan of Object.values(state.channels)) {
-        if (chan.isDm) continue; // DMs are rendered in the DM section
-        const item = document.createElement('div');
-        item.className = `nav-item ${chan.id === activeChannelId ? 'active' : ''}`;
-        const prefix = chan.id === 'chan_talk_to_a_human' ? '💬' : '#';
-        item.innerHTML = `<div class="nav-item-left"><span>${prefix}</span> <span>${chan.name}</span></div>`;
-        item.onclick = () => selectChannel(chan.id);
-        listEl.appendChild(item);
+      if (listEl) {
+        listEl.innerHTML = '';
+        for (const chan of Object.values(state.channels)) {
+          if (chan.isDm) continue; // DMs are rendered in the DM section
+          const item = document.createElement('div');
+          item.className = `nav-item ${chan.id === activeChannelId ? 'active' : ''}`;
+          const prefix = chan.id === 'chan_talk_to_a_human' ? '💬' : '#';
+          const isMuted = isChannelMuted(chan.id, notificationConfig);
+          const muteBadge = isMuted ? `<span class="nav-item-mute-icon" style="font-size:11px; opacity:0.65; margin-left:auto;" title="Channel Muted">🔕</span>` : '';
+          item.innerHTML = `<div class="nav-item-left"><span>${prefix}</span> <span>${chan.name}</span></div>${muteBadge}`;
+          item.onclick = () => selectChannel(chan.id);
+          listEl.appendChild(item);
+        }
       }
 
       const agentItem = document.getElementById('nav-agent-item');
       if (agentItem) {
         const agentDmId = getDmChannelId(config.user.id, 'agent_human');
         const isAgentActive = activeChannelId === 'chan_talk_to_a_human' || activeChannelId === agentDmId;
+        const isMuted = isChannelMuted('chan_talk_to_a_human', notificationConfig) || isChannelMuted(agentDmId, notificationConfig);
+        const muteBadge = isMuted ? `<span class="nav-item-mute-icon" style="font-size:11px; opacity:0.65; margin-left:auto; margin-right:4px;" title="Agent Muted">🔕</span>` : '';
         agentItem.className = `nav-item ${isAgentActive ? 'active' : ''}`;
+        agentItem.innerHTML = `<div class="nav-item-left"><span>👤</span> <span>Talk to a Human</span></div>${muteBadge}<span class="user-online-dot" style="background:var(--accent-blue)" title="Autonomous AI Teammate"></span>`;
         agentItem.onclick = () => selectChannel('chan_talk_to_a_human');
       }
 
@@ -2568,6 +3030,8 @@
         const isOnline = u.lastSeen && (Date.now() - u.lastSeen < 300000); // within 5m
         const dmId = getDmChannelId(config.user.id, u.id);
         const isActive = activeChannelId === dmId;
+        const isMuted = isChannelMuted(dmId, notificationConfig);
+        const muteBadge = isMuted ? `<span class="nav-item-mute-icon" style="font-size:11px; opacity:0.65; margin-right:4px;" title="Muted">🔕</span>` : '';
 
         const item = document.createElement('div');
         item.className = `nav-item ${isActive ? 'active' : ''}`;
@@ -2576,7 +3040,10 @@
             <span>${u.avatar || '👤'}</span>
             <span>${u.name}</span>
           </div>
-          <span class="user-online-dot" style="background:${isOnline ? 'var(--success)' : 'var(--text-dim)'}" title="${isOnline ? 'Online' : 'Offline'}"></span>
+          <div style="display:flex; align-items:center;">
+            ${muteBadge}
+            <span class="user-online-dot" style="background:${isOnline ? 'var(--success)' : 'var(--text-dim)'}" title="${isOnline ? 'Online' : 'Offline'}"></span>
+          </div>
         `;
         item.onclick = () => openDm(u.id);
         dmListEl.appendChild(item);
@@ -2600,6 +3067,7 @@
       saveLocalCache();
       selectChannel(dmId);
     }
+    window.openDm = openDm;
 
     function selectChannel(chanId) {
       activeChannelId = chanId;
@@ -2618,6 +3086,7 @@
           document.getElementById('encryption-indicator').textContent = '🔒 End-to-End Encrypted (AES-GCM-256)';
         }
       }
+      updateChannelMuteUI();
       renderSidebar();
       renderTimeline();
     }
@@ -2818,6 +3287,7 @@
         simulateAgentResponse(text, activeChannelId, threadRootId || (isAgentChannel && !threadRootId ? undefined : newMsg.id));
       }
     }
+    window.sendMessage = sendMessage;
 
     // Autonomous Human Agent reply generator
     function generateAgentText(prompt, channelId) {
@@ -2868,6 +3338,7 @@
         };
 
         state.messages.push(agentReply);
+        notifyMessageIfEligible(agentReply);
         saveLocalCache();
         renderTimeline();
         if (activeThreadRootId === rootId) renderThread();
@@ -3067,6 +3538,7 @@
           if (idx === -1) {
             state.messages.push(parsed);
             isChanged = true;
+            notifyMessageIfEligible(parsed);
           } else {
             const existing = state.messages[idx];
             if (existing.timestamp !== parsed.timestamp || 
@@ -3236,6 +3708,7 @@
         await syncFromGitHub(manual);
       }
     }
+    window.syncFromLocalServer = syncFromLocalServer;
 
     // Text formatting helper
     function wrapText(before, after) {
@@ -3271,14 +3744,6 @@ Minimum version required to store current data is: `+i+`.
     }
 
     function generateMobileSetupUrl() {
-      const payload = {
-        owner: config.owner,
-        repo: config.repo,
-        branch: config.branch || 'git-chat',
-        password: vaultPassword,
-        workspaceSecret: config.workspaceSecret || ''
-      };
-      const b64 = btoa(JSON.stringify(payload));
       let baseUrl = config.lanUrl || '';
       if (!baseUrl) {
         if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
@@ -3287,17 +3752,33 @@ Minimum version required to store current data is: `+i+`.
           baseUrl = window.location.origin + window.location.pathname;
         }
       }
+      const payload = {
+        owner: config.owner,
+        repo: config.repo,
+        branch: config.branch || 'git-chat',
+        password: vaultPassword,
+        workspaceSecret: config.workspaceSecret || '',
+        backendUrl: baseUrl.replace(/\/+$/, '')
+      };
+      const b64 = btoa(JSON.stringify(payload));
       return baseUrl.replace(/\/+$/, '') + '/#setup=' + b64;
     }
 
     function openMobileModal() {
       const qrModal = document.getElementById('qr-modal');
-      const qrCanvas = document.getElementById('qr-canvas');
+      if (!qrModal) return;
       const mobileLink = generateMobileSetupUrl();
-      document.getElementById('mobile-link-url').value = mobileLink;
-      renderQRCodeToCanvas(qrCanvas, mobileLink);
+      const linkInput = document.getElementById('mobile-link-url');
+      if (linkInput) linkInput.value = mobileLink;
+      try {
+        const qrCanvas = document.getElementById('qr-canvas');
+        if (qrCanvas) renderQRCodeToCanvas(qrCanvas, mobileLink);
+      } catch (err) {
+        console.warn('QR render error:', err);
+      }
       qrModal.classList.add('open');
     }
+    window.openMobileModal = openMobileModal;
 
     // Helper for resilient event binding
     function setClickHandler(id, handler) {
@@ -3401,6 +3882,7 @@ Minimum version required to store current data is: `+i+`.
       // Storage & Access Tab fields
       updateStorageVolumeStatusDisplay();
       renderMembersRoster();
+      renderNotificationsSettingsTab();
       if (typeof window.switchSettingsTab === 'function') window.switchSettingsTab('general');
       const settingsModal = document.getElementById('settings-modal');
       if (settingsModal) settingsModal.classList.add('open');
@@ -3467,7 +3949,46 @@ Minimum version required to store current data is: `+i+`.
           threadInput.style.height = 'auto';
           threadInput.style.height = Math.min(threadInput.scrollHeight, 140) + 'px';
         });
+    const FIREFOX_PRIMARY_PATH = 'file:///sdcard/Download/git-chat.html';
+    const FIREFOX_SDCARD_PATH = 'file:///storage/emulated/0/Download/git-chat.html';
+
+    const updateState = {
+      availableVersion: null,
+      isDownloaded: false,
+    };
+
+    function isAutoUpdateEnabled() {
+      return localStorage.getItem('git_chat_auto_update') !== 'false';
+    }
+
+    function setAutoUpdateEnabled(val) {
+      localStorage.setItem('git_chat_auto_update', val ? 'true' : 'false');
+    }
+
+    async function checkForUpdates(manual = false) {
+      try {
+        const res = await fetch(apiUrl('/api/identity'));
+        if (res.ok) {
+          const data = await res.json();
+          if (data.latestVersion && data.latestVersion !== CLIENT_VERSION) {
+            updateState.availableVersion = data.latestVersion;
+            if (manual) showToast(`Update available: v${data.latestVersion}`);
+          } else if (manual) {
+            showToast('git-chat is up to date');
+          }
+        }
+      } catch (e) {
+        if (manual) showToast('Could not reach backend for update check');
       }
+    }
+
+    function openUpdateModal(version, isDownloaded = false) {
+      showToast(`Update v${version || 'latest'} available`);
+    }
+
+    function closeUpdateModal() {
+      const modal = document.getElementById('update-modal');
+      if (modal) modal.classList.remove('open');
     }
 
     // Synchronously bind all UI click and input events

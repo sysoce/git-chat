@@ -21,17 +21,20 @@ describe('Server Update Endpoints Suite', () => {
   });
 
   after(async () => {
-    if (typeof (server as any).closeAllConnections === 'function') {
-      (server as any).closeAllConnections();
+    if (server) {
+      (server as any).closeAllConnections?.();
+      server.unref();
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve());
+      });
     }
-    await new Promise<void>((resolve) => {
-      server.close(() => resolve());
-    });
   });
 
 
   it('GET /api/version returns JSON with current package version and downloadUrl', async () => {
-    const res = await fetch(`http://127.0.0.1:${testPort}/api/version`);
+    const res = await fetch(`http://127.0.0.1:${testPort}/api/version`, {
+      headers: { 'Connection': 'close' }
+    });
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('content-type'), 'application/json');
 
@@ -41,7 +44,9 @@ describe('Server Update Endpoints Suite', () => {
   });
 
   it('GET /download serves standalone HTML bundle with attachment header', async () => {
-    const res = await fetch(`http://127.0.0.1:${testPort}/download`);
+    const res = await fetch(`http://127.0.0.1:${testPort}/download`, {
+      headers: { 'Connection': 'close' }
+    });
     assert.equal(res.status, 200);
     assert.match(res.headers.get('content-type') || '', /text\/html/);
     assert.match(
@@ -55,7 +60,9 @@ describe('Server Update Endpoints Suite', () => {
   });
 
   it('GET /api/sync/pull includes appVersion field', async () => {
-    const res = await fetch(`http://127.0.0.1:${testPort}/api/sync/pull`);
+    const res = await fetch(`http://127.0.0.1:${testPort}/api/sync/pull`, {
+      headers: { 'Connection': 'close' }
+    });
     assert.equal(res.status, 200);
     const body = (await res.json()) as { success?: boolean; appVersion?: string };
     assert.equal(body.success, true);

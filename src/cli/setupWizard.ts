@@ -50,44 +50,22 @@ export async function runSetupWizard(workspaceRoot: string, port = 4300): Promis
     ],
   };
 
-  const adminUser: ChatUser = {
-    id: 'user_admin',
-    name: 'Admin',
-    avatar: '⚡',
-    role: 'admin',
-  };
-
-  const agentUser: ChatUser = {
-    id: 'agent_human',
-    name: 'Human',
-    avatar: '👤',
-    role: 'agent',
-    isBot: true,
-  };
+  const adminUser: ChatUser = { id: 'user_admin', name: 'Admin', avatar: '⚡', role: 'admin' };
+  const agentUser: ChatUser = { id: 'agent_human', name: 'Human', avatar: '👤', role: 'agent', isBot: true };
 
   const welcomeMessage: ChatMessage = {
     id: 'msg_welcome_001',
     channelId: 'chan_general',
-    author: {
-      id: 'agent_human',
-      name: 'Human',
-      avatar: '👤',
-      isBot: true,
-    },
-    content: `👋 **Welcome to git-chat!**\n\nThis entire workspace is synced peer-to-peer over your Git repository on branch \`refs/heads/${branch}\`.\n- **Zero Central Servers Required**\n- **Zero Merge Conflicts** (discrete atomic files)\n- **Strict Isolation**: localhost users push only chat data, leaving system code intact.\n\nType \`/help\`, tag \`@Human\`, or visit the **#Talk to a Human** channel to get started!`,
+    author: { id: 'agent_human', name: 'Human', avatar: '👤', isBot: true },
+    content: `👋 **Welcome to git-chat!**\n\nSynced peer-to-peer over branch \`refs/heads/${branch}\` with discrete zero-conflict updates.`,
     timestamp: Date.now(),
   };
 
   const humanChanWelcomeMessage: ChatMessage = {
     id: 'msg_human_welcome_001',
     channelId: 'chan_talk_to_a_human',
-    author: {
-      id: 'agent_human',
-      name: 'Human',
-      avatar: '👤',
-      isBot: true,
-    },
-    content: `👋 Hello! I am **Human**, your built-in autonomous AI partner. Ask me anything here, brainstorm ideas, or get help with your code and tasks!`,
+    author: { id: 'agent_human', name: 'Human', avatar: '👤', isBot: true },
+    content: `👋 Hello! I am **Human**, your built-in autonomous AI partner. Ask me anything here or in any channel!`,
     timestamp: Date.now(),
   };
 
@@ -97,10 +75,7 @@ export async function runSetupWizard(workspaceRoot: string, port = 4300): Promis
     { relativePath: 'users/agent_human.json', content: JSON.stringify(agentUser, null, 2) },
     { relativePath: 'presence/user_admin.json', content: JSON.stringify({ userId: 'user_admin', status: 'online', emoji: '💻', lastSeen: Date.now() }, null, 2) },
     { relativePath: 'presence/agent_human.json', content: JSON.stringify({ userId: 'agent_human', status: 'online', emoji: '👤', lastSeen: Date.now(), currentTask: 'Active in #Talk to a Human' }, null, 2) },
-    { relativePath: 'channels/chan_general/meta.json', content: JSON.stringify(workspaceConfig.channels[0], null, 2) },
-    { relativePath: 'channels/chan_talk_to_a_human/meta.json', content: JSON.stringify(workspaceConfig.channels[1], null, 2) },
-    { relativePath: 'channels/chan_engineering/meta.json', content: JSON.stringify(workspaceConfig.channels[2], null, 2) },
-    { relativePath: 'channels/chan_random/meta.json', content: JSON.stringify(workspaceConfig.channels[3], null, 2) },
+    ...workspaceConfig.channels.map(c => ({ relativePath: `channels/${c.id}/meta.json`, content: JSON.stringify(c, null, 2) })),
     { relativePath: `channels/chan_general/messages/${Date.now()}_agent_human_msg-001.json`, content: JSON.stringify(welcomeMessage, null, 2) },
     { relativePath: `channels/chan_talk_to_a_human/messages/${Date.now()}_agent_human_msg-002.json`, content: JSON.stringify(humanChanWelcomeMessage, null, 2) },
   ];
@@ -119,17 +94,30 @@ export async function runSetupWizard(workspaceRoot: string, port = 4300): Promis
     // If local git commit fails (e.g. non-git environment), continue to payload creation
   }
 
-  // 3. Build setup hash payload
+  // 3. Detect LAN IPv4 for cross-device mobile pairing
+  const os = await import('node:os');
+  const ifaces = os.networkInterfaces();
+  let lanUrl = `http://localhost:${port}`;
+  for (const name in ifaces) {
+    for (const net of ifaces[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) {
+        lanUrl = `http://${net.address}:${port}`;
+        break;
+      }
+    }
+  }
+
   const setupPayload = {
     owner,
     repo,
     branch,
     token: token || '',
     remoteUrl,
+    backendUrl: lanUrl,
   };
 
   const encodedPayload = Buffer.from(JSON.stringify(setupPayload)).toString('base64');
-  const setupUrl = `http://localhost:${port}/#setup=${encodedPayload}`;
+  const setupUrl = `${lanUrl}/#setup=${encodedPayload}`;
 
   const qrMatrix = generateQrMatrix(setupUrl);
   const qrTerminal = renderQrToTerminal(qrMatrix);
