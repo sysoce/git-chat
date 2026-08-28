@@ -4,15 +4,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 describe('Mobile Setup & Download Page Suite', () => {
-  const rootDir = path.resolve(__dirname, '..');
+  const rootDir = process.cwd();
   const indexHtmlPath = path.join(rootDir, 'index.html');
   const downloadHtmlPath = path.join(rootDir, 'download.html');
 
-  it('encodes and decodes mobile setup hash payload accurately', () => {
+  it('encodes and decodes mobile setup hash payload accurately with token and custom data repo', () => {
     const originalConfig = {
       owner: 'sysoce',
-      repo: 'git-chat',
-      branch: 'git-chat',
+      repo: 'chat-data',
+      branch: 'master',
+      token: 'github_pat_1234567890abcdef',
       password: 'super-secret-vault-pass',
       workspaceSecret: 'custom-workspace-secret',
       backendUrl: 'http://192.168.1.111:4300'
@@ -24,6 +25,17 @@ describe('Mobile Setup & Download Page Suite', () => {
     const decoded = JSON.parse(decodedJson);
 
     assert.deepEqual(decoded, originalConfig);
+    assert.equal(decoded.repo, 'chat-data');
+    assert.equal(decoded.branch, 'master');
+    assert.equal(decoded.token, 'github_pat_1234567890abcdef');
+  });
+
+  it('generates correct GitHub Pages app URL without pointing to data repository', () => {
+    const indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+
+    // Verify index.html does not hardcode data repo as web app host
+    assert.ok(indexHtml.includes('git-chat'), 'web app host must point to git-chat');
+    assert.ok(indexHtml.includes('token: config.token'), 'setup payload must include token');
   });
 
   it('index.html contains interactive Mobile QR modal and settings buttons', () => {

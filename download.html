@@ -326,11 +326,12 @@
           savedCfg = JSON.parse(localStorage.getItem('git_chat_config') || '{}');
         } catch {}
 
-        if (savedPass || savedCfg.owner || savedCfg.repo) {
+        if (savedPass || savedCfg.owner || savedCfg.repo || savedCfg.token) {
           return {
             owner: savedCfg.owner || 'sysoce',
-            repo: savedCfg.repo || 'git-chat',
-            branch: savedCfg.branch || 'git-chat',
+            repo: savedCfg.repo || 'chat-data',
+            branch: savedCfg.branch || 'master',
+            token: savedCfg.token || '',
             password: savedPass,
             workspaceSecret: savedCfg.workspaceSecret || '',
             backendUrl: (savedCfg.lanUrl || (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://192.168.1.111:4300')).replace(/\/+$/, ''),

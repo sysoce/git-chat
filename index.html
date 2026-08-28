@@ -1898,7 +1898,7 @@
     // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.3';
+    const CLIENT_VERSION = '1.0.4';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -2123,22 +2123,53 @@
     // Direct GitHub Git Data API Push helper (when standalone with PAT)
     async function pushFilesToGitHub(files) {
       if (!config.token || !config.owner || !config.repo || !files || !files.length) return;
+      const token = config.token.trim();
+      const authHeader = token.startsWith('github_pat_') || token.startsWith('ghp_') ? `Bearer ${token}` : `token ${token}`;
       const headers = {
         'Accept': 'application/vnd.github.v3+json',
-        'Authorization': `token ${config.token}`,
+        'Authorization': authHeader,
         'Content-Type': 'application/json'
       };
-      const branch = config.branch || 'git-chat';
+      const branch = config.branch || 'master';
 
-      const refRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/refs/heads/${branch}`, { headers });
+      let refRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/refs/heads/${encodeURIComponent(branch)}`, { headers });
+      
+      // If branch does not exist yet, attempt initialization via Contents API
+      if (!refRes.ok) {
+        const firstFile = files[0];
+        if (firstFile) {
+          try {
+            const putRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${firstFile.relativePath}`, {
+              method: 'PUT',
+              headers,
+              body: JSON.stringify({
+                message: `chore: initial commit on ${branch}`,
+                content: btoa(unescape(encodeURIComponent(firstFile.content))),
+                branch: branch
+              })
+            });
+            if (putRes.ok) {
+              if (files.length === 1) {
+                setTimeout(() => syncFromGitHub(false), 500);
+                return;
+              }
+              refRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/refs/heads/${encodeURIComponent(branch)}`, { headers });
+            }
+          } catch (initErr) {
+            console.warn('Initial branch commit attempt:', initErr);
+          }
+        }
+      }
+
       if (!refRes.ok) return;
       const refData = await refRes.json();
-      const parentCommitSha = refData.object.sha;
+      const parentCommitSha = refData.object?.sha;
+      if (!parentCommitSha) return;
 
       const commitRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/commits/${parentCommitSha}`, { headers });
       if (!commitRes.ok) return;
       const commitData = await commitRes.json();
-      const baseTreeSha = commitData.tree.sha;
+      const baseTreeSha = commitData.tree?.sha;
 
       const treeItems = files.map(f => ({
         path: f.relativePath,
@@ -2167,11 +2198,15 @@
       if (!newCommitRes.ok) return;
       const newCommitData = await newCommitRes.json();
 
-      await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/refs/heads/${branch}`, {
+      const updateRefRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/refs/heads/${encodeURIComponent(branch)}`, {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({ sha: newCommitData.sha })
+        body: JSON.stringify({ sha: newCommitData.sha, force: true })
       });
+
+      if (updateRefRes.ok) {
+        setTimeout(() => syncFromGitHub(false), 500);
+      }
     }
 
     // Push discrete files with local server bridge and GitHub fallback
@@ -3694,12 +3729,21 @@
     async function syncFromGitHub(manual = false) {
       if (!config.owner || !config.repo) return;
       try {
-        const branch = config.branch || 'git-chat';
+        const branch = config.branch || 'master';
+        const token = (config.token || '').trim();
         const headers = { 'Accept': 'application/vnd.github.v3+json' };
-        if (config.token) headers['Authorization'] = `token ${config.token}`;
+        if (token) {
+          headers['Authorization'] = token.startsWith('github_pat_') || token.startsWith('ghp_') ? `Bearer ${token}` : `token ${token}`;
+        }
 
         // Get branch commit and tree SHA safely
-        const branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/${encodeURIComponent(branch)}`, { headers });
+        let branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/${encodeURIComponent(branch)}`, { headers });
+        if (!branchRes.ok && branch !== 'master' && branch !== 'main') {
+          branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/master`, { headers });
+          if (!branchRes.ok) {
+            branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/main`, { headers });
+          }
+        }
         if (!branchRes.ok) return;
         const branchData = await branchRes.json();
         const treeSha = branchData.commit?.commit?.tree?.sha;
@@ -3717,6 +3761,7 @@
             item.path.startsWith('channels/') ||
             item.path.startsWith('users/') ||
             item.path.startsWith('presence/') ||
+            item.path.startsWith('config/') ||
             item.path === 'workspace.json'
           )
         );
@@ -3724,15 +3769,20 @@
         let count = 0;
         await Promise.all(chatBlobs.map(async (item) => {
           try {
-            const rawUrl = `https://raw.githubusercontent.com/${config.owner}/${config.repo}/${branch}/${item.path}`;
-            const fileRes = await fetch(rawUrl, { headers });
-            if (fileRes.ok) {
-              const text = await fileRes.text();
-              if (processSyncFile(item.path, text)) {
-                count++;
+            // Fetch via official GitHub API git/blobs endpoint - CORS compatible & supports private repos with PAT
+            const blobRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/blobs/${item.sha}`, { headers });
+            if (blobRes.ok) {
+              const blobData = await blobRes.json();
+              if (blobData.content && blobData.encoding === 'base64') {
+                const text = decodeURIComponent(escape(atob(blobData.content.replace(/\s/g, ''))));
+                if (processSyncFile(item.path, text)) {
+                  count++;
+                }
               }
             }
-          } catch {}
+          } catch (blobErr) {
+            console.warn('Failed to fetch blob:', item.path, blobErr);
+          }
         }));
 
         saveLocalCache();
@@ -3741,7 +3791,7 @@
         if (activeThreadRootId) renderThread();
         if (manual) showToast(`Synced ${count} items from GitHub (${config.owner}/${config.repo})`);
       } catch (e) {
-        // Safe catch
+        console.warn('syncFromGitHub failed:', e);
       }
     }
 
@@ -3818,24 +3868,39 @@ Minimum version required to store current data is: `+i+`.
 
     let currentQrTarget = 'gh_pages';
 
+    function getWebAppBaseUrl(pathSuffix = '') {
+      if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+        const cleanPath = window.location.pathname.replace(/\/download(\.html)?$/i, '').replace(/\/index\.html$/i, '').replace(/\/+$/, '');
+        const origin = window.location.origin;
+        const root = origin + (cleanPath ? cleanPath : '');
+        return (root + (pathSuffix ? '/' + pathSuffix.replace(/^\/+/, '') : '')).replace(/\/+$/, '');
+      }
+      const appOwner = config.owner || 'sysoce';
+      const root = `https://${appOwner}.github.io/git-chat`;
+      return (root + (pathSuffix ? '/' + pathSuffix.replace(/^\/+/, '') : '')).replace(/\/+$/, '');
+    }
+
     function generateMobileSetupUrl(targetType = currentQrTarget) {
       let baseUrl = '';
       if (targetType === 'lan') {
-        baseUrl = (config.lanUrl || 'http://192.168.1.111:4300').replace(/\/+$/, '');
+        baseUrl = (config.lanUrl || config.backendUrl || 'http://192.168.1.111:4300').replace(/\/+$/, '');
       } else if (targetType === 'download') {
-        baseUrl = `https://${config.owner || 'sysoce'}.github.io/${config.repo || 'git-chat'}/download.html`;
+        baseUrl = getWebAppBaseUrl('download.html');
       } else {
         // gh_pages default (works everywhere and scannable by phone camera)
-        baseUrl = `https://${config.owner || 'sysoce'}.github.io/${config.repo || 'git-chat'}`;
+        baseUrl = getWebAppBaseUrl('');
       }
 
+      const pass = vaultPassword || sessionStorage.getItem('git_chat_vault_pass') || localStorage.getItem('git_chat_saved_vault_pass') || '';
       const payload = {
         owner: config.owner || 'sysoce',
-        repo: config.repo || 'git-chat',
-        branch: config.branch || 'git-chat',
-        password: vaultPassword || '',
+        repo: config.repo || 'chat-data',
+        branch: config.branch || 'master',
+        token: config.token || '',
+        password: pass,
         workspaceSecret: config.workspaceSecret || '',
-        backendUrl: (config.lanUrl || 'http://192.168.1.111:4300').replace(/\/+$/, '')
+        backendUrl: (config.lanUrl || config.backendUrl || 'http://192.168.1.111:4300').replace(/\/+$/, ''),
+        user: config.user || { id: 'user_dev', name: 'User', avatar: '💻' }
       };
 
       let b64 = '';
@@ -3902,8 +3967,9 @@ Minimum version required to store current data is: `+i+`.
       const pass = sessionStorage.getItem('git_chat_vault_pass') || localStorage.getItem('git_chat_saved_vault_pass') || vaultPassword || '';
       return {
         owner: config.owner || 'sysoce',
-        repo: config.repo || 'git-chat',
-        branch: config.branch || 'git-chat',
+        repo: config.repo || 'chat-data',
+        branch: config.branch || 'master',
+        token: config.token || '',
         password: pass,
         workspaceSecret: config.workspaceSecret || '',
         backendUrl: (config.backendUrl || (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://192.168.1.111:4300')).replace(/\/+$/, ''),
@@ -4668,12 +4734,12 @@ Minimum version required to store current data is: `+i+`.
         config.user.name = document.getElementById('cfg-user-name')?.value || 'User';
         config.user.id = document.getElementById('cfg-user-id')?.value || 'user_dev';
         config.user.avatar = document.getElementById('cfg-avatar')?.value || '💻';
-        const repoStr = document.getElementById('cfg-repo')?.value || 'sysoce/git-chat';
+        const repoStr = document.getElementById('cfg-repo')?.value.trim() || `${config.owner || 'sysoce'}/${config.repo || 'chat-data'}`;
         const [owner, repo] = repoStr.split('/');
         config.owner = owner || 'sysoce';
-        config.repo = repo || 'git-chat';
-        config.branch = document.getElementById('cfg-branch')?.value || 'git-chat';
-        config.token = document.getElementById('cfg-token')?.value || '';
+        config.repo = repo || 'chat-data';
+        config.branch = document.getElementById('cfg-branch')?.value.trim() || config.branch || 'master';
+        config.token = (document.getElementById('cfg-token')?.value || '').trim();
         config.backendUrl = document.getElementById('cfg-backend-url')?.value.trim() || '';
         config.workspaceSecret = document.getElementById('cfg-workspace-secret')?.value.trim() || '';
 
@@ -4707,6 +4773,7 @@ Minimum version required to store current data is: `+i+`.
           CryptoVault.clearKeyCache();
           vaultKey = await CryptoVault.deriveKey(vaultPassword);
           sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+          localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
         }
 
         decryptedMessageCache.clear();
@@ -4717,8 +4784,9 @@ Minimum version required to store current data is: `+i+`.
         renderSidebar();
         renderTimeline(true);
         checkS3Status();
+        syncFromLocalServer(true);
         if (settingsModal) settingsModal.classList.remove('open');
-        showToast('Settings saved successfully');
+        showToast('Settings saved & synced successfully');
       });
 
       // Export JSON Backup
