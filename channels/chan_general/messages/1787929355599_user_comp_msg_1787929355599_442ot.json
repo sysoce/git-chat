@@ -1,0 +1,19 @@
+{
+  "id": "msg_1787929355599_442ot",
+  "channelId": "chan_general",
+  "author": {
+    "id": "user_comp",
+    "name": "Comp",
+    "avatar": "💻",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "sTY1xFbigceFJscX",
+    "ciphertext": "l29qbohdP731yaZNxDlNof5iHsQ="
+  },
+  "reactions": {},
+  "timestamp": 1787929355599
+}
