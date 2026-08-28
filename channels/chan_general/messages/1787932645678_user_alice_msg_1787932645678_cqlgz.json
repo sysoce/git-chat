@@ -1,0 +1,19 @@
+{
+  "id": "msg_1787932645678_cqlgz",
+  "channelId": "chan_general",
+  "author": {
+    "id": "user_alice",
+    "name": "Alice",
+    "avatar": "👩‍💻",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "e3lSK3xz9dyliQof",
+    "ciphertext": "12ReRlZ9ZUl1fgRkXmqfifiIA/lHmcJ4LNCW3BkOKWJ+dm9NeX6v1MF0XbGW8pOqy288nYZPGjRNMSrqQxMFHsfgdS4YWURnXADCkxHEB2j/B7imdwkN78InQ5i1OBf9kZC1Zw3ikUg8p3Zz1ZbScNdXfS+v8g=="
+  },
+  "reactions": {},
+  "timestamp": 1787932645678
+}
