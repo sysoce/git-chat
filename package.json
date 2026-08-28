@@ -1,6 +1,6 @@
 {
   "name": "git-chat",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Zero-backend, single-file Slack clone with isolated Git data sync and autonomous agent support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

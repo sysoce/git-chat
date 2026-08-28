@@ -426,14 +426,30 @@ export function pureJsAesGcmDecrypt(key: Uint8Array, encryptedBytes: Uint8Array)
 
 export type VaultKey = CryptoKey | Uint8Array;
 
+const vaultKeyCache = new Map<string, VaultKey>();
+
+/**
+ * Clears the in-memory derived key cache (e.g. when credentials change or vault is locked).
+ */
+export function clearVaultKeyCache(): void {
+  vaultKeyCache.clear();
+}
+
 /**
  * Derives a 256-bit AES-GCM CryptoKey from a user password and salt using PBKDF2.
- * Uses WebCrypto if available, or falls back to Pure JS.
+ * Uses WebCrypto if available, or falls back to Pure JS. Results are cached in-memory.
  */
 export async function deriveVaultKey(
   passphrase: string,
   saltStr: string = 'git-chat-e2ee-vault-salt'
 ): Promise<VaultKey> {
+  const cacheKey = `${passphrase}:::${saltStr}`;
+  const cached = vaultKeyCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  let derivedKey: VaultKey;
   if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto?.subtle) {
     const subtle = globalThis.crypto.subtle;
     const encoder = new TextEncoder();
@@ -448,7 +464,7 @@ export async function deriveVaultKey(
       ['deriveKey']
     );
 
-    return await subtle.deriveKey(
+    derivedKey = await subtle.deriveKey(
       {
         name: 'PBKDF2',
         salt: saltBuffer,
@@ -460,10 +476,13 @@ export async function deriveVaultKey(
       false,
       ['encrypt', 'decrypt']
     );
+  } else {
+    // Pure JS Fallback
+    derivedKey = pureJsPbkdf2(passphrase, saltStr, 100_000, 32);
   }
 
-  // Pure JS Fallback
-  return pureJsPbkdf2(passphrase, saltStr, 100_000, 32);
+  vaultKeyCache.set(cacheKey, derivedKey);
+  return derivedKey;
 }
 
 /**

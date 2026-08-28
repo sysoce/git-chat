@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { createChatCommit, readChatBranchFiles, pushChatBranch, detectGitConfig } from '../backend/chatGitPlumbing';
 import { DataIsolationGuard } from '../security/dataIsolationGuard';
 import { S3Client } from '../storage/s3Client';
+import { injectSetupIntoHtml, EmbeddedSetupPayload } from '../engine/setupInjector';
 
 export interface ServerOptions {
   port?: number;
@@ -51,14 +52,65 @@ export function startGitChatServer(options: ServerOptions): http.Server {
         return;
       }
 
-      // API: Download Standalone HTML Bundle for Firefox / Local Offline use
+      // API: Download Landing Page (Explicit routes)
+      if ((url.pathname === '/download.html' || url.pathname === '/download-page') && req.method === 'GET') {
+        const dlPath = path.join(workspaceRoot, 'download.html');
+        let htmlContent = '';
+        try {
+          htmlContent = await fs.readFile(dlPath, 'utf8');
+        } catch {
+          htmlContent = `<!DOCTYPE html><html><head><title>git-chat download</title></head><body><h1>Download page not found</h1></body></html>`;
+        }
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(htmlContent);
+        return;
+      }
+
+      // API: Download Standalone HTML Bundle & Interactive Setup Page
       if (url.pathname === '/download' && req.method === 'GET') {
+        const acceptHeader = (req.headers.accept || req.headers['accept'] || '') as string;
+        const isHtmlNav = typeof acceptHeader === 'string' && (acceptHeader.includes('text/html') || acceptHeader.includes('application/xhtml+xml'));
+        const isForcedDownload = url.searchParams.has('download') || url.searchParams.has('raw');
+
+        // Browser navigation to /download -> serve interactive landing page with #setup reader
+        if (isHtmlNav && !isForcedDownload) {
+          const dlPath = path.join(workspaceRoot, 'download.html');
+          let htmlContent = '';
+          try {
+            htmlContent = await fs.readFile(dlPath, 'utf8');
+          } catch {
+            htmlContent = `<!DOCTYPE html><html><head><title>git-chat download</title></head><body><h1>Download page not found</h1></body></html>`;
+          }
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(htmlContent);
+          return;
+        }
+
+        // Direct file download of git-chat.html
         const indexPath = path.join(workspaceRoot, 'index.html');
         let htmlContent = '';
         try {
           htmlContent = await fs.readFile(indexPath, 'utf8');
         } catch {
           htmlContent = `<!DOCTYPE html><html><head><title>git-chat</title></head><body><h1>git-chat bundle not found</h1></body></html>`;
+        }
+
+        // Check for setup query parameter to pre-bake configuration
+        const setupParam = url.searchParams.get('setup');
+        if (setupParam) {
+          try {
+            let payload: EmbeddedSetupPayload | null = null;
+            try {
+              payload = JSON.parse(Buffer.from(setupParam, 'base64').toString('utf8'));
+            } catch {
+              payload = JSON.parse(setupParam);
+            }
+            if (payload && typeof payload === 'object') {
+              htmlContent = injectSetupIntoHtml(htmlContent, payload);
+            }
+          } catch (e) {
+            console.warn('Failed to inject setup from query param:', e);
+          }
         }
 
         const buf = Buffer.from(htmlContent, 'utf8');

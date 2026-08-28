@@ -1332,21 +1332,36 @@
 
   <!-- QR CODE MODAL FOR MOBILE ONBOARDING -->
   <div class="modal-overlay" id="qr-modal">
-    <div class="modal-card" style="text-align:center;">
+    <div class="modal-card" style="text-align:center; max-width:440px;">
       <div class="modal-sheet-handle"></div>
       <div class="modal-title">
-        <span>📱 Connect Phone</span>
+        <span>📱 Connect Phone & Mobile Setup</span>
         <button class="close-btn" id="btn-close-qr">×</button>
       </div>
-      <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
-        Scan this QR code with your phone camera or open the link on your mobile browser.
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:10px;">
+        Scan this QR code with your mobile camera to instantly open Git-Chat pre-configured.
       </p>
-      <div id="qr-canvas-container">
-        <canvas id="qr-canvas" width="240" height="240"></canvas>
+
+      <!-- Segmented Target Switcher -->
+      <div style="display:flex; gap:6px; background:var(--bg-input); padding:4px; border-radius:8px; border:1px solid var(--border); margin-bottom:12px;">
+        <button type="button" id="qr-tab-gh" class="btn-secondary" style="flex:1; padding:6px 4px; font-size:11px; font-weight:600; border-radius:6px; background:var(--bg-sidebar-active); color:#fff; border:none; cursor:pointer;">🌐 GitHub Pages</button>
+        <button type="button" id="qr-tab-lan" class="btn-secondary" style="flex:1; padding:6px 4px; font-size:11px; font-weight:600; border-radius:6px; background:transparent; color:var(--text-muted); border:none; cursor:pointer;">🏠 Local LAN</button>
+        <button type="button" id="qr-tab-dl" class="btn-secondary" style="flex:1; padding:6px 4px; font-size:11px; font-weight:600; border-radius:6px; background:transparent; color:var(--text-muted); border:none; cursor:pointer;">📥 Download</button>
+      </div>
+
+      <div id="qr-canvas-container" style="display:flex; justify-content:center; margin:8px 0;">
+        <canvas id="qr-canvas" width="240" height="240" style="background:#fff; padding:8px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.3);"></canvas>
       </div>
       <div style="margin-top:10px;">
-        <input class="form-input" id="mobile-link-url" readonly style="font-size:12px; font-family:var(--font-mono); text-align:center;" />
-        <button class="btn-primary" id="btn-copy-qr-link" style="margin-top:8px;">📋 Copy Link</button>
+        <input class="form-input" id="mobile-link-url" readonly style="font-size:11px; font-family:var(--font-mono); text-align:center;" />
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <button class="btn-primary" id="btn-copy-qr-link" style="flex:1; font-size:12px; padding:8px 10px;">📋 Copy Link</button>
+          <button class="btn-secondary" id="btn-copy-setup-hash" style="flex:1; font-size:12px; padding:8px 10px;">🔑 Copy Hash</button>
+        </div>
+        <button class="btn-secondary" id="btn-download-app-bundle" style="width:100%; margin-top:6px; font-size:12px; padding:8px 10px;">📥 Download git-chat.html</button>
+      </div>
+      <div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.4;">
+        Fallback: If camera scan fails, open <a id="qr-fallback-link" href="#" target="_blank" style="color:var(--accent-blue);">Download Page</a> or copy setup hash into URL bar.
       </div>
     </div>
   </div>
@@ -1764,7 +1779,19 @@
     }
 
     class CryptoVault {
+      static keyCache = new Map();
+
+      static clearKeyCache() {
+        CryptoVault.keyCache.clear();
+      }
+
       static async deriveKey(passphrase, saltStr = 'git-chat-e2ee-vault-salt') {
+        const cacheKey = `${passphrase}:::${saltStr}`;
+        if (CryptoVault.keyCache.has(cacheKey)) {
+          return CryptoVault.keyCache.get(cacheKey);
+        }
+
+        let derived = null;
         if (typeof crypto !== 'undefined' && crypto?.subtle) {
           try {
             const encoder = new TextEncoder();
@@ -1775,7 +1802,7 @@
               false,
               ['deriveKey']
             );
-            return await crypto.subtle.deriveKey(
+            derived = await crypto.subtle.deriveKey(
               {
                 name: 'PBKDF2',
                 salt: encoder.encode(saltStr),
@@ -1791,7 +1818,11 @@
             console.warn('WebCrypto deriveKey failed, using pure JS fallback:', e);
           }
         }
-        return purePbkdf2(passphrase, saltStr, 100000, 32);
+        if (!derived) {
+          derived = purePbkdf2(passphrase, saltStr, 100000, 32);
+        }
+        CryptoVault.keyCache.set(cacheKey, derived);
+        return derived;
       }
 
       static async deriveDMKey(passphrase, userAId, userBId) {
@@ -1867,7 +1898,7 @@
     // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.2';
+    const CLIENT_VERSION = '1.0.3';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -3228,7 +3259,7 @@
       }
     }
 
-    // Send Message (with E2EE & S3 Attachments)
+    // Send Message (with Instant Optimistic UI Append & Background E2EE)
     async function sendMessage(content, threadRootId = null, attachments = null) {
       const currentAttachments = attachments || (stagedAttachments.length > 0 ? [...stagedAttachments] : undefined);
       if ((!content || !content.trim()) && (!currentAttachments || !currentAttachments.length)) return;
@@ -3240,53 +3271,73 @@
         return;
       }
 
-      const chanKey = await getEncryptionKeyForChannel(activeChannelId);
       const msgId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-      let encryptedPayload = null;
-      if (chanKey) {
-        encryptedPayload = await CryptoVault.encrypt(text, chanKey);
-      }
+      const targetChannelId = activeChannelId;
+      const timestamp = Date.now();
 
       const newMsg = {
         id: msgId,
-        channelId: activeChannelId,
+        channelId: targetChannelId,
         threadRootId: threadRootId || undefined,
         author: { ...config.user },
         content: text,
-        encrypted: encryptedPayload || undefined,
+        encrypted: undefined,
         attachments: currentAttachments,
         reactions: {},
-        timestamp: Date.now()
+        timestamp: timestamp
       };
-
-      const relativePath = threadRootId
-        ? `channels/${activeChannelId}/threads/${threadRootId}/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`
-        : `channels/${activeChannelId}/messages/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`;
-
-      ClientDataIsolationGuard.validatePath(relativePath, config.user.id);
 
       if (!attachments) {
         stagedAttachments = [];
         renderStagedAttachments();
       }
 
+      // Optimistic instant local append: render immediately without blocking on crypto or network
       state.messages.push(newMsg);
       saveLocalCache();
 
       if (threadRootId) renderThread();
       else renderTimeline();
 
-      // Push to Git backend
-      const diskMsg = { ...newMsg, content: '[Encrypted Message]' }; // Plaintext omitted on git ref
-      pushFiles([{ relativePath, content: JSON.stringify(diskMsg, null, 2) }], config.user.id);
+      // Background E2EE encryption, caching, and Git push
+      (async () => {
+        try {
+          const chanKey = await getEncryptionKeyForChannel(targetChannelId);
+          let encryptedPayload = null;
+          if (chanKey) {
+            encryptedPayload = await CryptoVault.encrypt(text, chanKey);
+          }
 
-      // Agent mention or message in Talk to a Human / Human DM
-      const isAgentChannel = activeChannelId === 'chan_talk_to_a_human' || activeChannelId === getDmChannelId(config.user.id, 'agent_human');
-      const isAgentMention = /(@Human|@human|@agent|@SupervisorAgent|\/human|\/agent|\/ask)/i.test(text);
+          newMsg.encrypted = encryptedPayload || undefined;
 
-      if (isAgentChannel || isAgentMention) {
-        simulateAgentResponse(text, activeChannelId, threadRootId || (isAgentChannel && !threadRootId ? undefined : newMsg.id));
-      }
+          if (encryptedPayload && chanKey) {
+            const cacheKey = getMsgDecryptCacheKey(newMsg, isVaultLocked, targetChannelId);
+            if (cacheKey) decryptedMessageCache.set(cacheKey, text);
+          }
+
+          saveLocalCache();
+
+          const relativePath = threadRootId
+            ? `channels/${targetChannelId}/threads/${threadRootId}/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`
+            : `channels/${targetChannelId}/messages/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`;
+
+          ClientDataIsolationGuard.validatePath(relativePath, config.user.id);
+
+          // Push to Git backend
+          const diskMsg = { ...newMsg, content: '[Encrypted Message]' }; // Plaintext omitted on git ref
+          pushFiles([{ relativePath, content: JSON.stringify(diskMsg, null, 2) }], config.user.id);
+
+          // Agent mention or message in Talk to a Human / Human DM
+          const isAgentChannel = targetChannelId === 'chan_talk_to_a_human' || targetChannelId === getDmChannelId(config.user.id, 'agent_human');
+          const isAgentMention = /(@Human|@human|@agent|@SupervisorAgent|\/human|\/agent|\/ask)/i.test(text);
+
+          if (isAgentChannel || isAgentMention) {
+            simulateAgentResponse(text, targetChannelId, threadRootId || (isAgentChannel && !threadRootId ? undefined : newMsg.id));
+          }
+        } catch (err) {
+          console.error('Background send / encryption error:', err);
+        }
+      })();
     }
     window.sendMessage = sendMessage;
 
@@ -3337,6 +3388,11 @@
           encrypted: enc || undefined,
           timestamp: Date.now()
         };
+
+        if (enc && chanKey) {
+          const cacheKey = getMsgDecryptCacheKey(agentReply, isVaultLocked, channelId);
+          if (cacheKey) decryptedMessageCache.set(cacheKey, replyText);
+        }
 
         state.messages.push(agentReply);
         notifyMessageIfEligible(agentReply);
@@ -3744,47 +3800,87 @@ Minimum version required to store current data is: `+i+`.
       }
     }
 
-    function generateMobileSetupUrl() {
-      let baseUrl = config.lanUrl || '';
-      if (!baseUrl) {
-        if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
-          baseUrl = 'http://192.168.1.111:4300';
-        } else {
-          baseUrl = window.location.origin + window.location.pathname;
-        }
+    let currentQrTarget = 'gh_pages';
+
+    function generateMobileSetupUrl(targetType = currentQrTarget) {
+      let baseUrl = '';
+      if (targetType === 'lan') {
+        baseUrl = (config.lanUrl || 'http://192.168.1.111:4300').replace(/\/+$/, '');
+      } else if (targetType === 'download') {
+        baseUrl = `https://${config.owner || 'sysoce'}.github.io/${config.repo || 'git-chat'}/download.html`;
+      } else {
+        // gh_pages default (works everywhere and scannable by phone camera)
+        baseUrl = `https://${config.owner || 'sysoce'}.github.io/${config.repo || 'git-chat'}`;
       }
+
       const payload = {
         owner: config.owner || 'sysoce',
         repo: config.repo || 'git-chat',
         branch: config.branch || 'git-chat',
         password: vaultPassword || '',
         workspaceSecret: config.workspaceSecret || '',
-        backendUrl: baseUrl.replace(/\/+$/, '')
+        backendUrl: (config.lanUrl || 'http://192.168.1.111:4300').replace(/\/+$/, '')
       };
+
       let b64 = '';
       try {
         b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
       } catch {
         b64 = btoa(JSON.stringify(payload));
       }
-      return baseUrl.replace(/\/+$/, '') + '/#setup=' + b64;
+
+      const hash = '#setup=' + b64;
+      if (targetType === 'download') {
+        return baseUrl + hash;
+      }
+      return baseUrl.replace(/\/+$/, '') + '/' + hash;
     }
 
-    function openMobileModal() {
-      const qrModal = document.getElementById('qr-modal');
-      if (!qrModal) return;
-      const mobileLink = generateMobileSetupUrl();
+    function updateQrModalView(targetType = currentQrTarget) {
+      currentQrTarget = targetType;
+      const tabs = {
+        gh_pages: document.getElementById('qr-tab-gh'),
+        lan: document.getElementById('qr-tab-lan'),
+        download: document.getElementById('qr-tab-dl')
+      };
+      Object.keys(tabs).forEach(k => {
+        const btn = tabs[k];
+        if (btn) {
+          if (k === targetType) {
+            btn.style.background = 'var(--bg-sidebar-active)';
+            btn.style.color = '#fff';
+          } else {
+            btn.style.background = 'transparent';
+            btn.style.color = 'var(--text-muted)';
+          }
+        }
+      });
+
+      const mobileLink = generateMobileSetupUrl(targetType);
       const linkInput = document.getElementById('mobile-link-url');
       if (linkInput) linkInput.value = mobileLink;
+
+      const fallbackLink = document.getElementById('qr-fallback-link');
+      if (fallbackLink) {
+        fallbackLink.href = generateMobileSetupUrl('download');
+      }
+
       try {
         const qrCanvas = document.getElementById('qr-canvas');
         if (qrCanvas) renderQRCodeToCanvas(qrCanvas, mobileLink);
       } catch (err) {
         console.warn('QR render error:', err);
       }
+    }
+
+    function openMobileModal(targetType = 'gh_pages') {
+      const qrModal = document.getElementById('qr-modal');
+      if (!qrModal) return;
+      updateQrModalView(targetType);
       qrModal.classList.add('open');
     }
     window.openMobileModal = openMobileModal;
+    window.updateQrModalView = updateQrModalView;
 
     // Helper for resilient event binding
     function setClickHandler(id, handler) {
@@ -3832,10 +3928,12 @@ Minimum version required to store current data is: `+i+`.
         config.repo = repo;
       }
 
+      CryptoVault.clearKeyCache();
       vaultKey = await CryptoVault.deriveKey(vaultPassword);
       isVaultLocked = false;
       decryptedMessageCache.clear();
       lastRenderedChecksum = '';
+      getEncryptionKeyForChannel(activeChannelId).catch(() => {});
       sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
       if (remember) {
         localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
@@ -3860,6 +3958,8 @@ Minimum version required to store current data is: `+i+`.
       renderSidebar();
       renderTimeline(true);
       showToast(`🔓 Vault unlocked & password copied to clipboard! Welcome, ${config.user.name}`);
+      syncFromLocalServer(false).catch(() => {});
+      syncFromGitHub(false).catch(() => {});
     }
     window.handleVaultUnlock = handleVaultUnlock;
 
@@ -4028,16 +4128,55 @@ Minimum version required to store current data is: `+i+`.
       });
 
       // Mobile Connect Modal (QR Code & Direct Setup Link)
-      setClickHandler('btn-mobile-sync-link', openMobileModal);
+      setClickHandler('btn-mobile-sync-link', () => openMobileModal('gh_pages'));
+      setClickHandler('btn-show-qr-code', () => openMobileModal('gh_pages'));
+      setClickHandler('btn-copy-mobile-setup-link', () => {
+        const link = generateMobileSetupUrl('gh_pages');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).catch(() => {});
+        }
+        showToast('📋 Mobile setup link copied to clipboard!');
+      });
+
+      setClickHandler('qr-tab-gh', () => updateQrModalView('gh_pages'));
+      setClickHandler('qr-tab-lan', () => updateQrModalView('lan'));
+      setClickHandler('qr-tab-dl', () => updateQrModalView('download'));
+
       setClickHandler('btn-close-qr', () => {
         const qrModal = document.getElementById('qr-modal');
         if (qrModal) qrModal.classList.remove('open');
       });
 
-      setClickHandler('btn-copy-mobile-link', () => {
-        const link = generateMobileSetupUrl();
-        navigator.clipboard.writeText(link);
+      setClickHandler('btn-copy-qr-link', () => {
+        const linkInput = document.getElementById('mobile-link-url');
+        const link = linkInput?.value || generateMobileSetupUrl();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).catch(() => {});
+        }
         showToast('📋 Mobile setup link copied to clipboard!');
+      });
+
+      setClickHandler('btn-copy-mobile-link', () => {
+        const linkInput = document.getElementById('mobile-link-url');
+        const link = linkInput?.value || generateMobileSetupUrl();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).catch(() => {});
+        }
+        showToast('📋 Mobile setup link copied to clipboard!');
+      });
+
+      setClickHandler('btn-copy-setup-hash', () => {
+        const link = generateMobileSetupUrl();
+        const hash = link.includes('#') ? link.substring(link.indexOf('#')) : link;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(hash).catch(() => {});
+        }
+        showToast('🔑 Setup hash copied to clipboard!');
+      });
+
+      setClickHandler('btn-download-app-bundle', () => {
+        triggerBundleDownload('/download', 'git-chat.html');
+        showToast('📥 Downloaded git-chat.html');
       });
 
       // Clipboard Paste
@@ -4130,6 +4269,7 @@ Minimum version required to store current data is: `+i+`.
         } else {
           isVaultLocked = true;
           vaultKey = null;
+          CryptoVault.clearKeyCache();
           decryptedMessageCache.clear();
           lastRenderedChecksum = '';
           sessionStorage.removeItem('git_chat_vault_pass');
@@ -4488,6 +4628,7 @@ Minimum version required to store current data is: `+i+`.
         const newPass = document.getElementById('cfg-vault-pass')?.value;
         if (newPass) {
           vaultPassword = newPass;
+          CryptoVault.clearKeyCache();
           vaultKey = await CryptoVault.deriveKey(vaultPassword);
           sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
         }
@@ -4737,6 +4878,40 @@ Minimum version required to store current data is: `+i+`.
         decryptedMessageCache.clear();
       }
 
+      // Check for pre-baked embedded setup script tag
+      const embeddedScript = document.getElementById('embedded-setup-config');
+      if (embeddedScript && embeddedScript.textContent) {
+        try {
+          const embedded = JSON.parse(embeddedScript.textContent.trim());
+          if (embedded.owner) config.owner = embedded.owner;
+          if (embedded.repo) config.repo = embedded.repo;
+          if (embedded.branch) config.branch = embedded.branch;
+          if (embedded.workspaceSecret) config.workspaceSecret = embedded.workspaceSecret;
+          if (embedded.backendUrl) config.backendUrl = embedded.backendUrl;
+          if (embedded.token) config.token = embedded.token;
+          if (embedded.user && typeof embedded.user === 'object') {
+            if (embedded.user.name) config.user.name = embedded.user.name;
+            if (embedded.user.id) config.user.id = embedded.user.id;
+            if (embedded.user.avatar) config.user.avatar = embedded.user.avatar;
+          }
+          if (embedded.password) {
+            vaultPassword = embedded.password;
+            vaultKey = await CryptoVault.deriveKey(vaultPassword);
+            isVaultLocked = false;
+            sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
+            localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
+            const vaultBtn = document.getElementById('btn-vault-toggle');
+            if (vaultBtn) {
+              vaultBtn.className = 'header-btn vault-unlocked';
+              vaultBtn.textContent = '🔓 Vault Unlocked';
+            }
+          }
+          saveLocalCache();
+        } catch (err) {
+          console.warn('Failed to parse embedded-setup-config', err);
+        }
+      }
+
       // Check URL hash for vault password or setup
       if (window.location.hash.startsWith('#setup=')) {
         try {
@@ -4779,6 +4954,7 @@ Minimum version required to store current data is: `+i+`.
         try {
           vaultKey = await CryptoVault.deriveKey(vaultPassword);
           isVaultLocked = false;
+          getEncryptionKeyForChannel(activeChannelId).catch(() => {});
           const vaultBtn = document.getElementById('btn-vault-toggle');
           if (vaultBtn) {
             vaultBtn.className = 'header-btn vault-unlocked';
