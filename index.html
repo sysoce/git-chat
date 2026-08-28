@@ -1322,7 +1322,8 @@
         </div>
         <div style="display:flex; gap:8px;">
           <button class="btn-secondary" id="btn-export-json" style="flex:1;">💾 Export Backup</button>
-          <button class="btn-secondary" id="btn-reset-cache" style="flex:1; color:var(--danger);">🗑️ Clear Cache</button>
+          <button class="btn-secondary" id="btn-reset-cache" style="flex:1; color:var(--text-muted);">🗑️ Clear Cache</button>
+          <button class="btn-secondary" id="btn-clean-slate" style="flex:1; color:#ef4444; border-color:rgba(239,68,68,0.4);" title="Purge all messages and reset workspace to clean slate">🧹 Clean Slate</button>
         </div>
         <button class="btn-primary" id="btn-save-settings">Save Settings</button>
       </div>
@@ -1866,7 +1867,7 @@
     // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.1';
+    const CLIENT_VERSION = '1.0.2';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -4524,6 +4525,20 @@ Minimum version required to store current data is: `+i+`.
         }
       });
 
+      // Clean Slate Workspace Reset
+      setClickHandler('btn-clean-slate', async () => {
+        if (!confirm('Warning: This will purge all message history from the Git data branch and reset to a clean slate. Continue?')) return;
+        try {
+          await fetch(apiUrl('/api/workspace/reset'), { method: 'POST' });
+        } catch (e) {
+          console.error(e);
+        }
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.hash = '';
+        window.location.reload();
+      });
+
       // Search Modal
       const searchModal = document.getElementById('search-modal');
       const searchInput = document.getElementById('search-query-input');
@@ -4713,6 +4728,15 @@ Minimum version required to store current data is: `+i+`.
 
     // Initialize Vault Session & Setup Hash
     async function initVaultSession() {
+      // Check for clean slate parameter in hash or query
+      if (window.location.hash.includes('clean=1') || window.location.hash.includes('reset=1') || window.location.search.includes('reset=1')) {
+        localStorage.clear();
+        sessionStorage.clear();
+        state.messages = [];
+        state.events = [];
+        decryptedMessageCache.clear();
+      }
+
       // Check URL hash for vault password or setup
       if (window.location.hash.startsWith('#setup=')) {
         try {

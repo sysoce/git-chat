@@ -50,6 +50,7 @@ export interface CreateChatCommitOptions {
   files: StagedChatFile[];
   message: string;
   isWorkspaceInit?: boolean;
+  cleanSlate?: boolean;
 }
 
 export interface GitChatCommitResult {
@@ -64,7 +65,7 @@ export interface GitChatCommitResult {
  * enforcing strict path sandboxing and ensuring the local working directory on master is never modified.
  */
 export async function createChatCommit(opts: CreateChatCommitOptions): Promise<GitChatCommitResult> {
-  const { workspaceRoot, activeUserId, files, message, isWorkspaceInit } = opts;
+  const { workspaceRoot, activeUserId, files, message, isWorkspaceInit, cleanSlate } = opts;
   const branch = opts.branch || 'git-chat';
 
   // 1. Enforce branch security
@@ -83,9 +84,9 @@ export async function createChatCommit(opts: CreateChatCommitOptions): Promise<G
   await fs.mkdir(tempDir, { recursive: true });
 
   try {
-    // If the branch already exists, read its existing tree into the isolated temporary index
+    // If the branch already exists, read its existing tree into the isolated temporary index (unless clean slate)
     const parentSha = await getHeadCommitSha(workspaceRoot, branch);
-    if (parentSha) {
+    if (parentSha && !cleanSlate) {
       await execFileAsync('git', ['read-tree', `refs/heads/${branch}`], { cwd: workspaceRoot, env });
     }
 
@@ -138,9 +139,11 @@ export async function createChatCommit(opts: CreateChatCommitOptions): Promise<G
 /**
  * Pushes the isolated chat branch to the remote without touching the active working tree.
  */
-export async function pushChatBranch(workspaceRoot: string, branch = 'git-chat', remote = 'origin'): Promise<boolean> {
+export async function pushChatBranch(workspaceRoot: string, branch = 'git-chat', remote = 'origin', force = false): Promise<boolean> {
   try {
-    await execFileAsync('git', ['push', remote, `refs/heads/${branch}:${branch}`], { cwd: workspaceRoot });
+    const pushArgs = ['push', remote, `refs/heads/${branch}:${branch}`];
+    if (force) pushArgs.push('--force');
+    await execFileAsync('git', pushArgs, { cwd: workspaceRoot });
     return true;
   } catch {
     return false;

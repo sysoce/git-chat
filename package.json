@@ -1,6 +1,6 @@
 {
   "name": "git-chat",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Zero-backend, single-file Slack clone with isolated Git data sync and autonomous agent support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,6 +11,8 @@
     "build": "tsc",
     "start": "tsx src/cli/cli.ts start",
     "setup": "tsx src/cli/cli.ts setup",
+    "reset": "tsx src/cli/cli.ts reset",
+    "clean": "tsx src/cli/cli.ts reset",
     "export": "tsx src/cli/cli.ts export",
     "test": "tsx --test test/*.test.ts",
     "lint": "tsc --noEmit"

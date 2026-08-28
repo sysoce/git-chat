@@ -12,10 +12,27 @@ async function main() {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === 'setup') command = 'setup';
+    else if (a === 'reset' || a === 'clean') command = 'reset';
     else if (a === 'start') command = 'start';
     else if ((a === '--port' || a === '-p') && args[i + 1]) port = Number(args[++i]);
     else if ((a === '--host' || a === '-h') && args[i + 1]) host = args[++i]!;
     else if ((a === '--dir' || a === '-d') && args[i + 1]) dir = path.resolve(args[++i]!);
+  }
+
+  if (command === 'reset' || command === 'clean') {
+    console.log('🧹 Resetting git-chat workspace to a clean slate...');
+    const { resetWorkspace } = await import('./resetWorkspace.js');
+    const res = await resetWorkspace(dir, port);
+    console.log('\n======================================================');
+    console.log(' ✨  git-chat Clean Slate Reset Complete!');
+    console.log('======================================================');
+    console.log(` ▸ Remote URL:    ${res.remoteUrl}`);
+    console.log(` ▸ Data Branch:   refs/heads/${res.branch}`);
+    console.log(` ▸ Clean Setup:   ${res.setupUrl}\n`);
+    console.log(' Scan this QR code to connect mobile / browser:');
+    console.log(res.qrTerminal);
+    console.log('------------------------------------------------------\n');
+    return;
   }
 
   if (command === 'setup') {

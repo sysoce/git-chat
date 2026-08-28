@@ -226,6 +226,16 @@ export function startGitChatServer(options: ServerOptions): http.Server {
         return;
       }
 
+      // API: Reset workspace to clean slate
+      if (url.pathname === '/api/workspace/reset' && req.method === 'POST') {
+        liveRelayFiles.clear();
+        const { resetWorkspace } = await import('../cli/resetWorkspace.js');
+        const resData = await resetWorkspace(workspaceRoot, port);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, ...resData }));
+        return;
+      }
+
 
       // API: Push discrete user files to local git-chat ref & live memory relay
       if (url.pathname === '/api/sync/push' && req.method === 'POST') {
