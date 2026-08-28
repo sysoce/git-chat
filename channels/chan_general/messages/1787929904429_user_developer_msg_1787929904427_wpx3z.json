@@ -1,0 +1,19 @@
+{
+  "id": "msg_1787929904427_wpx3z",
+  "channelId": "chan_general",
+  "author": {
+    "id": "user_developer",
+    "name": "Developer",
+    "avatar": "💻",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "BeVzo3prpqfPRVW2",
+    "ciphertext": "bQlvtIQqsg9OxTYuL3O6CIwYaRE="
+  },
+  "reactions": {},
+  "timestamp": 1787929904429
+}
