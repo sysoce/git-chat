@@ -126,6 +126,16 @@
       align-items: center;
       gap: 8px;
     }
+    .ws-version-badge {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-dim);
+      background: var(--bg-hover);
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      line-height: 1.2;
+    }
     .workspace-status {
       font-size: 11px;
       color: var(--success);
@@ -586,6 +596,258 @@
     }
     .action-btn:hover, .action-btn:active { background: var(--bg-hover); color: var(--text-heading); }
 
+    /* Attachment Styling */
+    .msg-attachments-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .attachment-image-card {
+      position: relative;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #111214;
+      max-width: 440px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .attachment-image-card:hover {
+      border-color: #555c63;
+    }
+    .attachment-image-link {
+      display: block;
+      text-decoration: none !important;
+      color: inherit !important;
+      cursor: zoom-in;
+    }
+    .attachment-image-link:hover, .attachment-image-link:visited, .attachment-image-link:active {
+      text-decoration: none !important;
+      color: inherit !important;
+    }
+    .attachment-img {
+      display: block;
+      max-width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      background: #111214;
+    }
+    .attachment-img-caption {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 9px;
+      background: rgba(18, 19, 21, 0.9);
+      border-top: 1px solid var(--border-light);
+      font-size: 11px;
+      color: var(--text-muted);
+      gap: 8px;
+    }
+    .attachment-img-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+    .attachment-img-size {
+      flex-shrink: 0;
+      color: var(--text-dim);
+    }
+    .attachment-media-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 8px;
+      max-width: 420px;
+      width: 100%;
+      margin-top: 2px;
+    }
+    .attachment-media-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-heading);
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .attachment-file-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-decoration: none !important;
+      color: var(--text-heading) !important;
+      font-size: 13px;
+      max-width: 380px;
+      margin-top: 2px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .attachment-file-card:hover {
+      background: var(--bg-hover);
+      border-color: #555c63;
+      text-decoration: none !important;
+    }
+    .attachment-file-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .attachment-file-info {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .attachment-file-name {
+      font-weight: 600;
+      font-size: 12.5px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-heading);
+    }
+    .attachment-file-size {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .attachment-file-btn {
+      color: var(--accent-blue);
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    /* Clickable Encrypted / Decryption Error Badge */
+    .msg-encrypted-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(224, 160, 44, 0.12);
+      border: 1px dashed #e0a02c;
+      border-radius: 6px;
+      color: #f1c40f;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .msg-encrypted-badge:hover {
+      background: rgba(224, 160, 44, 0.22);
+      border-color: #ffd166;
+    }
+
+    /* Built-in HTML5 Media Viewer Dialog */
+    dialog#media-viewer-dialog {
+      border: none;
+      background: transparent;
+      padding: 0;
+      max-width: 96vw;
+      max-height: 94vh;
+      overflow: hidden;
+      outline: none;
+      margin: auto;
+    }
+    dialog#media-viewer-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .media-dialog-container {
+      display: flex;
+      flex-direction: column;
+      background: #141618;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75);
+      max-width: 92vw;
+      max-height: 90vh;
+      animation: zoomInMedia 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes zoomInMedia {
+      from { transform: scale(0.94); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .media-dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #1b1d20;
+      border-bottom: 1px solid var(--border-light);
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .media-dialog-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-heading);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .media-dialog-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .media-dialog-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-heading);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .media-dialog-btn:hover {
+      background: var(--bg-hover);
+      border-color: #555c63;
+    }
+    .media-dialog-body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      background: #0d0e10;
+      overflow: auto;
+      max-height: calc(90vh - 54px);
+    }
+    .media-dialog-body img {
+      max-width: 100%;
+      max-height: calc(88vh - 74px);
+      object-fit: contain;
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .media-dialog-body video {
+      max-width: 100%;
+      max-height: calc(88vh - 74px);
+      border-radius: 6px;
+      background: #000;
+      outline: none;
+    }
+    .media-dialog-body audio {
+      width: 100%;
+      min-width: 280px;
+      max-width: 500px;
+    }
+
     /* Composer */
     #composer-container {
       padding: 0 14px calc(12px + var(--safe-bottom)) 14px;
@@ -596,7 +858,8 @@
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: 10px;
-      overflow: hidden;
+      overflow: visible;
+      position: relative;
       transition: border-color 0.15s;
     }
     .composer-box:focus-within { border-color: #555c63; }
@@ -607,8 +870,131 @@
       padding: 6px 10px;
       background: var(--bg-card);
       border-bottom: 1px solid var(--border-light);
+      border-top-left-radius: 9px;
+      border-top-right-radius: 9px;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
+    }
+
+    /* Composer Staged Attachments (Modern Thumbnails & Hover Tooltips) */
+    #composer-staged-attachments {
+      display: none;
+      padding: 10px 12px 6px 12px;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: rgba(0, 0, 0, 0.18);
+      border-bottom: 1px solid var(--border-light);
+      align-items: center;
+    }
+    .staged-att-item {
+      position: relative;
+      width: 58px;
+      height: 58px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      cursor: default;
+    }
+    .staged-att-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 7px;
+      display: block;
+    }
+    .staged-att-generic {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      border-radius: 7px;
+      background: #191b1e;
+    }
+    .staged-att-icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+    .staged-att-ext {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      max-width: 50px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .staged-att-tooltip {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #25262b;
+      color: #f1f3f5;
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 5px 9px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      white-space: nowrap;
+      pointer-events: none;
+      transition: opacity 0.15s ease, visibility 0.15s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+      z-index: 100;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .staged-att-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px;
+      border-style: solid;
+      border-color: #25262b transparent transparent transparent;
+    }
+    .staged-att-item:hover .staged-att-tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+    .staged-att-remove {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #1e1f20;
+      color: #ced4da;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      font-size: 13px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s, color 0.15s;
+      z-index: 10;
+      padding: 0;
+    }
+    .staged-att-remove:hover {
+      background: var(--danger);
+      color: #ffffff;
+      border-color: var(--danger);
+      transform: scale(1.12);
+    }
+    .composer-bottom {
+      border-bottom-left-radius: 9px;
+      border-bottom-right-radius: 9px;
     }
     .tool-btn {
       background: var(--bg-card);
@@ -834,9 +1220,49 @@
       margin: 12px 0;
     }
 
-    /* Spinner Animation */
-    .spin { animation: rotate 1s linear infinite; }
-    @keyframes rotate { 100% { transform: rotate(360deg); } }
+    /* Toggle Switch Component */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #3f3f46;
+      border-radius: 20px;
+      transition: 0.2s;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+    input:checked + .slider {
+      background-color: var(--accent, #007a5a);
+    }
+    input:checked + .slider:before {
+      transform: translateX(16px);
+    }
+
+    /* Update Modal Cards */
+    .update-modal-card {
+      max-width: 480px;
+    }
 
     /* ========================================================= */
     /* RESPONSIVE MOBILE UX (Screens <= 768px: Mobile / Tablet)  */
@@ -944,7 +1370,7 @@
     <aside id="sidebar">
       <div class="sidebar-header">
         <div>
-          <div class="workspace-title">💬 <span id="ws-name">Git-Chat</span></div>
+          <div class="workspace-title">💬 <span id="ws-name">Git-Chat</span> <span class="ws-version-badge">v1.0.0</span></div>
           <div class="workspace-status"><span class="status-dot"></span> <span id="sync-status">refs/heads/git-chat</span></div>
         </div>
         <button class="header-btn" id="btn-open-settings" title="Workspace Settings" style="padding:6px 9px;">⚙️</button>
@@ -997,6 +1423,7 @@
           </div>
         </div>
         <div class="chat-header-actions">
+          <button class="header-btn" id="btn-channel-mute-toggle" title="Mute notifications for channel" style="display:flex; align-items:center; gap:5px;">🔔<span class="desktop-only"> Mute</span></button>
           <button class="header-btn" id="btn-mobile-sync-link" title="Connect Phone or Share Link" style="display:flex; align-items:center; gap:5px;">📱<span class="desktop-only"> Mobile</span></button>
           <button class="header-btn desktop-only" id="btn-s3-status" title="S3 Media Storage Status" style="display:flex; align-items:center; gap:5px;"><span id="s3-status-dot" style="width:7px; height:7px; border-radius:50%; background:var(--warning);"></span> S3 Media</button>
           <button class="header-btn vault-unlocked" id="btn-vault-toggle" title="Toggle Vault Encryption Lock">🔓<span class="desktop-only"> Vault</span></button>
@@ -1009,6 +1436,7 @@
 
         <!-- Mobile Overflow Dropdown -->
         <div class="mobile-menu-dropdown" id="mobile-overflow-dropdown">
+          <button class="dropdown-item" id="btn-mob-mute">🔔 Mute Channel</button>
           <button class="dropdown-item" id="btn-mob-search">🔍 Search Messages</button>
           <button class="dropdown-item" id="btn-mob-sync">🔄 Sync Git Now</button>
           <button class="dropdown-item" id="btn-mob-s3">📦 S3 Media Status</button>
@@ -1033,7 +1461,7 @@
             <button class="tool-btn" id="tb-attach" title="Attach Media / Files to S3" style="font-size:14px; margin-left:auto; color:var(--accent-blue);">📎 Attach</button>
             <input type="file" id="file-upload-input" style="display:none;" multiple />
           </div>
-          <div id="composer-staged-attachments" style="display:none; padding:8px 12px; gap:8px; flex-wrap:wrap; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border-light);"></div>
+          <div id="composer-staged-attachments"></div>
           <textarea class="composer-textarea" id="message-input" placeholder="Message #general (Type / for commands, @ for mentions)..." rows="1"></textarea>
           <div class="composer-bottom">
             <div class="isolation-pill" id="encryption-indicator">🔒 E2EE Active</div>
@@ -1145,6 +1573,7 @@
         <button class="tab-btn active" id="stab-general" onclick="switchSettingsTab('general')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-sidebar-active); color:#fff; cursor:pointer;">⚙️ Workspace</button>
         <button class="tab-btn" id="stab-storage" onclick="switchSettingsTab('storage')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:pointer;">📦 Git-S3 Storage</button>
         <button class="tab-btn" id="stab-access" onclick="switchSettingsTab('access')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:pointer;">👥 Access & Members</button>
+        <button class="tab-btn" id="stab-notifications" onclick="switchSettingsTab('notifications')" style="flex:1; padding:6px; font-size:12px; font-weight:600; border-radius:4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:pointer;">🔔 Notifications</button>
       </div>
 
       <div id="settings-tab-content" style="overflow-y:auto; flex:1; padding-right:4px;">
@@ -1189,7 +1618,24 @@
             <input class="form-input" type="password" id="cfg-workspace-secret" placeholder="Defaults to repository identity" />
             <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Optional custom shared passphrase for team channels. If empty, uses repository identity.</div>
           </div>
+          <div class="form-group" style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border); margin-top:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <div>
+                <label class="form-label" style="margin-bottom:2px; color:var(--text-heading); font-weight:700;">🔄 Auto-Update Client</label>
+                <div style="font-size:11px; color:var(--text-dim);">Automatically download new HTML bundle when updated (<span id="settings-client-version">v1.0.0</span>)</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfg-auto-update-enabled" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button type="button" class="btn-secondary" id="btn-check-updates-now" style="flex:1; padding:6px 10px; font-size:11.5px;">🔍 Check for Updates</button>
+              <button type="button" class="btn-secondary" id="btn-download-bundle-now" style="flex:1; padding:6px 10px; font-size:11.5px;">📥 Download git-chat.html</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- TAB 2: GIT-S3 STORAGE -->
         <div id="sec-storage" style="display:none;">
@@ -1252,6 +1698,59 @@
             <button class="btn-secondary" id="btn-gen-invite-link" style="width:100%;">🔗 Generate 1-Click Invite Link</button>
           </div>
         </div>
+
+        <!-- TAB 4: NOTIFICATIONS & MUTING -->
+        <div id="sec-notifications" style="display:none;">
+          <div style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+            Configure browser push notifications, sound alerts, and channel muting preferences.
+          </div>
+          
+          <!-- Push Permission Status & Request -->
+          <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:600; font-size:13px; color:var(--text-heading);">Web Push Notifications</div>
+                <div id="notif-permission-status-text" style="font-size:11px; color:var(--text-muted); margin-top:2px;">Status: Checking...</div>
+              </div>
+              <button class="btn-secondary" id="btn-request-notif-perm" style="padding:5px 12px; font-size:12px;">Enable Push</button>
+            </div>
+          </div>
+
+          <!-- Global Notification Mode -->
+          <div class="form-group">
+            <label class="form-label">Notification Frequency</label>
+            <select class="form-input" id="cfg-notif-global-mode">
+              <option value="all">🟢 All Messages (Notify on all messages in unmuted channels)</option>
+              <option value="mentions">🟡 Mentions & Direct Messages Only</option>
+              <option value="nothing">🔴 Muted / Do Not Disturb (No notifications)</option>
+            </select>
+          </div>
+
+          <!-- Toggles: Sound Alerts & Mention Bypass -->
+          <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; color:var(--text-main);">
+              <input type="checkbox" id="cfg-notif-sound" style="width:16px; height:16px; accent-color:var(--accent-blue);" />
+              <span>Play audio chime for new notifications</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; color:var(--text-main);">
+              <input type="checkbox" id="cfg-notif-mention-bypass" style="width:16px; height:16px; accent-color:var(--accent-blue);" />
+              <span>Direct @mentions always notify even if channel is muted</span>
+            </label>
+          </div>
+
+          <!-- Muted Channels Management -->
+          <div style="margin-top:12px;">
+            <label class="form-label">Muted Channels & Direct Messages</label>
+            <div id="muted-channels-list-container" style="max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); padding:6px; display:flex; flex-direction:column; gap:4px; font-size:12px;">
+              <div style="color:var(--text-muted); padding:8px; text-align:center;">No channels are currently muted.</div>
+            </div>
+          </div>
+
+          <!-- Test Notification Button -->
+          <div style="margin-top:14px;">
+            <button class="btn-secondary" id="btn-test-notification" style="width:100%;">🔔 Send Test Notification & Chime</button>
+          </div>
+        </div>
       </div>
 
       <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px; display:flex; flex-direction:column; gap:8px;">
@@ -1302,8 +1801,116 @@
     </div>
   </div>
 
+  <!-- UPDATE MODAL (Auto-Update & Firefox Restart Prompt) -->
+  <div class="modal-overlay" id="update-modal">
+    <div class="modal-card update-modal-card">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-title">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="update-modal-badge" style="background:var(--accent, #007a5a); color:#ffffff; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">🚀 Update Downloaded</span>
+        </div>
+        <button class="close-btn" id="btn-close-update-modal" aria-label="Close">×</button>
+      </div>
+
+      <div style="padding:14px 0 10px 0; display:flex; flex-direction:column; gap:12px;">
+        <h3 id="update-modal-heading" style="font-size:16px; font-weight:700; color:var(--text-heading); margin:0;">
+          Version Update Ready
+        </h3>
+        <p style="font-size:13px; color:var(--text-muted); margin:0;">
+          Current: <span id="update-current-version" style="background:var(--bg-input); padding:2px 6px; border-radius:4px; font-family:var(--font-mono); font-size:12px;">v1.0.0</span> &rarr;
+          New: <span id="update-new-version" style="background:rgba(0,122,90,0.2); color:#2eb886; padding:2px 6px; border-radius:4px; font-family:var(--font-mono); font-size:12px; font-weight:bold;">v1.0.1</span>
+        </p>
+
+        <!-- Downloaded Container -->
+        <div id="update-downloaded-section">
+          <div style="background:rgba(0,122,90,0.15); border:1px solid rgba(46,184,134,0.3); border-radius:8px; padding:12px; display:flex; gap:10px; align-items:flex-start;">
+            <span style="font-size:20px; line-height:1;">📥</span>
+            <div style="font-size:12px; line-height:1.4;">
+              <strong style="color:#2eb886; display:block; margin-bottom:2px;">New bundle saved to Downloads</strong>
+              <span style="color:var(--text-main);">Open the updated local file in Firefox to switch to the new version.</span>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+            <a
+              id="update-link-firefox-primary"
+              href="file:///storage/emulated/0/Download/git-chat.html"
+              class="btn-primary"
+              style="text-align:center; text-decoration:none; padding:10px 14px; font-size:13px; font-weight:600; display:block; border-radius:6px;"
+              target="_blank"
+              rel="noopener"
+            >
+              🦊 Open in Firefox (Primary)
+            </a>
+            <a
+              id="update-link-firefox-sdcard"
+              href="file:///sdcard/Download/git-chat.html"
+              class="btn-secondary"
+              style="text-align:center; text-decoration:none; padding:8px 12px; font-size:12px; display:block; border-radius:6px; background:var(--bg-card); color:var(--text-muted); border:1px solid var(--border);"
+              target="_blank"
+              rel="noopener"
+            >
+              📂 Alt SD Card Link
+            </a>
+            <button
+              type="button"
+              id="btn-copy-firefox-link"
+              class="btn-secondary"
+              data-copy-text="file:///storage/emulated/0/Download/git-chat.html"
+              style="padding:8px 12px; font-size:12px; cursor:pointer; border-radius:6px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border);"
+            >
+              📋 Copy Firefox Path
+            </button>
+          </div>
+
+          <div style="font-size:11px; color:var(--text-dim); line-height:1.4; background:var(--code-bg); padding:8px 10px; border-radius:6px; border:1px solid var(--border-light); margin-top:10px;">
+            <strong style="color:var(--text-muted);">Tip for Firefox:</strong> Tap the button above, or copy the path and paste it directly into your Firefox address bar.
+          </div>
+        </div>
+
+        <!-- Not Yet Downloaded Container (Manual Download) -->
+        <div id="update-available-section" style="display:none; margin-top:6px;">
+          <button type="button" id="btn-manual-download-update" class="btn-primary" style="width:100%; padding:10px; font-size:13px; font-weight:600;">
+            📥 Download New File
+          </button>
+        </div>
+
+        <!-- Auto-Update Toggle -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); padding:10px 12px; border-radius:8px; border:1px solid var(--border-light); margin-top:6px;">
+          <div>
+            <strong style="font-size:12px; color:var(--text-heading); display:block;">Auto-Update</strong>
+            <span style="font-size:11px; color:var(--text-dim);">Automatically download new versions when available</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-auto-update" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; border-top:1px solid var(--border); padding-top:10px; margin-top:4px;">
+        <button class="btn-secondary" id="btn-dismiss-update" style="padding:6px 14px; font-size:12px;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUILT-IN HTML5 MEDIA VIEWER DIALOG -->
+  <dialog id="media-viewer-dialog" class="media-dialog">
+    <div class="media-dialog-container">
+      <div class="media-dialog-header">
+        <span class="media-dialog-title" id="media-viewer-title">Media Viewer</span>
+        <div class="media-dialog-actions">
+          <a id="media-viewer-download" href="#" download="" class="media-dialog-btn" title="Download media">⬇ Save</a>
+          <button type="button" class="close-btn" id="btn-close-media-viewer" aria-label="Close media viewer">×</button>
+        </div>
+      </div>
+      <div class="media-dialog-body" id="media-viewer-content"></div>
+    </div>
+  </dialog>
+
   <!-- TOAST -->
   <div id="toast"></div>
+
 
   <script>
     // ==========================================
@@ -1407,59 +2014,50 @@
       return out;
     }
 
-    function pureHmacSha256(key, data) {
-      let k = key;
-      if (k.length > 64) {
-        k = pureSha256(k);
-      }
+    function purePbkdf2(passphrase, salt, iterations = 100000, keyLen = 32) {
+      const enc = new TextEncoder();
+      let passBytes = enc.encode(passphrase);
+      const saltBytes = typeof salt === 'string' ? enc.encode(salt) : salt;
+      if (passBytes.length > 64) passBytes = pureSha256(passBytes);
       const kPad = new Uint8Array(64);
-      kPad.set(k);
-
+      kPad.set(passBytes);
       const iPad = new Uint8Array(64);
       const oPad = new Uint8Array(64);
       for (let i = 0; i < 64; i++) {
         iPad[i] = kPad[i] ^ 0x36;
         oPad[i] = kPad[i] ^ 0x5c;
       }
-
-      const inner = new Uint8Array(64 + data.length);
-      inner.set(iPad, 0);
-      inner.set(data, 64);
-      const innerHash = pureSha256(inner);
-
-      const outer = new Uint8Array(64 + 32);
-      outer.set(oPad, 0);
-      outer.set(innerHash, 64);
-      return pureSha256(outer);
-    }
-
-    function purePbkdf2(passphrase, salt, iterations = 100000, keyLen = 32) {
-      const enc = new TextEncoder();
-      const passBytes = enc.encode(passphrase);
-      const saltBytes = typeof salt === 'string' ? enc.encode(salt) : salt;
-
       const numBlocks = Math.ceil(keyLen / 32);
       const out = new Uint8Array(numBlocks * 32);
+      const innerBuffer = new Uint8Array(64 + 32);
+      innerBuffer.set(iPad, 0);
+      const outerBuffer = new Uint8Array(64 + 32);
+      outerBuffer.set(oPad, 0);
 
       for (let blockIdx = 1; blockIdx <= numBlocks; blockIdx++) {
-        const saltBlock = new Uint8Array(saltBytes.length + 4);
-        saltBlock.set(saltBytes, 0);
-        new DataView(saltBlock.buffer).setUint32(saltBytes.length, blockIdx, false);
-
-        let u = pureHmacSha256(passBytes, saltBlock);
+        const initialInner = new Uint8Array(64 + saltBytes.length + 4);
+        initialInner.set(iPad, 0);
+        initialInner.set(saltBytes, 64);
+        new DataView(initialInner.buffer).setUint32(64 + saltBytes.length, blockIdx, false);
+        let u = pureSha256(initialInner);
+        outerBuffer.set(u, 64);
+        u = pureSha256(outerBuffer);
         const blockXor = new Uint8Array(u);
-
         for (let iter = 1; iter < iterations; iter++) {
-          u = pureHmacSha256(passBytes, u);
-          for (let j = 0; j < 32; j++) {
-            blockXor[j] ^= u[j];
-          }
+          innerBuffer.set(u, 64);
+          const innerH = pureSha256(innerBuffer);
+          outerBuffer.set(innerH, 64);
+          u = pureSha256(outerBuffer);
+          for (let j = 0; j < 32; j++) blockXor[j] ^= u[j];
         }
         out.set(blockXor, (blockIdx - 1) * 32);
       }
-
       return out.subarray(0, keyLen);
     }
+
+    const PURE_RCON = new Uint32Array([
+      0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000, 0x1b000000, 0x36000000
+    ]);
 
     const PURE_SBOX = new Uint8Array([
       0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
@@ -1480,110 +2078,129 @@
       0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
     ]);
 
-    const PURE_RCON = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
-
     function pureSubWord(w) {
-      return (((PURE_SBOX[(w >>> 24) & 0xff] << 24) |
+      return ((PURE_SBOX[(w >>> 24) & 0xff] << 24) |
               (PURE_SBOX[(w >>> 16) & 0xff] << 16) |
               (PURE_SBOX[(w >>> 8) & 0xff] << 8) |
-              PURE_SBOX[w & 0xff]) >>> 0);
+              (PURE_SBOX[w & 0xff])) >>> 0;
     }
 
-    function pureExpandKey256(key) {
-      const w = new Uint32Array(60);
-      for (let i = 0; i < 8; i++) {
-        w[i] = ((key[4 * i] << 24) | (key[4 * i + 1] << 16) | (key[4 * i + 2] << 8) | key[4 * i + 3]) >>> 0;
+    function pureRotWord(w) {
+      return ((w << 8) | (w >>> 24)) >>> 0;
+    }
+
+    function pureKeyExpansion(keyBytes) {
+      const Nk = keyBytes.length / 4;
+      const Nr = Nk + 6;
+      const w = new Uint32Array(4 * (Nr + 1));
+      const view = new DataView(keyBytes.buffer, keyBytes.byteOffset, keyBytes.byteLength);
+
+      for (let i = 0; i < Nk; i++) {
+        w[i] = view.getUint32(i * 4, false);
       }
-      for (let i = 8; i < 60; i++) {
+
+      for (let i = Nk; i < 4 * (Nr + 1); i++) {
         let temp = w[i - 1];
-        if (i % 8 === 0) {
-          const rot = ((temp << 8) | (temp >>> 24)) >>> 0;
-          const sub = pureSubWord(rot);
-          const rconVal = (PURE_RCON[Math.floor(i / 8) - 1] << 24) >>> 0;
-          temp = (sub ^ rconVal) >>> 0;
-        } else if (i % 8 === 4) {
+        if (i % Nk === 0) {
+          temp = pureSubWord(pureRotWord(temp)) ^ PURE_RCON[(i / Nk) - 1];
+        } else if (Nk > 6 && i % Nk === 4) {
           temp = pureSubWord(temp);
         }
-        w[i] = (w[i - 8] ^ temp) >>> 0;
+        w[i] = (w[i - Nk] ^ temp) >>> 0;
       }
-      return w;
+      return { w, Nr };
     }
 
-    const pureG2 = (x) => ((x << 1) ^ ((x & 0x80) ? 0x11b : 0)) & 0xff;
-    const pureG3 = (x) => (pureG2(x) ^ x) & 0xff;
-
-    const PURE_T0 = new Uint32Array(256);
-    const PURE_T1 = new Uint32Array(256);
-    const PURE_T2 = new Uint32Array(256);
-    const PURE_T3 = new Uint32Array(256);
-
-    for (let i = 0; i < 256; i++) {
-      const s = PURE_SBOX[i];
-      const s2 = pureG2(s);
-      const s3 = pureG3(s);
-      PURE_T0[i] = ((s2 << 24) | (s << 16) | (s << 8) | s3) >>> 0;
-      PURE_T1[i] = ((s3 << 24) | (s2 << 16) | (s << 8) | s) >>> 0;
-      PURE_T2[i] = ((s << 24) | (s3 << 16) | (s2 << 8) | s) >>> 0;
-      PURE_T3[i] = ((s << 24) | (s << 16) | (s3 << 8) | s2) >>> 0;
-    }
-
-    function pureEncryptBlock256(block, w) {
-      const inView = new DataView(block.buffer, block.byteOffset, 16);
-      let s0 = (inView.getUint32(0, false) ^ w[0]) >>> 0;
-      let s1 = (inView.getUint32(4, false) ^ w[1]) >>> 0;
-      let s2 = (inView.getUint32(8, false) ^ w[2]) >>> 0;
-      let s3 = (inView.getUint32(12, false) ^ w[3]) >>> 0;
-
-      for (let r = 1; r <= 13; r++) {
-        const k0 = w[r * 4];
-        const k1 = w[r * 4 + 1];
-        const k2 = w[r * 4 + 2];
-        const k3 = w[r * 4 + 3];
-
-        const t0 = (PURE_T0[(s0 >>> 24) & 0xff] ^ PURE_T1[(s1 >>> 16) & 0xff] ^ PURE_T2[(s2 >>> 8) & 0xff] ^ PURE_T3[s3 & 0xff] ^ k0) >>> 0;
-        const t1 = (PURE_T0[(s1 >>> 24) & 0xff] ^ PURE_T1[(s2 >>> 16) & 0xff] ^ PURE_T2[(s3 >>> 8) & 0xff] ^ PURE_T3[s0 & 0xff] ^ k1) >>> 0;
-        const t2 = (PURE_T0[(s2 >>> 24) & 0xff] ^ PURE_T1[(s3 >>> 16) & 0xff] ^ PURE_T2[(s0 >>> 8) & 0xff] ^ PURE_T3[s1 & 0xff] ^ k2) >>> 0;
-        const t3 = (PURE_T0[(s3 >>> 24) & 0xff] ^ PURE_T1[(s0 >>> 16) & 0xff] ^ PURE_T2[(s1 >>> 8) & 0xff] ^ PURE_T3[s2 & 0xff] ^ k3) >>> 0;
-
-        s0 = t0; s1 = t1; s2 = t2; s3 = t3;
+    function pureGfMul(a, b) {
+      let p = 0;
+      for (let i = 0; i < 8; i++) {
+        if ((b & 1) !== 0) p ^= a;
+        const hiBit = (a & 0x80) !== 0;
+        a = (a << 1) & 0xff;
+        if (hiBit) a ^= 0x1b;
+        b >>>= 1;
       }
-
-      const k0 = w[56], k1 = w[57], k2 = w[58], k3 = w[59];
-      const out = new Uint8Array(16);
-      const outView = new DataView(out.buffer);
-
-      const t0 = (((PURE_SBOX[(s0 >>> 24) & 0xff] << 24) | (PURE_SBOX[(s1 >>> 16) & 0xff] << 16) | (PURE_SBOX[(s2 >>> 8) & 0xff] << 8) | PURE_SBOX[s3 & 0xff]) ^ k0) >>> 0;
-      const t1 = (((PURE_SBOX[(s1 >>> 24) & 0xff] << 24) | (PURE_SBOX[(s2 >>> 16) & 0xff] << 16) | (PURE_SBOX[(s3 >>> 8) & 0xff] << 8) | PURE_SBOX[s0 & 0xff]) ^ k1) >>> 0;
-      const t2 = (((PURE_SBOX[(s2 >>> 24) & 0xff] << 24) | (PURE_SBOX[(s3 >>> 16) & 0xff] << 16) | (PURE_SBOX[(s0 >>> 8) & 0xff] << 8) | PURE_SBOX[s1 & 0xff]) ^ k2) >>> 0;
-      const t3 = (((PURE_SBOX[(s3 >>> 24) & 0xff] << 24) | (PURE_SBOX[(s0 >>> 16) & 0xff] << 16) | (PURE_SBOX[(s1 >>> 8) & 0xff] << 8) | PURE_SBOX[s2 & 0xff]) ^ k3) >>> 0;
-
-      outView.setUint32(0, t0, false);
-      outView.setUint32(4, t1, false);
-      outView.setUint32(8, t2, false);
-      outView.setUint32(12, t3, false);
-
-      return out;
+      return p;
     }
 
-    function pureGhashMultiply(x, y) {
-      const z = new Uint8Array(16);
-      const v = new Uint8Array(y);
+    function pureAesEncryptBlock(block, expandedKey) {
+      const { w, Nr } = expandedKey;
+      let state = new Uint8Array(16);
+      state.set(block);
+
+      const addRoundKey = (round) => {
+        for (let c = 0; c < 4; c++) {
+          const rk = w[round * 4 + c];
+          state[c * 4 + 0] ^= (rk >>> 24) & 0xff;
+          state[c * 4 + 1] ^= (rk >>> 16) & 0xff;
+          state[c * 4 + 2] ^= (rk >>> 8) & 0xff;
+          state[c * 4 + 3] ^= rk & 0xff;
+        }
+      };
+
+      const subBytes = () => {
+        for (let i = 0; i < 16; i++) state[i] = PURE_SBOX[state[i]];
+      };
+
+      const shiftRows = () => {
+        const s = new Uint8Array(state);
+        state[1] = s[5]; state[5] = s[9]; state[9] = s[13]; state[13] = s[1];
+        state[2] = s[10]; state[6] = s[14]; state[10] = s[2]; state[14] = s[6];
+        state[3] = s[15]; state[7] = s[3]; state[11] = s[7]; state[15] = s[11];
+      };
+
+      const mixColumns = () => {
+        for (let c = 0; c < 4; c++) {
+          const a0 = state[c * 4 + 0], a1 = state[c * 4 + 1], a2 = state[c * 4 + 2], a3 = state[c * 4 + 3];
+          state[c * 4 + 0] = pureGfMul(0x02, a0) ^ pureGfMul(0x03, a1) ^ a2 ^ a3;
+          state[c * 4 + 1] = a0 ^ pureGfMul(0x02, a1) ^ pureGfMul(0x03, a2) ^ a3;
+          state[c * 4 + 2] = a0 ^ a1 ^ pureGfMul(0x02, a2) ^ pureGfMul(0x03, a3);
+          state[c * 4 + 3] = pureGfMul(0x03, a0) ^ a1 ^ a2 ^ pureGfMul(0x02, a3);
+        }
+      };
+
+      addRoundKey(0);
+      for (let round = 1; round < Nr; round++) {
+        subBytes();
+        shiftRows();
+        mixColumns();
+        addRoundKey(round);
+      }
+      subBytes();
+      shiftRows();
+      addRoundKey(Nr);
+      return state;
+    }
+
+    function pureGhashMul(x, y) {
+      let z0 = 0n, z1 = 0n;
+      let v0 = (BigInt(x[0]) << 56n) | (BigInt(x[1]) << 48n) | (BigInt(x[2]) << 40n) | (BigInt(x[3]) << 32n) |
+               (BigInt(x[4]) << 24n) | (BigInt(x[5]) << 16n) | (BigInt(x[6]) << 8n) | BigInt(x[7]);
+      let v1 = (BigInt(x[8]) << 56n) | (BigInt(x[9]) << 48n) | (BigInt(x[10]) << 40n) | (BigInt(x[11]) << 32n) |
+               (BigInt(x[12]) << 24n) | (BigInt(x[13]) << 16n) | (BigInt(x[14]) << 8n) | BigInt(x[15]);
+
+      const r = 0xe100000000000000n;
 
       for (let i = 0; i < 128; i++) {
-        const bit = (x[Math.floor(i / 8)] >>> (7 - (i % 8))) & 1;
-        if (bit) {
-          for (let j = 0; j < 16; j++) z[j] ^= v[j];
+        const byteIdx = Math.floor(i / 8);
+        const bitIdx = 7 - (i % 8);
+        if ((y[byteIdx] & (1 << bitIdx)) !== 0) {
+          z0 ^= v0;
+          z1 ^= v1;
         }
-        const lsb = v[15] & 1;
-        for (let j = 15; j > 0; j--) {
-          v[j] = ((v[j] >>> 1) | ((v[j - 1] & 1) << 7)) & 0xff;
-        }
-        v[0] = (v[0] >>> 1) & 0xff;
-        if (lsb) {
-          v[0] ^= 0xe1;
+        const lsb = v1 & 1n;
+        v1 = (v1 >> 1n) | ((v0 & 1n) << 63n);
+        v0 = v0 >> 1n;
+        if (lsb !== 0n) {
+          v0 ^= r;
         }
       }
-      return z;
+
+      const out = new Uint8Array(16);
+      const view = new DataView(out.buffer);
+      view.setBigUint64(0, z0, false);
+      view.setBigUint64(8, z1, false);
+      return out;
     }
 
     function pureGhash(h, data) {
@@ -1591,109 +2208,114 @@
       const m = Math.ceil(data.length / 16);
       for (let i = 0; i < m; i++) {
         const block = new Uint8Array(16);
-        block.set(data.subarray(i * 16, Math.min(data.length, (i + 1) * 16)));
+        const slice = data.subarray(i * 16, Math.min((i + 1) * 16, data.length));
+        block.set(slice);
         for (let j = 0; j < 16; j++) y[j] ^= block[j];
-        y = pureGhashMultiply(y, h);
+        y = pureGhashMul(y, h);
       }
       return y;
     }
 
-    function pureAesGcmEncrypt(key, iv, plaintext) {
-      const w = pureExpandKey256(key);
-      const zeroBlock = new Uint8Array(16);
-      const h = pureEncryptBlock256(zeroBlock, w);
+    function pureAesGcmEncrypt(keyBytes, iv, plaintext, aad = new Uint8Array(0)) {
+      const expanded = pureKeyExpansion(keyBytes);
+      const h = pureAesEncryptBlock(new Uint8Array(16), expanded);
 
       const j0 = new Uint8Array(16);
-      j0.set(iv.subarray(0, 12));
-      j0[15] = 1;
+      if (iv.length === 12) {
+        j0.set(iv, 0);
+        j0[15] = 1;
+      } else {
+        const ivPadded = new Uint8Array(Math.ceil(iv.length / 16) * 16 + 16);
+        ivPadded.set(iv, 0);
+        new DataView(ivPadded.buffer).setBigUint64(ivPadded.length - 8, BigInt(iv.length * 8), false);
+        j0.set(pureGhash(h, ivPadded));
+      }
 
-      const cb = new Uint8Array(j0);
-      const incCb = () => {
-        for (let i = 15; i >= 12; i--) {
-          cb[i] = (cb[i] + 1) & 0xff;
-          if (cb[i] !== 0) break;
-        }
-      };
-
-      const ciphertext = new Uint8Array(plaintext.length);
       const numBlocks = Math.ceil(plaintext.length / 16);
-      for (let i = 0; i < numBlocks; i++) {
-        incCb();
-        const eCb = pureEncryptBlock256(cb, w);
-        const start = i * 16;
-        const end = Math.min(plaintext.length, (i + 1) * 16);
+      const ciphertext = new Uint8Array(plaintext.length);
+      const cb = new Uint8Array(j0);
+
+      for (let i = 1; i <= numBlocks; i++) {
+        let val = (cb[12] << 24) | (cb[13] << 16) | (cb[14] << 8) | cb[15];
+        val = (val + 1) >>> 0;
+        cb[12] = (val >>> 24) & 0xff; cb[13] = (val >>> 16) & 0xff; cb[14] = (val >>> 8) & 0xff; cb[15] = val & 0xff;
+
+        const eCb = pureAesEncryptBlock(cb, expanded);
+        const start = (i - 1) * 16;
+        const end = Math.min(i * 16, plaintext.length);
         for (let j = 0; j < end - start; j++) {
           ciphertext[start + j] = plaintext[start + j] ^ eCb[j];
         }
       }
 
-      const lenBlock = new Uint8Array(16);
-      const lenView = new DataView(lenBlock.buffer);
-      lenView.setUint32(12, plaintext.length * 8, false);
+      const lenA = BigInt(aad.length * 8);
+      const lenC = BigInt(ciphertext.length * 8);
+      const aadPad = Math.ceil(aad.length / 16) * 16;
+      const ctPad = Math.ceil(ciphertext.length / 16) * 16;
+      const ghashBuf = new Uint8Array(aadPad + ctPad + 16);
+      ghashBuf.set(aad, 0);
+      ghashBuf.set(ciphertext, aadPad);
+      const ghashView = new DataView(ghashBuf.buffer);
+      ghashView.setBigUint64(aadPad + ctPad, lenA, false);
+      ghashView.setBigUint64(aadPad + ctPad + 8, lenC, false);
 
-      const ghashInput = new Uint8Array(Math.ceil(ciphertext.length / 16) * 16 + 16);
-      ghashInput.set(ciphertext);
-      ghashInput.set(lenBlock, Math.ceil(ciphertext.length / 16) * 16);
-
-      const s = pureGhash(h, ghashInput);
-      const tagMask = pureEncryptBlock256(j0, w);
+      const s = pureGhash(h, ghashBuf);
+      const eJ0 = pureAesEncryptBlock(j0, expanded);
       const tag = new Uint8Array(16);
-      for (let i = 0; i < 16; i++) {
-        tag[i] = s[i] ^ tagMask[i];
-      }
+      for (let i = 0; i < 16; i++) tag[i] = s[i] ^ eJ0[i];
 
-      const result = new Uint8Array(iv.length + ciphertext.length + tag.length);
-      result.set(iv, 0);
-      result.set(ciphertext, iv.length);
-      result.set(tag, iv.length + ciphertext.length);
-      return result;
+      const out = new Uint8Array(iv.length + ciphertext.length + 16);
+      out.set(iv, 0);
+      out.set(ciphertext, iv.length);
+      out.set(tag, iv.length + ciphertext.length);
+      return out;
     }
 
-    function pureAesGcmDecrypt(key, encryptedBytes) {
-      if (encryptedBytes.length < 12 + 16) throw new Error('Ciphertext too short');
-      const iv = encryptedBytes.subarray(0, 12);
-      const tag = encryptedBytes.subarray(encryptedBytes.length - 16);
-      const ciphertext = encryptedBytes.subarray(12, encryptedBytes.length - 16);
+    function pureAesGcmDecrypt(keyBytes, payloadBytes, aad = new Uint8Array(0)) {
+      if (payloadBytes.length < 28) throw new Error('Invalid GCM payload length');
+      const iv = payloadBytes.subarray(0, 12);
+      const tag = payloadBytes.subarray(payloadBytes.length - 16);
+      const ciphertext = payloadBytes.subarray(12, payloadBytes.length - 16);
 
-      const w = pureExpandKey256(key);
-      const zeroBlock = new Uint8Array(16);
-      const h = pureEncryptBlock256(zeroBlock, w);
+      const expanded = pureKeyExpansion(keyBytes);
+      const h = pureAesEncryptBlock(new Uint8Array(16), expanded);
 
       const j0 = new Uint8Array(16);
-      j0.set(iv);
+      j0.set(iv, 0);
       j0[15] = 1;
 
-      const lenBlock = new Uint8Array(16);
-      const lenView = new DataView(lenBlock.buffer);
-      lenView.setUint32(12, ciphertext.length * 8, false);
+      const lenA = BigInt(aad.length * 8);
+      const lenC = BigInt(ciphertext.length * 8);
+      const aadPad = Math.ceil(aad.length / 16) * 16;
+      const ctPad = Math.ceil(ciphertext.length / 16) * 16;
+      const ghashBuf = new Uint8Array(aadPad + ctPad + 16);
+      ghashBuf.set(aad, 0);
+      ghashBuf.set(ciphertext, aadPad);
+      const ghashView = new DataView(ghashBuf.buffer);
+      ghashView.setBigUint64(aadPad + ctPad, lenA, false);
+      ghashView.setBigUint64(aadPad + ctPad + 8, lenC, false);
 
-      const ghashInput = new Uint8Array(Math.ceil(ciphertext.length / 16) * 16 + 16);
-      ghashInput.set(ciphertext);
-      ghashInput.set(lenBlock, Math.ceil(ciphertext.length / 16) * 16);
+      const s = pureGhash(h, ghashBuf);
+      const eJ0 = pureAesEncryptBlock(j0, expanded);
+      const calculatedTag = new Uint8Array(16);
+      for (let i = 0; i < 16; i++) calculatedTag[i] = s[i] ^ eJ0[i];
 
-      const s = pureGhash(h, ghashInput);
-      const tagMask = pureEncryptBlock256(j0, w);
-      let tagMatch = true;
-      for (let i = 0; i < 16; i++) {
-        if ((s[i] ^ tagMask[i]) !== tag[i]) tagMatch = false;
-      }
-      if (!tagMatch) throw new Error('Authentication tag mismatch');
+      let diff = 0;
+      for (let i = 0; i < 16; i++) diff |= tag[i] ^ calculatedTag[i];
+      if (diff !== 0) throw new Error('Authentication tag mismatch');
 
-      const cb = new Uint8Array(j0);
-      const incCb = () => {
-        for (let i = 15; i >= 12; i--) {
-          cb[i] = (cb[i] + 1) & 0xff;
-          if (cb[i] !== 0) break;
-        }
-      };
-
-      const plaintext = new Uint8Array(ciphertext.length);
       const numBlocks = Math.ceil(ciphertext.length / 16);
-      for (let i = 0; i < numBlocks; i++) {
-        incCb();
-        const eCb = pureEncryptBlock256(cb, w);
-        const start = i * 16;
-        const end = Math.min(ciphertext.length, (i + 1) * 16);
+      const plaintext = new Uint8Array(ciphertext.length);
+      const cb = new Uint8Array(j0);
+
+      for (let i = 1; i <= numBlocks; i++) {
+        let val = (cb[12] << 24) | (cb[13] << 16) | (cb[14] << 8) | cb[15];
+        val = (val + 1) >>> 0;
+        cb[12] = (val >>> 24) & 0xff; cb[13] = (val >>> 16) & 0xff; cb[14] = (val >>> 8) & 0xff; cb[15] = val & 0xff;
+
+        const eCb = pureAesEncryptBlock(cb, expanded);
+        const start = (i - 1) * 16;
+        const end = Math.min(i * 16, ciphertext.length);
         for (let j = 0; j < end - start; j++) {
           plaintext[start + j] = ciphertext[start + j] ^ eCb[j];
         }
@@ -1701,135 +2323,529 @@
       return plaintext;
     }
 
-    class CryptoVault {
-      static async deriveKey(passphrase, saltStr = 'git-chat-e2ee-vault-salt') {
-        if (typeof crypto !== 'undefined' && crypto?.subtle) {
-          try {
-            const encoder = new TextEncoder();
-            const baseKey = await crypto.subtle.importKey(
-              'raw',
-              encoder.encode(passphrase),
-              { name: 'PBKDF2' },
-              false,
-              ['deriveKey']
-            );
-            return await crypto.subtle.deriveKey(
-              {
-                name: 'PBKDF2',
-                salt: encoder.encode(saltStr),
-                iterations: 100000,
-                hash: 'SHA-256'
-              },
-              baseKey,
-              { name: 'AES-GCM', length: 256 },
-              false,
-              ['encrypt', 'decrypt']
-            );
-          } catch (e) {
-            console.warn('WebCrypto deriveKey failed, using pure JS fallback:', e);
-          }
-        }
-        return purePbkdf2(passphrase, saltStr, 100000, 32);
-      }
+const derivedKeyCache = new Map();
 
-      static async deriveDMKey(passphrase, userAId, userBId) {
-        const sorted = [userAId, userBId].sort();
-        return await CryptoVault.deriveKey(passphrase, `git-chat-dm-salt-${sorted[0]}-${sorted[1]}`);
-      }
+class CryptoVault {
+  static async deriveKey(passphrase, saltStr = 'git-chat-e2ee-vault-salt') {
+    const cacheKey = `${passphrase}:::${saltStr}`;
+    if (derivedKeyCache.has(cacheKey)) {
+      return derivedKeyCache.get(cacheKey);
+    }
 
-      static async encrypt(plaintext, key) {
-        if (!key) return null;
+    let key = null;
+    if (typeof crypto !== 'undefined' && crypto?.subtle) {
+      try {
         const encoder = new TextEncoder();
-        const data = encoder.encode(plaintext);
-
-        const iv = new Uint8Array(12);
-        if (typeof crypto !== 'undefined' && crypto?.getRandomValues) {
-          crypto.getRandomValues(iv);
-        } else {
-          for (let i = 0; i < 12; i++) iv[i] = Math.floor(Math.random() * 256);
-        }
-
-        if (key instanceof Uint8Array || !crypto?.subtle) {
-          const keyBytes = key instanceof Uint8Array ? key : new Uint8Array(32);
-          const fullEnc = pureAesGcmEncrypt(keyBytes, iv, data);
-          const encIv = fullEnc.subarray(0, 12);
-          const encCt = fullEnc.subarray(12);
-          return {
-            v: 1,
-            alg: 'AES-GCM-256',
-            iv: btoa(String.fromCharCode(...encIv)),
-            ciphertext: btoa(String.fromCharCode(...encCt))
-          };
-        }
-
-        const encrypted = await crypto.subtle.encrypt(
-          { name: 'AES-GCM', iv },
-          key,
-          data
+        const baseKey = await crypto.subtle.importKey(
+          'raw',
+          encoder.encode(passphrase),
+          { name: 'PBKDF2' },
+          false,
+          ['deriveKey']
         );
-        return {
-          v: 1,
-          alg: 'AES-GCM-256',
-          iv: btoa(String.fromCharCode(...iv)),
-          ciphertext: btoa(String.fromCharCode(...new Uint8Array(encrypted)))
-        };
-      }
-
-      static async decrypt(payload, key) {
-        if (!key || !payload || !payload.iv || !payload.ciphertext) return null;
-        try {
-          const iv = new Uint8Array(atob(payload.iv).split('').map(c => c.charCodeAt(0)));
-          const ciphertext = new Uint8Array(atob(payload.ciphertext).split('').map(c => c.charCodeAt(0)));
-
-          if (key instanceof Uint8Array || !crypto?.subtle) {
-            const keyBytes = key instanceof Uint8Array ? key : new Uint8Array(32);
-            const combined = new Uint8Array(iv.length + ciphertext.length);
-            combined.set(iv, 0);
-            combined.set(ciphertext, iv.length);
-            const decryptedBytes = pureAesGcmDecrypt(keyBytes, combined);
-            return new TextDecoder().decode(decryptedBytes);
-          }
-
-          const decrypted = await crypto.subtle.decrypt(
-            { name: 'AES-GCM', iv },
-            key,
-            ciphertext
-          );
-          return new TextDecoder().decode(decrypted);
-        } catch (e) {
-          return null;
-        }
+        key = await crypto.subtle.deriveKey(
+          {
+            name: 'PBKDF2',
+            salt: encoder.encode(saltStr),
+            iterations: 100000,
+            hash: 'SHA-256'
+          },
+          baseKey,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+      } catch (e) {
+        console.warn('WebCrypto deriveKey failed, using pure JS fallback:', e);
       }
     }
+    if (!key) {
+      key = purePbkdf2(passphrase, saltStr, 100000, 32);
+    }
+    derivedKeyCache.set(cacheKey, key);
+    return key;
+  }
 
-    // ==========================================
-    // DM & CHANNEL HELPERS
-    // ==========================================
-    function getDmChannelId(userAId, userBId) {
-      const sorted = [userAId, userBId].sort();
-      return `chan_dm_${sorted[0]}__${sorted[1]}`;
+  static async deriveDMKey(passphrase, userAId, userBId) {
+    const sorted = [userAId, userBId].sort();
+    return await CryptoVault.deriveKey(passphrase, `git-chat-dm-salt-${sorted[0]}-${sorted[1]}`);
+  }
+
+  static async encrypt(plaintext, key) {
+    if (!key) return null;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plaintext);
+
+    const iv = new Uint8Array(12);
+    if (typeof crypto !== 'undefined' && crypto?.getRandomValues) {
+      crypto.getRandomValues(iv);
+    } else {
+      for (let i = 0; i < 12; i++) iv[i] = Math.floor(Math.random() * 256);
     }
 
-    function parseDmChannelUsers(channelId) {
-      if (!channelId || !channelId.startsWith('chan_dm_')) return null;
-      const parts = channelId.slice(8).split('__');
-      if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
-      return [parts[0], parts[1]];
+    if (key instanceof Uint8Array || !crypto?.subtle) {
+      const keyBytes = key instanceof Uint8Array ? key : new Uint8Array(32);
+      const fullEnc = pureAesGcmEncrypt(keyBytes, iv, data);
+      const encIv = fullEnc.subarray(0, 12);
+      const encCt = fullEnc.subarray(12);
+      return {
+        v: 1,
+        alg: 'AES-GCM-256',
+        iv: btoa(String.fromCharCode(...encIv)),
+        ciphertext: btoa(String.fromCharCode(...encCt))
+      };
     }
+
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      data
+    );
+    return {
+      v: 1,
+      alg: 'AES-GCM-256',
+      iv: btoa(String.fromCharCode(...iv)),
+      ciphertext: btoa(String.fromCharCode(...new Uint8Array(encrypted)))
+    };
+  }
+
+  static async decrypt(payload, key) {
+    if (!key || !payload || !payload.iv || !payload.ciphertext) return null;
+    try {
+      const iv = new Uint8Array(atob(payload.iv).split('').map(c => c.charCodeAt(0)));
+      const ciphertext = new Uint8Array(atob(payload.ciphertext).split('').map(c => c.charCodeAt(0)));
+
+      if (key instanceof Uint8Array || !crypto?.subtle) {
+        const keyBytes = key instanceof Uint8Array ? key : new Uint8Array(32);
+        const combined = new Uint8Array(iv.length + ciphertext.length);
+        combined.set(iv, 0);
+        combined.set(ciphertext, iv.length);
+        const decryptedBytes = pureAesGcmDecrypt(keyBytes, combined);
+        return new TextDecoder().decode(decryptedBytes);
+      }
+
+      const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        ciphertext
+      );
+      return new TextDecoder().decode(decrypted);
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
+    const decryptedMessageCache = new Map();
 
     async function getEncryptionKeyForChannel(channelId) {
-      if (isVaultLocked) return null;
-      const workspaceSecret = config.workspaceSecret || vaultPassword || `${config.owner}/${config.repo}`;
-      const dmUsers = parseDmChannelUsers(channelId);
-      if (dmUsers) {
-        const sorted = [...dmUsers].sort();
-        const dmSalt = `git-chat-dm-${config.owner}-${config.repo}-${sorted[0]}-${sorted[1]}`;
-        return await CryptoVault.deriveKey(workspaceSecret, dmSalt);
+      if (!channelId) return null;
+      const secret = (vaultPassword && vaultPassword.trim()) || 
+                     (config.workspaceSecret && config.workspaceSecret.trim()) || 
+                     `${config.owner || 'sysoce'}/${config.repo || 'git-chat'}`;
+      
+      const chan = state.channels[channelId];
+      if (chan && chan.isDM && chan.dmUsers && chan.dmUsers.length === 2) {
+        return await CryptoVault.deriveDMKey(secret, chan.dmUsers[0], chan.dmUsers[1]);
       }
-      // Public / Workspace Channel (e.g. chan_general, chan_engineering)
-      const chanSalt = `git-chat-chan-${config.owner}-${config.repo}-${channelId}`;
-      return await CryptoVault.deriveKey(workspaceSecret, chanSalt);
+      return await CryptoVault.deriveKey(secret, `git-chat-channel-${channelId}`);
     }
+
+    async function decryptMessage(msg, channelId) {
+      if (!msg || !msg.encrypted || !msg.encryptedPayload) {
+        return msg ? msg.content : null;
+      }
+      const cacheKey = `${msg.id}:::${vaultPassword || ''}:::${config.workspaceSecret || ''}`;
+      if (decryptedMessageCache.has(cacheKey)) {
+        return decryptedMessageCache.get(cacheKey);
+      }
+      const chanKey = await getEncryptionKeyForChannel(channelId || msg.channelId);
+      if (!chanKey) return null;
+      const decrypted = await CryptoVault.decrypt(msg.encryptedPayload, chanKey);
+      if (decrypted) {
+        decryptedMessageCache.set(cacheKey, decrypted);
+      }
+      return decrypted;
+    }
+    const DEFAULT_NOTIFICATION_CONFIG = {
+      enabled: false,
+      soundEnabled: true,
+      globalMode: 'all',
+      mentionsBypassMute: true,
+      mutedChannelIds: [],
+      mutedUserIds: []
+    };
+
+    let notificationConfig = { ...DEFAULT_NOTIFICATION_CONFIG };
+    const notifiedMessageIds = new Set();
+    const appBootTimestamp = Date.now();
+
+    function loadNotificationConfig() {
+      try {
+        const raw = localStorage.getItem('git_chat_notification_config');
+        if (raw) {
+          notificationConfig = { ...DEFAULT_NOTIFICATION_CONFIG, ...JSON.parse(raw) };
+        }
+      } catch (e) {
+        notificationConfig = { ...DEFAULT_NOTIFICATION_CONFIG };
+      }
+    }
+
+    function saveNotificationConfig() {
+      try {
+        localStorage.setItem('git_chat_notification_config', JSON.stringify(notificationConfig));
+      } catch (e) {}
+    }
+
+    function isMentioned(content, currentUserId, currentUserName) {
+      if (!content) return false;
+      const lower = content.toLowerCase();
+      const nameRegex = new RegExp(`@${(currentUserName || '').toLowerCase()}\\b`, 'i');
+      const idRegex = new RegExp(`@${(currentUserId || '').toLowerCase()}\\b`, 'i');
+
+      if (nameRegex.test(lower) || idRegex.test(lower)) return true;
+      if (/\b@(everyone|channel|here)\b/i.test(lower)) return true;
+      if (currentUserId === 'user_human_agent' && (/\b@human\b/i.test(lower) || /\/human\b/i.test(lower))) {
+        return true;
+      }
+      return false;
+    }
+
+    function isChannelMuted(channelId, notifCfg) {
+      const cfg = notifCfg || notificationConfig;
+      return Boolean(cfg.mutedChannelIds && cfg.mutedChannelIds.includes(channelId));
+    }
+
+    function toggleChannelMute(channelId, notifCfg) {
+      const cfg = notifCfg || notificationConfig;
+      const currentList = cfg.mutedChannelIds || [];
+      const nextList = currentList.includes(channelId)
+        ? currentList.filter(id => id !== channelId)
+        : [...currentList, channelId];
+      return {
+        ...cfg,
+        mutedChannelIds: nextList
+      };
+    }
+
+    function shouldNotifyMessage(msg, currentUserId, currentUserName, notifCfg) {
+      const cfg = notifCfg || notificationConfig;
+      if (!msg || msg.author?.id === currentUserId) {
+        return { notify: false, reason: 'none', sound: false };
+      }
+      if (cfg.globalMode === 'nothing') {
+        return { notify: false, reason: 'none', sound: false };
+      }
+      if (cfg.mutedUserIds?.includes(msg.author?.id)) {
+        return { notify: false, reason: 'none', sound: false };
+      }
+
+      const mentioned = isMentioned(msg.content, currentUserId, currentUserName);
+      const dmUsers = parseDmChannelUsers(msg.channelId);
+      const isDm = Boolean(dmUsers && dmUsers.includes(currentUserId));
+      const channelMuted = isChannelMuted(msg.channelId, cfg);
+
+      if (channelMuted) {
+        if (mentioned && cfg.mentionsBypassMute) {
+          return { notify: true, reason: 'mention', sound: cfg.soundEnabled };
+        }
+        return { notify: false, reason: 'none', sound: false };
+      }
+
+      if (cfg.globalMode === 'mentions') {
+        if (mentioned) {
+          return { notify: true, reason: 'mention', sound: cfg.soundEnabled };
+        }
+        if (isDm) {
+          return { notify: true, reason: 'dm', sound: cfg.soundEnabled };
+        }
+        return { notify: false, reason: 'none', sound: false };
+      }
+
+      return {
+        notify: true,
+        reason: mentioned ? 'mention' : isDm ? 'dm' : 'all',
+        sound: cfg.soundEnabled
+      };
+    }
+
+    function formatNotificationPreview(msg, channelName) {
+      const isDm = msg.channelId.startsWith('chan_dm_');
+      const cleanName = channelName ? channelName.replace(/^#/, '') : msg.channelId;
+      const authorName = msg.author?.name || 'User';
+      const title = isDm ? `${authorName} (Direct Message)` : `#${cleanName} • ${authorName}`;
+
+      let body = (msg.content || '').replace(/\s+/g, ' ').trim();
+      if (!body && msg.attachments && msg.attachments.length > 0) {
+        body = `[Attachment: ${msg.attachments[0].name}]`;
+      }
+      if (body.length > 150) {
+        body = body.slice(0, 147) + '...';
+      }
+
+      return {
+        title,
+        body,
+        channelId: msg.channelId,
+        messageId: msg.id,
+        threadRootId: msg.threadRootId,
+        avatar: msg.author?.avatar
+      };
+    }
+
+    // Synthesized Web Audio Chime (2-Tone Sine Wave Chime: D5 -> A5)
+    let audioCtx = null;
+    function playNotificationSound() {
+      if (!notificationConfig.soundEnabled) return;
+      try {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtxClass) return;
+        if (!audioCtx) {
+          audioCtx = new AudioCtxClass();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const now = audioCtx.currentTime;
+
+        // Tone 1: 587.33 Hz (D5)
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now);
+        gain1.gain.setValueAtTime(0, now);
+        gain1.gain.linearRampToValueAtTime(0.12, now + 0.01);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.13);
+
+        // Tone 2: 880 Hz (A5)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, now + 0.08);
+        gain2.gain.setValueAtTime(0, now + 0.08);
+        gain2.gain.linearRampToValueAtTime(0.15, now + 0.09);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.08);
+        osc2.stop(now + 0.3);
+      } catch (err) {
+        console.warn('Audio chime playback failed:', err);
+      }
+    }
+
+    // Web Notifications Dispatcher
+    async function sendPushNotification(preview) {
+      if (!notificationConfig.enabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+        return;
+      }
+      try {
+        const notif = new Notification(preview.title, {
+          body: preview.body,
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💬</text></svg>',
+          tag: `git-chat-${preview.messageId}`
+        });
+        notif.onclick = () => {
+          window.focus();
+          selectChannel(preview.channelId);
+          if (preview.threadRootId) {
+            openThread(preview.threadRootId);
+          }
+          notif.close();
+        };
+      } catch (e) {
+        console.warn('Push notification delivery error:', e);
+      }
+    }
+
+    async function notifyMessageIfEligible(msg) {
+      if (!msg || msg.author?.id === config.user.id) return;
+      if (notifiedMessageIds.has(msg.id)) return;
+      notifiedMessageIds.add(msg.id);
+
+      // Skip old messages loaded before this session
+      if (msg.timestamp && msg.timestamp < appBootTimestamp - 10000) return;
+
+      let content = msg.content;
+      if ((!content || content === '[Encrypted Message]') && msg.encrypted && !isVaultLocked) {
+        try {
+          const chanKey = await getEncryptionKeyForChannel(msg.channelId);
+          if (chanKey) {
+            content = await CryptoVault.decrypt(msg.encrypted, chanKey);
+          }
+        } catch {}
+      }
+
+      const resolvedMsg = { ...msg, content: content || '[Encrypted Message]' };
+      const decision = shouldNotifyMessage(resolvedMsg, config.user.id, config.user.name, notificationConfig);
+      if (!decision.notify) return;
+
+      const chan = state.channels[msg.channelId];
+      const channelName = chan ? chan.name : msg.channelId;
+      const preview = formatNotificationPreview(resolvedMsg, channelName);
+
+      sendPushNotification(preview);
+      if (decision.sound) {
+        playNotificationSound();
+      }
+    }
+
+    function toggleCurrentChannelMute() {
+      const isMuted = isChannelMuted(activeChannelId, notificationConfig);
+      notificationConfig = toggleChannelMute(activeChannelId, notificationConfig);
+      saveNotificationConfig();
+      updateChannelMuteUI();
+      lastRenderedSidebarChecksum = ''; // force sidebar re-render
+      renderSidebar();
+      renderNotificationsSettingsTab();
+      const chan = state.channels[activeChannelId];
+      const chanName = chan ? chan.name : activeChannelId;
+      if (!isMuted) {
+        showToast(`🔕 Muted notifications for #${chanName}`);
+      } else {
+        showToast(`🔔 Unmuted notifications for #${chanName}`);
+      }
+    }
+
+    function updateChannelMuteUI() {
+      const isMuted = isChannelMuted(activeChannelId, notificationConfig);
+      const chan = state.channels[activeChannelId];
+      const chanName = chan ? chan.name : activeChannelId;
+      const btn = document.getElementById('btn-channel-mute-toggle');
+      if (btn) {
+        if (isMuted) {
+          btn.innerHTML = `🔕<span class="desktop-only"> Unmute</span>`;
+          btn.title = `Unmute notifications for #${chanName}`;
+          btn.style.color = 'var(--text-muted)';
+          btn.style.opacity = '0.85';
+        } else {
+          btn.innerHTML = `🔔<span class="desktop-only"> Mute</span>`;
+          btn.title = `Mute notifications for #${chanName}`;
+          btn.style.color = '';
+          btn.style.opacity = '1';
+        }
+      }
+
+      const mobBtn = document.getElementById('btn-mob-mute');
+      if (mobBtn) {
+        mobBtn.innerHTML = isMuted ? `🔔 Unmute Channel` : `🔕 Mute Channel`;
+      }
+    }
+
+    async function requestNotificationPermission() {
+      if (typeof Notification === 'undefined') {
+        showToast('Push Notifications are not supported in this browser environment.');
+        return;
+      }
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          notificationConfig.enabled = true;
+          saveNotificationConfig();
+          showToast('🔔 Push Notifications enabled!');
+          playNotificationSound();
+        } else if (perm === 'denied') {
+          notificationConfig.enabled = false;
+          saveNotificationConfig();
+          showToast('🚫 Notifications blocked in browser permissions.');
+        }
+        renderNotificationsSettingsTab();
+      } catch (e) {
+        console.warn('Error requesting notification permission:', e);
+      }
+    }
+
+    function sendTestNotification() {
+      playNotificationSound();
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        sendPushNotification({
+          title: '💬 Git-Chat Test Notification',
+          body: 'Push notifications and audio chime are working perfectly!',
+          channelId: activeChannelId,
+          messageId: 'test_' + Date.now()
+        });
+        showToast('🔔 Test notification dispatched');
+      } else {
+        showToast('🔔 Played audio chime (Push permissions not yet enabled)');
+      }
+    }
+
+    function renderNotificationsSettingsTab() {
+      const statusText = document.getElementById('notif-permission-status-text');
+      const reqBtn = document.getElementById('btn-request-notif-perm');
+      if (statusText && reqBtn) {
+        if (typeof Notification === 'undefined') {
+          statusText.innerHTML = '<span style="color:var(--text-dim)">Unsupported in this browser</span>';
+          reqBtn.disabled = true;
+        } else if (Notification.permission === 'granted') {
+          statusText.innerHTML = '<span style="color:var(--success)">✅ Enabled (Permission Granted)</span>';
+          reqBtn.textContent = 'Active 🔔';
+          reqBtn.disabled = true;
+          reqBtn.style.opacity = '0.7';
+        } else if (Notification.permission === 'denied') {
+          statusText.innerHTML = '<span style="color:var(--danger)">🚫 Blocked in Browser Settings</span>';
+          reqBtn.textContent = 'Blocked';
+          reqBtn.disabled = true;
+          reqBtn.style.opacity = '0.7';
+        } else {
+          statusText.innerHTML = '<span style="color:var(--warning)">⚠️ Not Yet Granted</span>';
+          reqBtn.textContent = 'Enable Push';
+          reqBtn.disabled = false;
+          reqBtn.style.opacity = '1';
+        }
+      }
+
+      const globalModeSelect = document.getElementById('cfg-notif-global-mode');
+      if (globalModeSelect) {
+        globalModeSelect.value = notificationConfig.globalMode || 'all';
+      }
+
+      const soundCheck = document.getElementById('cfg-notif-sound');
+      if (soundCheck) {
+        soundCheck.checked = Boolean(notificationConfig.soundEnabled);
+      }
+
+      const bypassCheck = document.getElementById('cfg-notif-mention-bypass');
+      if (bypassCheck) {
+        bypassCheck.checked = Boolean(notificationConfig.mentionsBypassMute);
+      }
+
+      const mutedContainer = document.getElementById('muted-channels-list-container');
+      if (mutedContainer) {
+        const mutedIds = notificationConfig.mutedChannelIds || [];
+        if (mutedIds.length === 0) {
+          mutedContainer.innerHTML = '<div style="color:var(--text-muted); padding:8px; text-align:center;">No channels or DMs are currently muted.</div>';
+        } else {
+          mutedContainer.innerHTML = mutedIds.map(id => {
+            const chan = state.channels[id];
+            const name = chan ? (chan.isDm ? `@${chan.name}` : `#${chan.name}`) : id;
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 8px; background:var(--bg-card-subtle); border-radius:4px; margin-bottom:4px;">
+                <span style="font-weight:500;">🔕 ${name}</span>
+                <button class="btn-secondary" onclick="unmuteSpecificChannel('${id}')" style="padding:2px 8px; font-size:11px;">Unmute</button>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    window.unmuteSpecificChannel = function(channelId) {
+      if (notificationConfig.mutedChannelIds && notificationConfig.mutedChannelIds.includes(channelId)) {
+        notificationConfig = toggleChannelMute(channelId, notificationConfig);
+        saveNotificationConfig();
+        updateChannelMuteUI();
+        lastRenderedSidebarChecksum = '';
+        renderSidebar();
+        renderNotificationsSettingsTab();
+        const chan = state.channels[channelId];
+        showToast(`🔔 Unmuted #${chan ? chan.name : channelId}`);
+      }
+    };
 
     // ==========================================
     // STATE & CONFIG
@@ -1848,6 +2864,34 @@
       workspaceSecret: '',
       user: { id: 'user_dev', name: 'Developer', avatar: '💻', role: 'member' }
     };
+
+    const DEFAULT_CHANNELS = {
+      'chan_general': { id: 'chan_general', name: 'general', topic: 'Company-wide announcements and work-based matters' },
+      'chan_talk_to_a_human': { id: 'chan_talk_to_a_human', name: 'Talk to a Human', topic: 'Always-open direct channel with Human' },
+      'chan_engineering': { id: 'chan_engineering', name: 'engineering', topic: 'Architecture, PRs, and technical discussions' },
+      'chan_random': { id: 'chan_random', name: 'random', topic: 'Water cooler banter and fun links' }
+    };
+
+    /**
+     * Creates a deterministic 1-on-1 Direct Message channel ID between two users
+     */
+    function getDmChannelId(userAId, userBId) {
+      if (!userAId || !userBId) return 'chan_general';
+      const sorted = [String(userAId), String(userBId)].sort();
+      return `chan_dm_${sorted[0]}__${sorted[1]}`;
+    }
+    window.getDmChannelId = getDmChannelId;
+
+    /**
+     * Parses the participant user IDs from a DM channel ID
+     */
+    function parseDmChannelUsers(channelId) {
+      if (!channelId || typeof channelId !== 'string' || !channelId.startsWith('chan_dm_')) return null;
+      const parts = channelId.slice(8).split('__');
+      if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+      return [parts[0], parts[1]];
+    }
+    window.parseDmChannelUsers = parseDmChannelUsers;
 
     function getApiBase() {
       if (config.backendUrl && config.backendUrl.trim()) {
@@ -1869,12 +2913,7 @@
     let activeChannelId = 'chan_general';
     let activeThreadRootId = null;
     let state = {
-      channels: {
-        'chan_general': { id: 'chan_general', name: 'general', topic: 'Company-wide announcements and work-based matters' },
-        'chan_talk_to_a_human': { id: 'chan_talk_to_a_human', name: 'Talk to a Human', topic: 'Always-open direct channel with Human' },
-        'chan_engineering': { id: 'chan_engineering', name: 'engineering', topic: 'Architecture, PRs, and technical discussions' },
-        'chan_random': { id: 'chan_random', name: 'random', topic: 'Water cooler banter and fun links' }
-      },
+      channels: { ...DEFAULT_CHANNELS },
       users: {
         'agent_human': { id: 'agent_human', name: 'Human', avatar: '👤', role: 'agent', isBot: true }
       },
@@ -1889,6 +2928,154 @@
       t.style.display = 'flex';
       setTimeout(() => { t.style.display = 'none'; }, 3000);
     }
+
+    // ==========================================
+    // AUTO-UPDATE & FIREFOX RESTART MANAGER
+    // ==========================================
+    const CLIENT_VERSION = '1.0.0';
+    const AUTO_UPDATE_KEY = 'git_chat_auto_update';
+    const FIREFOX_PRIMARY_PATH = 'file:///storage/emulated/0/Download/git-chat.html';
+    const FIREFOX_SDCARD_PATH = 'file:///sdcard/Download/git-chat.html';
+
+    let updateState = {
+      availableVersion: null,
+      isDownloaded: false,
+      isOpen: false
+    };
+
+    function isAutoUpdateEnabled() {
+      try {
+        return localStorage.getItem(AUTO_UPDATE_KEY) !== 'false';
+      } catch {
+        return true;
+      }
+    }
+
+    function setAutoUpdateEnabled(enabled) {
+      try {
+        localStorage.setItem(AUTO_UPDATE_KEY, String(enabled));
+      } catch {}
+      const chk1 = document.getElementById('toggle-auto-update');
+      const chk2 = document.getElementById('cfg-auto-update-enabled');
+      if (chk1) chk1.checked = enabled;
+      if (chk2) chk2.checked = enabled;
+    }
+
+    function parseSemver(ver) {
+      if (!ver || typeof ver !== 'string') return [0, 0, 0];
+      const clean = ver.trim().replace(/^v/, '').split('-')[0] || '';
+      const parts = clean.split('.').map(p => {
+        const num = parseInt(p, 10);
+        return isNaN(num) ? 0 : num;
+      });
+      return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
+    }
+
+    function isNewerVersion(remoteVer, currentVer = CLIENT_VERSION) {
+      if (!remoteVer) return false;
+      const r = parseSemver(remoteVer);
+      const c = parseSemver(currentVer);
+      if (r[0] > c[0]) return true;
+      if (r[0] < c[0]) return false;
+      if (r[1] > c[1]) return true;
+      if (r[1] < c[1]) return false;
+      return r[2] > c[2];
+    }
+
+    function triggerBundleDownload(url = '/download', filename = 'git-chat.html') {
+      const a = document.createElement('a');
+      a.href = apiUrl(url);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function openUpdateModal(remoteVersion, isDownloaded) {
+      updateState.availableVersion = remoteVersion;
+      updateState.isDownloaded = isDownloaded;
+      updateState.isOpen = true;
+
+      const modal = document.getElementById('update-modal');
+      const badge = document.getElementById('update-modal-badge');
+      const heading = document.getElementById('update-modal-heading');
+      const curVerEl = document.getElementById('update-current-version');
+      const newVerEl = document.getElementById('update-new-version');
+      const dlSec = document.getElementById('update-downloaded-section');
+      const avSec = document.getElementById('update-available-section');
+      const toggle = document.getElementById('toggle-auto-update');
+
+      if (curVerEl) curVerEl.textContent = `v${CLIENT_VERSION}`;
+      if (newVerEl) newVerEl.textContent = `v${remoteVersion}`;
+
+      const autoUpdate = isAutoUpdateEnabled();
+      if (toggle) toggle.checked = autoUpdate;
+
+      if (isDownloaded) {
+        if (badge) {
+          badge.textContent = '🚀 Update Downloaded';
+          badge.style.background = 'var(--accent, #007a5a)';
+        }
+        if (heading) heading.textContent = `Version v${remoteVersion} is Ready`;
+        if (dlSec) dlSec.style.display = 'block';
+        if (avSec) avSec.style.display = 'none';
+      } else {
+        if (badge) {
+          badge.textContent = '⚡ Update Available';
+          badge.style.background = '#1264a3';
+        }
+        if (heading) heading.textContent = `Version v${remoteVersion} Available`;
+        if (dlSec) dlSec.style.display = 'none';
+        if (avSec) {
+          avSec.style.display = 'block';
+          const btn = document.getElementById('btn-manual-download-update');
+          if (btn) btn.textContent = `📥 Download New File (v${remoteVersion})`;
+        }
+      }
+
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeUpdateModal() {
+      updateState.isOpen = false;
+      const modal = document.getElementById('update-modal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function handleProcessVersionCheck(remoteVersion, manual = false) {
+      if (!remoteVersion || !isNewerVersion(remoteVersion, CLIENT_VERSION)) {
+        if (manual) showToast(`git-chat is up to date (v${CLIENT_VERSION})`);
+        return false;
+      }
+
+      const autoUpdate = isAutoUpdateEnabled();
+      if (autoUpdate) {
+        triggerBundleDownload('/download', 'git-chat.html');
+        openUpdateModal(remoteVersion, true);
+        if (manual) showToast(`Downloaded git-chat v${remoteVersion}`);
+      } else {
+        openUpdateModal(remoteVersion, false);
+        if (manual) showToast(`New version available: v${remoteVersion}`);
+      }
+      return true;
+    }
+
+    async function checkForUpdates(manual = false) {
+      try {
+        const res = await fetch(apiUrl('/api/version'), { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.version) {
+            return handleProcessVersionCheck(data.version, manual);
+          }
+        }
+        if (manual) showToast('Could not fetch version info from server');
+      } catch (err) {
+        if (manual) showToast('Update server unreachable');
+      }
+      return false;
+    }
+
 
     // Save and load state from localStorage cache
     function saveLocalCache() {
@@ -1905,12 +3092,16 @@
 
     function loadLocalCache() {
       try {
+        state.channels = { ...DEFAULT_CHANNELS };
         const savedChannels = localStorage.getItem('git_chat_channels');
         if (savedChannels) {
           const parsedChans = JSON.parse(savedChannels);
-          if (parsedChans && typeof parsedChans === 'object') {
-            state.channels = { ...state.channels, ...parsedChans };
+          if (parsedChans && typeof parsedChans === 'object' && !Array.isArray(parsedChans)) {
+            state.channels = { ...DEFAULT_CHANNELS, ...parsedChans };
           }
+        }
+        if (!state.channels['chan_general']) {
+          state.channels['chan_general'] = { ...DEFAULT_CHANNELS['chan_general'] };
         }
 
         const savedUsers = localStorage.getItem('git_chat_users');
@@ -2128,45 +3319,152 @@
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
-    // Render S3 Media Attachments
+    // Resolve Attachment URL (properly prefixed with API base when opened from file:// or custom backend)
+    function resolveAttachmentUrl(att) {
+      if (!att) return '';
+      const raw = att.url || (att.key ? `/api/s3/file/${att.key}` : '');
+      if (!raw) return '';
+      if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:') || raw.startsWith('blob:')) {
+        return raw;
+      }
+      return apiUrl(raw);
+    }
+
+    // Helper to test if file is an image
+    function isImageMimeOrExt(mime, name) {
+      const m = (mime || '').toLowerCase();
+      const n = (name || '').toLowerCase();
+      return m.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(n);
+    }
+
+    // Helper for file icons and short extension badge
+    function getFileIconAndExt(mime, name) {
+      const m = (mime || '').toLowerCase();
+      const n = (name || '').toLowerCase();
+      const ext = n.includes('.') ? n.split('.').pop().toLowerCase() : (m.split('/').pop() || 'bin');
+      if (m.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac|aac)$/i.test(n)) return { icon: '🎵', ext };
+      if (m.startsWith('video/') || /\.(mp4|webm|mov|mkv|avi)$/i.test(n)) return { icon: '🎬', ext };
+      if (m.includes('pdf') || n.endsWith('.pdf')) return { icon: '📕', ext: 'pdf' };
+      if (m.includes('zip') || m.includes('tar') || m.includes('compressed') || /\.(zip|tar|gz|rar|7z)$/i.test(n)) return { icon: '📦', ext };
+      if (m.includes('text') || /\.(txt|md|json|ts|js|py|html|css|sh)$/i.test(n)) return { icon: '📝', ext };
+      return { icon: '📄', ext: ext.slice(0, 4) };
+    }
+
+    // Built-in In-App Media Viewer
+    function openMediaViewer(url, name, sizeStr, mediaType) {
+      if (!url) return;
+      const dialog = document.getElementById('media-viewer-dialog');
+      const titleEl = document.getElementById('media-viewer-title');
+      const dlLink = document.getElementById('media-viewer-download');
+      const contentEl = document.getElementById('media-viewer-content');
+      if (!dialog || !contentEl) return;
+
+      const title = name ? `${name} ${sizeStr ? `(${sizeStr})` : ''}` : 'Media Viewer';
+      if (titleEl) titleEl.textContent = title;
+      if (dlLink) {
+        dlLink.href = url;
+        dlLink.download = name || 'file';
+        dlLink.style.display = 'inline-flex';
+      }
+
+      const mime = (mediaType || '').toLowerCase();
+      const isImg = mediaType === 'image' || isImageMimeOrExt(mime, name || '');
+      const isVid = mediaType === 'video' || /\.(mp4|webm|mov|mkv)$/i.test(name || '');
+      const isAud = mediaType === 'audio' || /\.(mp3|wav|ogg|m4a|flac)$/i.test(name || '');
+
+      if (isImg) {
+        contentEl.innerHTML = `<img src="${url}" alt="${escapeHtml(name || '')}" />`;
+      } else if (isVid) {
+        contentEl.innerHTML = `<video src="${url}" controls autoplay playsinline></video>`;
+      } else if (isAud) {
+        contentEl.innerHTML = `<audio src="${url}" controls autoplay></audio>`;
+      } else {
+        contentEl.innerHTML = `
+          <div style="padding:28px; text-align:center;">
+            <div style="font-size:36px; margin-bottom:8px;">📄</div>
+            <div style="font-size:14px; font-weight:600; color:var(--text-heading); margin-bottom:12px;">${escapeHtml(name || 'Attachment')}</div>
+            <a href="${url}" download="${escapeHtml(name || 'file')}" class="btn-primary" style="text-decoration:none; display:inline-block; padding:8px 16px; font-size:13px; border-radius:6px;">Download File</a>
+          </div>`;
+      }
+
+      if (typeof dialog.showModal === 'function') {
+        try {
+          if (dialog.open) dialog.close();
+          dialog.showModal();
+        } catch {
+          dialog.setAttribute('open', '');
+        }
+      } else {
+        dialog.setAttribute('open', '');
+      }
+    }
+
+    function closeMediaViewer() {
+      const dialog = document.getElementById('media-viewer-dialog');
+      if (!dialog) return;
+      const contentEl = document.getElementById('media-viewer-content');
+      if (contentEl) contentEl.innerHTML = '';
+      if (typeof dialog.close === 'function') {
+        try {
+          dialog.close();
+        } catch {}
+      }
+      dialog.removeAttribute('open');
+    }
+
+    window.openMediaViewer = openMediaViewer;
+    window.closeMediaViewer = closeMediaViewer;
+
+    // Render S3 Media Attachments in Messages
     function renderAttachments(attachments) {
       if (!attachments || !attachments.length) return '';
-      let html = '<div class="msg-attachments-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
+      let html = '<div class="msg-attachments-container">';
       for (const att of attachments) {
-        const url = att.url || apiUrl(`/api/s3/file/${att.key}`);
+        const url = resolveAttachmentUrl(att);
         const mime = (att.type || '').toLowerCase();
         const name = att.name || 'file';
         const sizeStr = formatFileSize(att.size);
+        const safeName = escapeHtml(name);
+        const encodedUrl = encodeURI(url);
 
-        if (mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(name)) {
+        if (isImageMimeOrExt(mime, name)) {
           html += `
-            <div class="attachment-image-wrapper" style="margin-top:4px;">
-              <a href="${url}" target="_blank" rel="noopener noreferrer">
-                <img src="${url}" alt="${name}" style="max-width:100%; max-height:360px; border-radius:6px; border:1px solid var(--border); object-fit:contain; background:#111; cursor:zoom-in;" />
-              </a>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">🖼️ ${name} (${sizeStr}) • S3</div>
+            <div class="attachment-image-card" onclick="openMediaViewer('${encodedUrl}', '${safeName}', '${sizeStr}', 'image')">
+              <div class="attachment-image-link" title="Click to view full size ${safeName} (${sizeStr})">
+                <img src="${url}" alt="${safeName}" class="attachment-img" loading="lazy" />
+                <div class="attachment-img-caption">
+                  <span class="attachment-img-name">🖼️ ${safeName}</span>
+                  <span class="attachment-img-size">${sizeStr}</span>
+                </div>
+              </div>
             </div>`;
         } else if (mime.startsWith('audio/') || /\.(mp3|wav|ogg|m4a)$/i.test(name)) {
           html += `
-            <div class="attachment-media-box" style="background:var(--bg-card); border:1px solid var(--border); padding:8px 12px; border-radius:6px; max-width:400px; margin-top:4px;">
-              <div style="font-size:12px; font-weight:600; color:var(--text-heading); margin-bottom:4px;">🎵 ${name} (${sizeStr}) • S3</div>
-              <audio controls src="${url}" style="width:100%; height:36px;"></audio>
+            <div class="attachment-media-box">
+              <div class="attachment-media-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>🎵 ${safeName}</span>
+                <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${sizeStr})</span>
+              </div>
+              <audio controls src="${url}" style="width:100%; height:36px; margin-top:4px;"></audio>
             </div>`;
         } else if (mime.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(name)) {
           html += `
-            <div class="attachment-media-box" style="margin-top:4px; max-width:480px;">
-              <video controls src="${url}" style="max-width:100%; max-height:300px; border-radius:6px; border:1px solid var(--border); background:#000;"></video>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">🎬 ${name} (${sizeStr}) • S3</div>
+            <div class="attachment-media-box" style="padding:0; overflow:hidden;">
+              <video controls src="${url}" style="max-width:100%; max-height:300px; display:block; background:#000; cursor:pointer;" onclick="openMediaViewer('${encodedUrl}', '${safeName}', '${sizeStr}', 'video')"></video>
+              <div class="attachment-media-title" style="padding:6px 10px; margin:0; display:flex; justify-content:space-between; align-items:center;">
+                <span>🎬 ${safeName} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${sizeStr})</span></span>
+                <button type="button" class="media-dialog-btn" style="padding:2px 8px; font-size:11px;" onclick="openMediaViewer('${encodedUrl}', '${safeName}', '${sizeStr}', 'video')">🔍 Expand</button>
+              </div>
             </div>`;
         } else {
           html += `
-            <a href="${url}" download="${name}" target="_blank" class="attachment-file-card" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-decoration:none; color:var(--text-heading); font-size:13px; max-width:360px; margin-top:4px;">
-              <span style="font-size:18px;">📄</span>
-              <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
-                <div style="font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis;">${name}</div>
-                <div style="font-size:11px; color:var(--text-muted);">${sizeStr} • S3 Storage</div>
+            <a href="${url}" download="${safeName}" target="_blank" class="attachment-file-card" title="Download ${safeName}">
+              <span class="attachment-file-icon">📄</span>
+              <div class="attachment-file-info">
+                <div class="attachment-file-name">${safeName}</div>
+                <div class="attachment-file-size">${sizeStr} • S3 Storage</div>
               </div>
-              <span style="color:var(--accent-blue); font-size:12px; font-weight:600;">Download ⬇</span>
+              <span class="attachment-file-btn">Download ⬇</span>
             </a>`;
         }
       }
@@ -2186,12 +3484,30 @@
         return;
       }
       box.style.display = 'flex';
-      box.innerHTML = stagedAttachments.map((att, idx) => `
-        <div style="display:inline-flex; align-items:center; gap:6px; background:var(--bg-card); border:1px solid var(--border); padding:4px 8px; border-radius:4px; font-size:12px; color:var(--text-heading);">
-          <span>📦 ${att.name} (${formatFileSize(att.size)})</span>
-          <button onclick="removeStagedAttachment(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-weight:bold; font-size:13px; padding:0 2px;">×</button>
-        </div>
-      `).join('');
+      box.innerHTML = stagedAttachments.map((att, idx) => {
+        const url = resolveAttachmentUrl(att);
+        const name = att.name || 'attachment';
+        const sizeStr = formatFileSize(att.size);
+        const isImg = isImageMimeOrExt(att.type, name);
+        const { icon, ext } = getFileIconAndExt(att.type, name);
+        const safeName = escapeHtml(name);
+        const encodedUrl = encodeURI(url);
+
+        return `
+          <div class="staged-att-item">
+            <div class="staged-att-tooltip">${safeName} (${sizeStr})</div>
+            ${isImg && url ? `
+              <img class="staged-att-thumb" src="${url}" alt="${safeName}" onclick="openMediaViewer('${encodedUrl}', '${safeName}', '${sizeStr}', 'image')" style="cursor:zoom-in;" />
+            ` : `
+              <div class="staged-att-generic" ${url ? `onclick="openMediaViewer('${encodedUrl}', '${safeName}', '${sizeStr}', 'file')"` : ''} style="${url ? 'cursor:pointer;' : ''}">
+                <span class="staged-att-icon">${icon}</span>
+                <span class="staged-att-ext">${escapeHtml(ext)}</span>
+              </div>
+            `}
+            <button type="button" class="staged-att-remove" onclick="event.stopPropagation(); removeStagedAttachment(${idx});" aria-label="Remove attachment" title="Remove attachment">×</button>
+          </div>
+        `;
+      }).join('');
     }
 
     window.removeStagedAttachment = function(idx) {
@@ -2376,23 +3692,42 @@
     }
 
     // Settings Modal Tab Switcher
-    window.switchSettingsTab = function(tabName) {
+    function switchSettingsTab(tabName) {
       document.getElementById('sec-general').style.display = tabName === 'general' ? 'block' : 'none';
       document.getElementById('sec-storage').style.display = tabName === 'storage' ? 'block' : 'none';
       document.getElementById('sec-access').style.display = tabName === 'access' ? 'block' : 'none';
+      const secNotif = document.getElementById('sec-notifications');
+      if (secNotif) secNotif.style.display = tabName === 'notifications' ? 'block' : 'none';
 
-      document.getElementById('stab-general').style.background = tabName === 'general' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
-      document.getElementById('stab-general').style.color = tabName === 'general' ? '#fff' : 'var(--text-muted)';
+      const stabGen = document.getElementById('stab-general');
+      if (stabGen) {
+        stabGen.style.background = tabName === 'general' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+        stabGen.style.color = tabName === 'general' ? '#fff' : 'var(--text-muted)';
+      }
 
-      document.getElementById('stab-storage').style.background = tabName === 'storage' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
-      document.getElementById('stab-storage').style.color = tabName === 'storage' ? '#fff' : 'var(--text-muted)';
+      const stabStor = document.getElementById('stab-storage');
+      if (stabStor) {
+        stabStor.style.background = tabName === 'storage' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+        stabStor.style.color = tabName === 'storage' ? '#fff' : 'var(--text-muted)';
+      }
 
-      document.getElementById('stab-access').style.background = tabName === 'access' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
-      document.getElementById('stab-access').style.color = tabName === 'access' ? '#fff' : 'var(--text-muted)';
+      const stabAcc = document.getElementById('stab-access');
+      if (stabAcc) {
+        stabAcc.style.background = tabName === 'access' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+        stabAcc.style.color = tabName === 'access' ? '#fff' : 'var(--text-muted)';
+      }
+
+      const stabNotif = document.getElementById('stab-notifications');
+      if (stabNotif) {
+        stabNotif.style.background = tabName === 'notifications' ? 'var(--bg-sidebar-active)' : 'var(--bg-card)';
+        stabNotif.style.color = tabName === 'notifications' ? '#fff' : 'var(--text-muted)';
+      }
 
       if (tabName === 'access') renderMembersRoster();
       if (tabName === 'storage') updateStorageVolumeStatusDisplay();
-    };
+      if (tabName === 'notifications') renderNotificationsSettingsTab();
+    }
+    window.switchSettingsTab = switchSettingsTab;
 
     // Access & Member Roster Management
     function renderMembersRoster() {
@@ -2465,10 +3800,15 @@
     }
 
 
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     // Minimal Markdown Parser
     function renderMarkdown(text) {
       if (!text) return '';
-      let escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      let escaped = escapeHtml(text);
       escaped = escaped.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
       escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
       escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -2505,36 +3845,61 @@
     }
 
     // Render Channel Sidebar & DM Section
-    function renderSidebar() {
+    let lastRenderedSidebarChecksum = '';
+    function renderSidebar(force = false) {
+      if (force) lastRenderedSidebarChecksum = '';
+      if (!state.channels || Object.keys(state.channels).length === 0) {
+        state.channels = { ...DEFAULT_CHANNELS };
+      }
+      const nonDmChannels = Object.values(state.channels).filter(c => !c.isDm);
+      const otherUsers = Object.values(state.users).filter(u => u.id !== config.user.id && u.id !== 'agent_human' && u.id !== 'agent_supervisor');
+      const mutedListStr = (notificationConfig?.mutedChannelIds || []).join(',');
+      const sidebarChecksum = `${activeChannelId}_${isVaultLocked}_${config.user?.name}_${mutedListStr}_${nonDmChannels.map(c => `${c.id}:${c.name}`).join(',')}_${otherUsers.map(u => `${u.id}:${u.name}:${u.lastSeen && (Date.now() - u.lastSeen < 300000)}`).join(',')}`;
+      if (!force && sidebarChecksum === lastRenderedSidebarChecksum) return;
+      lastRenderedSidebarChecksum = sidebarChecksum;
+
       const listEl = document.getElementById('channel-list');
-      listEl.innerHTML = '';
-      for (const chan of Object.values(state.channels)) {
-        if (chan.isDm) continue; // DMs are rendered in the DM section
-        const item = document.createElement('div');
-        item.className = `nav-item ${chan.id === activeChannelId ? 'active' : ''}`;
-        const prefix = chan.id === 'chan_talk_to_a_human' ? '💬' : '#';
-        item.innerHTML = `<div class="nav-item-left"><span>${prefix}</span> <span>${chan.name}</span></div>`;
-        item.onclick = () => selectChannel(chan.id);
-        listEl.appendChild(item);
+      if (listEl) {
+        listEl.innerHTML = '';
+        for (const chan of Object.values(state.channels)) {
+          if (chan.isDm) continue; // DMs are rendered in the DM section
+          const item = document.createElement('div');
+          item.className = `nav-item ${chan.id === activeChannelId ? 'active' : ''}`;
+          const prefix = chan.id === 'chan_talk_to_a_human' ? '💬' : '#';
+          const isMuted = isChannelMuted(chan.id, notificationConfig);
+          const muteBadge = isMuted ? `<span class="nav-item-mute-icon" style="font-size:11px; opacity:0.65; margin-left:auto;" title="Channel Muted">🔕</span>` : '';
+          item.innerHTML = `<div class="nav-item-left"><span>${prefix}</span> <span>${chan.name}</span></div>${muteBadge}`;
+          item.onclick = () => selectChannel(chan.id);
+          listEl.appendChild(item);
+        }
       }
 
       const agentItem = document.getElementById('nav-agent-item');
       if (agentItem) {
         const agentDmId = getDmChannelId(config.user.id, 'agent_human');
         const isAgentActive = activeChannelId === 'chan_talk_to_a_human' || activeChannelId === agentDmId;
+        const isMuted = isChannelMuted('chan_talk_to_a_human', notificationConfig) || isChannelMuted(agentDmId, notificationConfig);
+        const muteBadge = isMuted ? `<span class="nav-item-mute-icon" style="font-size:11px; opacity:0.65; margin-left:auto; margin-right:4px;" title="Agent Muted">🔕</span>` : '';
         agentItem.className = `nav-item ${isAgentActive ? 'active' : ''}`;
+        agentItem.innerHTML = `<div class="nav-item-left"><span>👤</span> <span>Talk to a Human</span></div>${muteBadge}<span class="user-online-dot" style="background:var(--accent-blue)" title="Autonomous AI Teammate"></span>`;
         agentItem.onclick = () => selectChannel('chan_talk_to_a_human');
       }
 
       renderDmList();
 
       // Update Workspace & User info in sidebar
-      document.getElementById('ws-name').textContent = `${config.owner}/${config.repo}`;
-      document.getElementById('current-user-name').textContent = config.user.name;
-      document.getElementById('current-user-avatar').textContent = config.user.avatar || '💻';
-      document.getElementById('current-user-role').innerHTML = isVaultLocked
-        ? '<span style="color:var(--danger)">🔒 Locked</span>'
-        : '<span style="color:var(--success)">🔓 E2EE Vault Active</span>';
+      const wsEl = document.getElementById('ws-name');
+      if (wsEl) wsEl.textContent = `${config.owner}/${config.repo}`;
+      const nameEl = document.getElementById('current-user-name');
+      if (nameEl) nameEl.textContent = config.user.name;
+      const avatarEl = document.getElementById('current-user-avatar');
+      if (avatarEl) avatarEl.textContent = config.user.avatar || '💻';
+      const roleEl = document.getElementById('current-user-role');
+      if (roleEl) {
+        roleEl.innerHTML = isVaultLocked
+          ? '<span style="color:var(--danger)">🔒 Locked</span>'
+          : '<span style="color:var(--success)">🔓 E2EE Vault Active</span>';
+      }
     }
 
     function renderDmList() {
@@ -2553,6 +3918,8 @@
         const isOnline = u.lastSeen && (Date.now() - u.lastSeen < 300000); // within 5m
         const dmId = getDmChannelId(config.user.id, u.id);
         const isActive = activeChannelId === dmId;
+        const isMuted = isChannelMuted(dmId, notificationConfig);
+        const muteBadge = isMuted ? `<span class="nav-item-mute-icon" style="font-size:11px; opacity:0.65; margin-left:auto; margin-right:6px;" title="Direct Messages Muted">🔕</span>` : '';
 
         const item = document.createElement('div');
         item.className = `nav-item ${isActive ? 'active' : ''}`;
@@ -2561,6 +3928,7 @@
             <span>${u.avatar || '👤'}</span>
             <span>${u.name}</span>
           </div>
+          ${muteBadge}
           <span class="user-online-dot" style="background:${isOnline ? 'var(--success)' : 'var(--text-dim)'}" title="${isOnline ? 'Online' : 'Offline'}"></span>
         `;
         item.onclick = () => openDm(u.id);
@@ -2603,22 +3971,24 @@
           document.getElementById('encryption-indicator').textContent = '🔒 End-to-End Encrypted (AES-GCM-256)';
         }
       }
+      updateChannelMuteUI();
       renderSidebar();
       renderTimeline();
     }
 
     // In-memory plaintext cache for decrypted AES-GCM-256 messages (eliminates lag on mobile)
-    const decryptedMessageCache = new Map();
     let lastRenderedChannelId = null;
     let lastRenderedChecksum = '';
 
     function getMsgDecryptCacheKey(msg, isVaultLocked, keyId) {
-      if (!msg.encrypted) return null;
+      if (!msg || !msg.encrypted) return null;
       const cipher = msg.encrypted.ciphertext || JSON.stringify(msg.encrypted);
-      return `${msg.id}_${isVaultLocked ? 'locked' : 'unlocked'}_${keyId}_${cipher}`;
+      const secret = config.workspaceSecret || `${config.owner}/${config.repo}`;
+      return `${msg.id}_${isVaultLocked ? 'locked' : 'unlocked'}_${keyId}_${secret}_${vaultPassword || ''}_${cipher}`;
     }
 
     // Render Timeline Messages with High Performance Caching & Diffing
+    let renderTimelineGen = 0;
     async function renderTimeline(force = false) {
       const container = document.getElementById('timeline-container');
       if (!container) return;
@@ -2637,6 +4007,8 @@
       lastRenderedChannelId = activeChannelId;
       lastRenderedChecksum = checksum;
 
+      const thisGen = ++renderTimelineGen;
+
       if (chanMsgs.length === 0) {
         const chan = state.channels[activeChannelId];
         const label = chan?.isDm ? `@${chan.name}` : `#${chan?.name || activeChannelId}`;
@@ -2645,32 +4017,32 @@
       }
 
       const chanKey = await getEncryptionKeyForChannel(activeChannelId);
+      if (thisGen !== renderTimelineGen) return;
       const keyId = chanKey ? activeChannelId : 'none';
       const fragment = document.createDocumentFragment();
 
       for (const msg of chanMsgs) {
+        if (thisGen !== renderTimelineGen) return;
         const el = document.createElement('div');
         el.className = 'msg-group';
         el.dataset.msgId = msg.id;
         const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        // Fast In-Memory Cached Decryption
+        // Fast In-Memory Cached Decryption with Multi-Key Fallbacks
         let displayContent = msg.content;
+        let isPlaceholder = false;
         if (msg.encrypted) {
-          if (!isVaultLocked && chanKey) {
-            const cacheKey = getMsgDecryptCacheKey(msg, isVaultLocked, keyId);
-            if (cacheKey && decryptedMessageCache.has(cacheKey)) {
-              displayContent = decryptedMessageCache.get(cacheKey);
+          if (!isVaultLocked) {
+            const dec = await decryptMessage(msg, activeChannelId);
+            if (dec) {
+              displayContent = dec;
             } else {
-              let dec = await CryptoVault.decrypt(msg.encrypted, chanKey);
-              if (!dec && vaultKey && vaultKey !== chanKey) {
-                dec = await CryptoVault.decrypt(msg.encrypted, vaultKey);
-              }
-              displayContent = dec || '<span class="encrypted-placeholder">🔒 [Decryption failed - Incorrect Key]</span>';
-              if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
+              displayContent = '🔒 Decryption failed • Click to enter Vault key';
+              isPlaceholder = true;
             }
           } else {
-            displayContent = '<span class="encrypted-placeholder">🔒 [Encrypted Message • Unlock Vault to view]</span>';
+            displayContent = '🔒 Encrypted Message • Click to unlock Vault';
+            isPlaceholder = true;
           }
         }
 
@@ -2691,7 +4063,7 @@
         }
         reactionsHtml += '</div>';
 
-        const isAuthor = msg.author.id === config.user.id;
+        const isAuthor = Boolean(msg.author && msg.author.id === config.user.id);
         let actionsHtml = `
           <button class="action-btn" onclick="toggleReaction('${msg.id}', '👍')" title="React with 👍">👍</button>
           <button class="action-btn" onclick="toggleReaction('${msg.id}', '🚀')" title="React with 🚀">🚀</button>
@@ -2703,6 +4075,9 @@
         }
 
         const attachmentsHtml = renderAttachments(msg.attachments);
+        const contentHtml = isPlaceholder
+          ? `<span class="encrypted-placeholder msg-encrypted-badge" onclick="openVaultModal()" title="Click to enter Vault key">${escapeHtml(displayContent)}</span>`
+          : renderMarkdown(displayContent);
 
         el.innerHTML = `
           <div class="msg-avatar">${msg.author.avatar || '👤'}</div>
@@ -2712,7 +4087,7 @@
               ${msg.author.isBot ? '<span class="bot-tag">BOT</span>' : ''}
               <span class="msg-time">${timeStr}</span>
             </div>
-            <div class="msg-content">${renderMarkdown(displayContent)}</div>
+            <div class="msg-content">${contentHtml}</div>
             ${attachmentsHtml}
             ${reactionsHtml}
             ${threadHtml}
@@ -2735,6 +4110,7 @@
         fragment.appendChild(el);
       }
 
+      if (thisGen !== renderTimelineGen) return;
       container.innerHTML = '';
       container.appendChild(fragment);
 
@@ -2853,6 +4229,7 @@
         };
 
         state.messages.push(agentReply);
+        notifyMessageIfEligible(agentReply);
         saveLocalCache();
         renderTimeline();
         if (activeThreadRootId === rootId) renderThread();
@@ -2866,7 +4243,7 @@
     }
 
     // Delete message
-    window.deleteMessage = function(msgId) {
+    function deleteMessage(msgId) {
       if (!confirm('Are you sure you want to delete this message?')) return;
       state.messages = state.messages.filter(m => m.id !== msgId && m.threadRootId !== msgId);
       saveLocalCache();
@@ -2876,42 +4253,53 @@
         activeThreadRootId = null;
       }
       showToast('Message deleted');
-    };
+    }
+    window.deleteMessage = deleteMessage;
 
     // Thread Drawer
-    window.openThread = function(rootMsgId) {
+    function openThread(rootMsgId) {
       activeThreadRootId = rootMsgId;
       const drawer = document.getElementById('thread-drawer');
       drawer.classList.add('open');
       renderThread();
-    };
+    }
+    window.openThread = openThread;
 
+    let renderThreadGen = 0;
     async function renderThread() {
       if (!activeThreadRootId) return;
+      const thisGen = ++renderThreadGen;
       const rootMsg = state.messages.find(m => m.id === activeThreadRootId);
       const replies = state.messages.filter(m => m.threadRootId === activeThreadRootId).sort((a,b) => a.timestamp - b.timestamp);
       const container = document.getElementById('thread-timeline');
       if (!container) return;
 
       const chanKey = await getEncryptionKeyForChannel(activeChannelId);
+      if (thisGen !== renderThreadGen) return;
       const keyId = chanKey ? activeChannelId : 'none';
       const fragment = document.createDocumentFragment();
 
       if (rootMsg) {
         let rootText = rootMsg.content;
-        if (rootMsg.encrypted && !isVaultLocked && chanKey) {
-          const cacheKey = getMsgDecryptCacheKey(rootMsg, isVaultLocked, keyId);
-          if (cacheKey && decryptedMessageCache.has(cacheKey)) {
-            rootText = decryptedMessageCache.get(cacheKey);
-          } else {
-            let dec = await CryptoVault.decrypt(rootMsg.encrypted, chanKey);
-            if (!dec && vaultKey && vaultKey !== chanKey) {
-              dec = await CryptoVault.decrypt(rootMsg.encrypted, vaultKey);
+        let rootIsPlaceholder = false;
+        if (rootMsg.encrypted) {
+          if (!isVaultLocked) {
+            const dec = await decryptMessage(rootMsg, activeChannelId);
+            if (dec) {
+              rootText = dec;
+            } else {
+              rootText = '🔒 Decryption failed • Click to enter Vault key';
+              rootIsPlaceholder = true;
             }
-            rootText = dec || rootMsg.content;
-            if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
+          } else {
+            rootText = '🔒 Encrypted Message • Click to unlock Vault';
+            rootIsPlaceholder = true;
           }
         }
+        if (thisGen !== renderThreadGen) return;
+        const rootContentHtml = rootIsPlaceholder
+          ? `<span class="encrypted-placeholder msg-encrypted-badge" onclick="openVaultModal()" title="Click to enter Vault key">${escapeHtml(rootText)}</span>`
+          : renderMarkdown(rootText);
         const rootEl = document.createElement('div');
         rootEl.className = 'msg-group';
         rootEl.style.borderBottom = '1px solid var(--border)';
@@ -2920,7 +4308,7 @@
           <div class="msg-avatar">${rootMsg.author.avatar || '👤'}</div>
           <div class="msg-body">
             <div class="msg-meta"><span class="msg-author">${rootMsg.author.name}</span> <span class="msg-time">${new Date(rootMsg.timestamp).toLocaleTimeString()}</span></div>
-            <div class="msg-content">${renderMarkdown(rootText)}</div>
+            <div class="msg-content">${rootContentHtml}</div>
             ${renderAttachments(rootMsg.attachments)}
           </div>
         `;
@@ -2928,33 +4316,41 @@
       }
 
       for (const rep of replies) {
+        if (thisGen !== renderThreadGen) return;
         let repText = rep.content;
-        if (rep.encrypted && !isVaultLocked && chanKey) {
-          const cacheKey = getMsgDecryptCacheKey(rep, isVaultLocked, keyId);
-          if (cacheKey && decryptedMessageCache.has(cacheKey)) {
-            repText = decryptedMessageCache.get(cacheKey);
-          } else {
-            let dec = await CryptoVault.decrypt(rep.encrypted, chanKey);
-            if (!dec && vaultKey && vaultKey !== chanKey) {
-              dec = await CryptoVault.decrypt(rep.encrypted, vaultKey);
+        let repIsPlaceholder = false;
+        if (rep.encrypted) {
+          if (!isVaultLocked) {
+            const dec = await decryptMessage(rep, activeChannelId);
+            if (dec) {
+              repText = dec;
+            } else {
+              repText = '🔒 Decryption failed • Click to enter Vault key';
+              repIsPlaceholder = true;
             }
-            repText = dec || rep.content;
-            if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
+          } else {
+            repText = '🔒 Encrypted Message • Click to unlock Vault';
+            repIsPlaceholder = true;
           }
         }
+        if (thisGen !== renderThreadGen) return;
+        const repContentHtml = repIsPlaceholder
+          ? `<span class="encrypted-placeholder msg-encrypted-badge" onclick="openVaultModal()" title="Click to enter Vault key">${escapeHtml(repText)}</span>`
+          : renderMarkdown(repText);
         const repEl = document.createElement('div');
         repEl.className = 'msg-group';
         repEl.innerHTML = `
           <div class="msg-avatar">${rep.author.avatar || '👤'}</div>
           <div class="msg-body">
             <div class="msg-meta"><span class="msg-author">${rep.author.name}</span> <span class="msg-time">${new Date(rep.timestamp).toLocaleTimeString()}</span></div>
-            <div class="msg-content">${renderMarkdown(repText)}</div>
+            <div class="msg-content">${repContentHtml}</div>
             ${renderAttachments(rep.attachments)}
           </div>
         `;
         fragment.appendChild(repEl);
       }
 
+      if (thisGen !== renderThreadGen) return;
       container.innerHTML = '';
       container.appendChild(fragment);
       container.scrollTop = container.scrollHeight;
@@ -3052,6 +4448,7 @@
           if (idx === -1) {
             state.messages.push(parsed);
             isChanged = true;
+            notifyMessageIfEligible(parsed);
           } else {
             const existing = state.messages[idx];
             if (existing.timestamp !== parsed.timestamp || 
@@ -3161,13 +4558,33 @@
           )
         );
 
+        const remoteMsgIds = new Set();
         let count = 0;
         await Promise.all(chatBlobs.map(async (item) => {
           try {
-            const rawUrl = `https://raw.githubusercontent.com/${config.owner}/${config.repo}/${branch}/${item.path}`;
-            const fileRes = await fetch(rawUrl, { headers });
-            if (fileRes.ok) {
-              const text = await fileRes.text();
+            let text = '';
+            if (config.token && item.sha) {
+              const blobRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/blobs/${item.sha}`, {
+                headers: { 'Accept': 'application/vnd.github.v3.raw', 'Authorization': `token ${config.token}` }
+              });
+              if (blobRes.ok) {
+                text = await blobRes.text();
+              }
+            }
+            if (!text) {
+              const rawUrl = `https://raw.githubusercontent.com/${config.owner}/${config.repo}/${branch}/${item.path}?_t=${Date.now()}`;
+              const fileRes = await fetch(rawUrl, { headers });
+              if (fileRes.ok) {
+                text = await fileRes.text();
+              }
+            }
+            if (text) {
+              if (item.path.startsWith('channels/') && item.path.includes('/messages/')) {
+                try {
+                  const p = JSON.parse(text);
+                  if (p && p.id) remoteMsgIds.add(p.id);
+                } catch {}
+              }
               if (processSyncFile(item.path, text)) {
                 count++;
               }
@@ -3175,10 +4592,17 @@
           } catch {}
         }));
 
-        saveLocalCache();
-        renderSidebar();
-        renderTimeline();
-        if (activeThreadRootId) renderThread();
+        // Authoritative reconciliation: prune local messages that were deleted/purged on remote
+        const beforeLenGit = state.messages.length;
+        state.messages = state.messages.filter(m => remoteMsgIds.has(m.id) || (m.timestamp && Date.now() - m.timestamp < 10000));
+        const wasPrunedGit = state.messages.length !== beforeLenGit;
+
+        if (count > 0 || wasPrunedGit) {
+          saveLocalCache();
+          renderSidebar();
+          renderTimeline();
+          if (activeThreadRootId) renderThread();
+        }
         if (manual) showToast(`Synced ${count} items from GitHub (${config.owner}/${config.repo})`);
       } catch (e) {
         // Safe catch
@@ -3188,24 +4612,42 @@
     // Pull Sync from Local Server Bridge with Automatic GitHub Fallback
     async function syncFromLocalServer(manual = false) {
       const syncIcon = document.getElementById('sync-icon');
-      if (syncIcon) syncIcon.classList.add('spin');
+      if (manual && syncIcon) syncIcon.classList.add('spin');
       let localBridgeSucceeded = false;
       try {
         const res = await fetch(apiUrl('/api/sync/pull'));
         if (res.ok) {
           localBridgeSucceeded = true;
           const data = await res.json();
-          if (data.files && data.files.length > 0) {
+          if (data.appVersion) {
+            handleProcessVersionCheck(data.appVersion, false);
+          }
+          if (data.files && Array.isArray(data.files)) {
+            const remoteMsgIds = new Set();
             let count = 0;
             for (const f of data.files) {
+              if (f.relativePath.startsWith('channels/') && f.relativePath.includes('/messages/')) {
+                try {
+                  const p = JSON.parse(f.content);
+                  if (p && p.id) remoteMsgIds.add(p.id);
+                } catch {}
+              }
               if (processSyncFile(f.relativePath, f.content)) {
                 count++;
               }
             }
-            saveLocalCache();
-            renderSidebar();
-            renderTimeline();
-            if (activeThreadRootId) renderThread();
+
+            // Authoritative reconciliation: prune local messages that were deleted/purged on local git ref
+            const beforeLenBridge = state.messages.length;
+            state.messages = state.messages.filter(m => remoteMsgIds.has(m.id) || (m.timestamp && Date.now() - m.timestamp < 10000));
+            const wasPrunedBridge = state.messages.length !== beforeLenBridge;
+
+            if (count > 0 || wasPrunedBridge) {
+              saveLocalCache();
+              renderSidebar();
+              renderTimeline();
+              if (activeThreadRootId) renderThread();
+            }
             if (manual) showToast(`Synced ${count} items from Git-Chat bridge`);
           } else if (manual) {
             showToast('Git ref up to date');
@@ -3214,7 +4656,7 @@
       } catch (e) {
         // Local bridge offline
       } finally {
-        if (syncIcon) syncIcon.classList.remove('spin');
+        if (manual && syncIcon) syncIcon.classList.remove('spin');
       }
 
       if (!localBridgeSucceeded && config.owner && config.repo) {
@@ -3261,13 +4703,15 @@ Minimum version required to store current data is: `+i+`.
         repo: config.repo,
         branch: config.branch || 'git-chat',
         password: vaultPassword,
-        workspaceSecret: config.workspaceSecret || ''
+        workspaceSecret: config.workspaceSecret || '',
+        backendUrl: config.lanUrl || (config.backendUrl && !config.backendUrl.includes('localhost') ? config.backendUrl : 'http://192.168.1.111:4300'),
+        token: config.token || ''
       };
       const b64 = btoa(JSON.stringify(payload));
-      let baseUrl = config.lanUrl || '';
+      let baseUrl = config.lanUrl || (config.backendUrl && !config.backendUrl.includes('localhost') ? config.backendUrl : 'http://192.168.1.111:4300');
       if (!baseUrl) {
         if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
-          baseUrl = 'http://localhost:4300';
+          baseUrl = 'http://192.168.1.111:4300';
         } else {
           baseUrl = window.location.origin + window.location.pathname;
         }
@@ -3294,12 +4738,32 @@ Minimum version required to store current data is: `+i+`.
 
     // Setup Event Listeners
     window.addEventListener('DOMContentLoaded', async () => {
-      loadLocalCache();
-      await detectIdentity();
-      renderSidebar();
-      renderTimeline();
-      syncFromLocalServer();
-      checkS3Status();
+      // Sync Version Badges
+      document.querySelectorAll('.ws-version-badge').forEach(el => { el.textContent = `v${CLIENT_VERSION}`; });
+      const curVerEl = document.getElementById('update-current-version');
+      if (curVerEl) curVerEl.textContent = `v${CLIENT_VERSION}`;
+      const setVerEl = document.getElementById('settings-client-version');
+      if (setVerEl) setVerEl.textContent = `v${CLIENT_VERSION}`;
+
+      try {
+        loadLocalCache();
+        loadNotificationConfig();
+        // Populate notified message IDs cache with existing loaded messages to avoid notification storms on boot
+        if (Array.isArray(state.messages)) {
+          for (const m of state.messages) {
+            if (m && m.id) notifiedMessageIds.add(m.id);
+          }
+        }
+        await detectIdentity();
+        renderSidebar();
+        updateChannelMuteUI();
+        renderTimeline();
+        syncFromLocalServer();
+        checkS3Status();
+        checkForUpdates(false);
+      } catch (err) {
+        console.error('Initial startup warning/error:', err);
+      }
 
       // Check URL hash for vault password or setup
       if (window.location.hash.startsWith('#setup=')) {
@@ -3310,6 +4774,8 @@ Minimum version required to store current data is: `+i+`.
           if (parsed.repo) config.repo = parsed.repo;
           if (parsed.branch) config.branch = parsed.branch;
           if (parsed.workspaceSecret) config.workspaceSecret = parsed.workspaceSecret;
+          if (parsed.backendUrl) config.backendUrl = parsed.backendUrl;
+          if (parsed.token) config.token = parsed.token;
           if (parsed.password) {
             vaultPassword = parsed.password;
             vaultKey = await CryptoVault.deriveKey(vaultPassword);
@@ -3324,10 +4790,11 @@ Minimum version required to store current data is: `+i+`.
               vaultBtn.className = 'header-btn vault-unlocked';
               vaultBtn.textContent = '🔓 Vault Unlocked';
             }
-            showToast(`📱 Workspace paired! Vault password copied to clipboard.`);
+            showToast(`📱 Workspace paired! Vault password applied.`);
           }
           saveLocalCache();
-          showToast(`Configured for repository: ${config.owner}/${config.repo}`);
+          showToast(`Configured for ${config.backendUrl || `${config.owner}/${config.repo}`}`);
+          syncFromLocalServer();
         } catch (e) {
           console.error('Failed to parse setup hash', e);
         }
@@ -3360,20 +4827,24 @@ Minimum version required to store current data is: `+i+`.
 
       // Mobile Virtual Keyboard and Visual Viewport Sync
       function initVisualViewportHandler() {
+        let lastVh = 0;
         const updateViewport = () => {
           if (window.visualViewport) {
-            const vh = window.visualViewport.height;
-            document.documentElement.style.setProperty('--app-height', `${vh}px`);
-            
-            const isKeyboardOpen = (window.innerHeight - vh) > 100;
-            if (isKeyboardOpen) {
-              const timeline = document.getElementById('timeline-container');
-              if (timeline) {
-                timeline.scrollTop = timeline.scrollHeight;
-              }
-              const threadTimeline = document.getElementById('thread-timeline');
-              if (threadTimeline) {
-                threadTimeline.scrollTop = threadTimeline.scrollHeight;
+            const vh = Math.round(window.visualViewport.height);
+            if (Math.abs(vh - lastVh) >= 1) {
+              lastVh = vh;
+              document.documentElement.style.setProperty('--app-height', `${vh}px`);
+              
+              const isKeyboardOpen = (window.innerHeight - vh) > 100;
+              if (isKeyboardOpen) {
+                const timeline = document.getElementById('timeline-container');
+                if (timeline) {
+                  timeline.scrollTop = timeline.scrollHeight;
+                }
+                const threadTimeline = document.getElementById('thread-timeline');
+                if (threadTimeline) {
+                  threadTimeline.scrollTop = threadTimeline.scrollHeight;
+                }
               }
             }
           }
@@ -3381,7 +4852,6 @@ Minimum version required to store current data is: `+i+`.
 
         if (window.visualViewport) {
           window.visualViewport.addEventListener('resize', updateViewport);
-          window.visualViewport.addEventListener('scroll', updateViewport);
         }
         window.addEventListener('resize', updateViewport);
         updateViewport();
@@ -3557,6 +5027,8 @@ Minimum version required to store current data is: `+i+`.
 
         vaultKey = await CryptoVault.deriveKey(vaultPassword);
         isVaultLocked = false;
+        decryptedMessageCache.clear();
+        lastRenderedChecksum = '';
         sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
         if (remember) {
           localStorage.setItem('git_chat_saved_vault_pass', vaultPassword);
@@ -3583,6 +5055,30 @@ Minimum version required to store current data is: `+i+`.
         showToast(`🔓 Vault unlocked & password copied to clipboard! Welcome, ${config.user.name}`);
       };
 
+      // Open Vault Modal helper
+      function openVaultModal() {
+        const vModal = document.getElementById('vault-modal');
+        if (vModal) {
+          vModal.classList.add('open');
+          const pwdInput = document.getElementById('vault-password');
+          if (pwdInput) setTimeout(() => pwdInput.focus(), 50);
+        }
+      }
+      window.openVaultModal = openVaultModal;
+
+      // Media Viewer Dialog Event Listeners (Backdrop click, Close button, and Cancel/Esc)
+      const mediaDlg = document.getElementById('media-viewer-dialog');
+      if (mediaDlg) {
+        mediaDlg.addEventListener('click', (e) => {
+          if (e.target === mediaDlg) closeMediaViewer();
+        });
+        mediaDlg.addEventListener('cancel', () => {
+          closeMediaViewer();
+        });
+        const closeBtn = document.getElementById('btn-close-media-viewer');
+        if (closeBtn) closeBtn.onclick = closeMediaViewer;
+      }
+
       setClickHandler('btn-unlock-vault', handleVaultUnlock);
       const vaultLoginForm = document.getElementById('vault-login-form');
       if (vaultLoginForm) {
@@ -3592,11 +5088,12 @@ Minimum version required to store current data is: `+i+`.
       // Vault Toggle Button in header
       setClickHandler('btn-vault-toggle', () => {
         if (isVaultLocked) {
-          const vModal = document.getElementById('vault-modal');
-          if (vModal) vModal.classList.add('open');
+          openVaultModal();
         } else {
           isVaultLocked = true;
           vaultKey = null;
+          decryptedMessageCache.clear();
+          lastRenderedChecksum = '';
           sessionStorage.removeItem('git_chat_vault_pass');
           localStorage.removeItem('git_chat_saved_vault_pass');
           const vaultBtn = document.getElementById('btn-vault-toggle');
@@ -3728,6 +5225,10 @@ Minimum version required to store current data is: `+i+`.
         if (uBackend) uBackend.value = config.backendUrl || (window.location.protocol === 'file:' ? 'http://localhost:4300' : '');
         const uSecret = document.getElementById('cfg-workspace-secret');
         if (uSecret) uSecret.value = config.workspaceSecret || '';
+        const autoUpChk = document.getElementById('cfg-auto-update-enabled');
+        if (autoUpChk) autoUpChk.checked = isAutoUpdateEnabled();
+        const verSpan = document.getElementById('settings-client-version');
+        if (verSpan) verSpan.textContent = `v${CLIENT_VERSION}`;
 
         // Storage & Access Tab fields
         updateStorageVolumeStatusDisplay();
@@ -3740,6 +5241,48 @@ Minimum version required to store current data is: `+i+`.
       setClickHandler('btn-user-profile', openSettingsHandler);
       setClickHandler('btn-close-settings', () => {
         if (settingsModal) settingsModal.classList.remove('open');
+      });
+
+      // Auto-Update & Update Modal Listeners
+      const autoUpToggle = document.getElementById('toggle-auto-update');
+      if (autoUpToggle) {
+        autoUpToggle.onchange = () => setAutoUpdateEnabled(autoUpToggle.checked);
+      }
+      const cfgAutoUpToggle = document.getElementById('cfg-auto-update-enabled');
+      if (cfgAutoUpToggle) {
+        cfgAutoUpToggle.onchange = () => setAutoUpdateEnabled(cfgAutoUpToggle.checked);
+      }
+      setClickHandler('btn-check-updates-now', () => checkForUpdates(true));
+      setClickHandler('btn-download-bundle-now', () => {
+        triggerBundleDownload('/download', 'git-chat.html');
+        showToast('Downloaded git-chat.html');
+      });
+      setClickHandler('btn-manual-download-update', () => {
+        triggerBundleDownload('/download', 'git-chat.html');
+        openUpdateModal(updateState.availableVersion, true);
+        showToast('Downloaded updated git-chat.html');
+      });
+      setClickHandler('btn-close-update-modal', closeUpdateModal);
+      setClickHandler('btn-dismiss-update', closeUpdateModal);
+
+      // Firefox Link Copy Action
+      setClickHandler('btn-copy-firefox-link', () => {
+        const copyBtn = document.getElementById('btn-copy-firefox-link');
+        const textToCopy = copyBtn?.getAttribute('data-copy-text') || FIREFOX_PRIMARY_PATH;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            if (copyBtn) {
+              const orig = copyBtn.textContent;
+              copyBtn.textContent = '✅ Copied!';
+              setTimeout(() => { copyBtn.textContent = orig; }, 2000);
+            }
+            showToast('Copied Firefox path to clipboard');
+          }).catch(() => {
+            showToast(`Firefox Path: ${textToCopy}`);
+          });
+        } else {
+          showToast(`Firefox Path: ${textToCopy}`);
+        }
       });
 
       // Test Storage Connection Button
@@ -3846,6 +5389,55 @@ Minimum version required to store current data is: `+i+`.
         showToast('🔗 1-Click Invite link copied to clipboard!');
       });
 
+      // Notification and Muting Handlers
+      setClickHandler('btn-channel-mute-toggle', () => {
+        toggleCurrentChannelMute();
+      });
+
+      setClickHandler('btn-mob-mute', () => {
+        toggleCurrentChannelMute();
+        const mobMenu = document.getElementById('mobile-menu-dropdown');
+        if (mobMenu) mobMenu.classList.remove('open');
+      });
+
+      setClickHandler('btn-request-notif-perm', async () => {
+        await requestNotificationPermission();
+      });
+
+      setClickHandler('btn-test-notification', () => {
+        sendTestNotification();
+      });
+
+      const notifGlobalModeSelect = document.getElementById('cfg-notif-global-mode');
+      if (notifGlobalModeSelect) {
+        notifGlobalModeSelect.addEventListener('change', (e) => {
+          notificationConfig.globalMode = e.target.value;
+          saveNotificationConfig();
+          showToast(`🔔 Notification mode set to: ${e.target.value}`);
+        });
+      }
+
+      const notifSoundCheckbox = document.getElementById('cfg-notif-sound');
+      if (notifSoundCheckbox) {
+        notifSoundCheckbox.addEventListener('change', (e) => {
+          notificationConfig.soundEnabled = e.target.checked;
+          saveNotificationConfig();
+          if (notificationConfig.soundEnabled) {
+            playNotificationSound();
+          }
+          showToast(`🔊 Sound chime ${e.target.checked ? 'enabled' : 'muted'}`);
+        });
+      }
+
+      const notifBypassCheckbox = document.getElementById('cfg-notif-mention-bypass');
+      if (notifBypassCheckbox) {
+        notifBypassCheckbox.addEventListener('change', (e) => {
+          notificationConfig.mentionsBypassMute = e.target.checked;
+          saveNotificationConfig();
+          showToast(`@mentions override ${e.target.checked ? 'enabled' : 'disabled'}`);
+        });
+      }
+
       // Save Settings
       setClickHandler('btn-save-settings', async () => {
         config.user.name = document.getElementById('cfg-user-name')?.value || 'User';
@@ -3868,6 +5460,15 @@ Minimum version required to store current data is: `+i+`.
         localStorage.setItem('git_chat_storage_repo', storageRepo);
         localStorage.setItem('git_chat_storage_token', storageToken);
 
+        // Notification Settings Sync
+        const notifMode = document.getElementById('cfg-notif-global-mode')?.value;
+        if (notifMode) notificationConfig.globalMode = notifMode;
+        const notifSound = document.getElementById('cfg-notif-sound');
+        if (notifSound) notificationConfig.soundEnabled = notifSound.checked;
+        const notifBypass = document.getElementById('cfg-notif-mention-bypass');
+        if (notifBypass) notificationConfig.mentionsBypassMute = notifBypass.checked;
+        saveNotificationConfig();
+
         // Membership Policy
         const policyEl = document.getElementById('cfg-membership-policy');
         if (state.membersConfig && policyEl) {
@@ -3882,10 +5483,13 @@ Minimum version required to store current data is: `+i+`.
           sessionStorage.setItem('git_chat_vault_pass', vaultPassword);
         }
 
+        decryptedMessageCache.clear();
+        lastRenderedChecksum = '';
         saveLocalCache();
         publishUserProfile();
+        updateChannelMuteUI();
         renderSidebar();
-        renderTimeline();
+        renderTimeline(true);
         checkS3Status();
         if (settingsModal) settingsModal.classList.remove('open');
         showToast('Settings saved successfully');
@@ -3928,23 +5532,34 @@ Minimum version required to store current data is: `+i+`.
         if (searchModal) searchModal.classList.remove('open');
       });
       if (searchInput && searchResults) {
-        searchInput.oninput = () => {
+        searchInput.oninput = async () => {
           const q = searchInput.value.toLowerCase().trim();
           searchResults.innerHTML = '';
           if (!q) return;
-          const matches = state.messages.filter(m => (m.content || '').toLowerCase().includes(q));
+          const matches = [];
+          for (const m of state.messages) {
+            let text = m.content || '';
+            if (m.encrypted && !isVaultLocked) {
+              const dec = await decryptMessage(m, m.channelId);
+              if (dec) text = dec;
+            }
+            if (text && text.toLowerCase().includes(q)) {
+              matches.push({ msg: m, text });
+            }
+          }
           if (matches.length === 0) {
             searchResults.innerHTML = '<div style="color:var(--text-dim); padding:10px; text-align:center;">No matching messages found</div>';
             return;
           }
-          for (const m of matches) {
+          for (const match of matches) {
+            const m = match.msg;
             const item = document.createElement('div');
             item.style.padding = '8px 10px';
             item.style.background = 'var(--bg-main)';
             item.style.borderRadius = '6px';
             item.style.cursor = 'pointer';
             item.style.border = '1px solid var(--border)';
-            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-weight:600; color:var(--text-heading);">${m.author?.name || 'Unknown'}</span> <span style="font-size:11px; color:var(--text-dim);">${new Date(m.timestamp).toLocaleDateString()}</span></div><div style="font-size:11px; color:var(--accent-blue); margin-bottom:4px;">#${state.channels[m.channelId]?.name || m.channelId}</div><div style="font-size:13px; color:var(--text-main);">${m.content}</div>`;
+            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-weight:600; color:var(--text-heading);">${m.author?.name || 'Unknown'}</span> <span style="font-size:11px; color:var(--text-dim);">${new Date(m.timestamp).toLocaleDateString()}</span></div><div style="font-size:11px; color:var(--accent-blue); margin-bottom:4px;">#${state.channels[m.channelId]?.name || m.channelId}</div><div style="font-size:13px; color:var(--text-main);">${renderMarkdown(match.text)}</div>`;
             item.onclick = () => {
               selectChannel(m.channelId);
               if (searchModal) searchModal.classList.remove('open');
@@ -4091,7 +5706,9 @@ Minimum version required to store current data is: `+i+`.
       setInterval(() => syncFromLocalServer(false), 3000);
       setInterval(publishPresence, 20000);
       setInterval(checkS3Status, 15000);
+      setInterval(() => checkForUpdates(false), 30000);
     });
+
   </script>
 </body>
 </html>

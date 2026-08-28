@@ -33,25 +33,34 @@ export function generateAgentResponse(
 ): string {
   const cleanPrompt = (prompt || '').replace(/@Human|@human|@agent|@SupervisorAgent|\/human|\/agent|\/ask/gi, '').trim();
   const lower = cleanPrompt.toLowerCase();
+  const nonAppText = lower.replace(/\bgit-chat\b/gi, '').trim();
   const userGreeting = context?.userName ? `Hello **${context.userName}**! ` : 'Hello! ';
 
-  if (!cleanPrompt || /^(hi|hello|hey|greetings|howdy|yo)\b/i.test(lower)) {
+  // 1. Greetings & test pings (e.g. "Test hello from git-chat", "hi", "hey", "testing")
+  if (!cleanPrompt || /\b(hi|hello|hey|greetings|howdy|yo)\b/i.test(lower) || /^(test|testing)\b/i.test(lower)) {
+    if (/test/i.test(lower)) {
+      return `👋 ${userGreeting}Loud and clear! Chat synchronization and E2EE are active. I'm **Human**, your AI partner in this workspace. How can I help you today?`;
+    }
     return `👋 ${userGreeting}I'm **Human**, your built-in autonomous AI teammate. I'm here to collaborate with you on code, tasks, Git operations, and architectural decisions. What are we building or solving today?`;
   }
 
+  // 2. Help commands
   if (lower.startsWith('/help') || lower.includes('what can you do') || lower.includes('help me')) {
     return `### 👤 Human Assistant Capabilities\n\n- 🔒 **E2EE & Git Sync**: Explaining zero-backend Git replication on \`refs/heads/git-chat\` and AES-GCM-256 vaults.\n- 💻 **Code & Architecture**: Answering questions across TypeScript, Node.js, Python, Git workflows, and testing.\n- 💬 **Always Open Channel**: I am always active in **#Talk to a Human** and via direct message.\n- 📎 **S3 & Media Attachments**: Assisting with binary asset encryption and cloud storage integration.\n\n*Feel free to ask any technical, architectural, or debugging question!*`;
   }
 
-  if (lower.includes('e2ee') || lower.includes('encrypt') || lower.includes('vault') || lower.includes('aes')) {
+  // 3. Security & E2EE
+  if (lower.includes('e2ee') || lower.includes('encrypt') || lower.includes('vault') || lower.includes('aes') || lower.includes('security')) {
     return `🔒 **Git-Chat Security & E2EE Model**:\n\n1. **AES-GCM-256 Encryption**: Every message is encrypted client-side using a key derived from your workspace passphrase via PBKDF2 with SHA-256.\n2. **Discrete Git Payloads**: The Git branch (\`refs/heads/git-chat\`) stores only encrypted ciphertexts, protecting your data in transit and at rest.\n3. **DataIsolationGuard**: Strict write sandboxing ensures localhost users cannot tamper with core codebase files (\`package.json\`, \`src/\`, etc.).`;
   }
 
-  if (lower.includes('typescript') || lower.includes('code') || lower.includes('function') || lower.includes('javascript')) {
+  // 4. Code & Programming
+  if (lower.includes('typescript') || lower.includes('javascript') || lower.includes('python') || /\b(code|function|class|algorithm|debug)\b/i.test(lower)) {
     return `Here is a clean implementation with strict typing:\n\n\`\`\`typescript\nexport function addNumbers(a: number, b: number): number {\n  return a + b;\n}\n\`\`\`\n\n*Key Highlights*:\n- Strict type safety with zero runtime overhead.\n- Follows single-responsibility design for modularity.`;
   }
 
-  if (lower.includes('git') || lower.includes('branch') || lower.includes('commit') || lower.includes('push')) {
+  // 5. Git operations (excluding bare 'git-chat' app mentions)
+  if (/\b(git branch|git commit|git push|git pull|git rebase|git checkout|git ref|data branch)\b/i.test(nonAppText) || (/\bgit\b/i.test(nonAppText) && !nonAppText.includes('git-chat'))) {
     return `💡 **Git Operations Guide**:\n\n- **Chat Isolation Branch**: \`refs/heads/git-chat\` is completely separate from your active code branch (\`master\` / \`main\`).\n- **Discrete Atomic Commits**: Each message or reaction is written as an isolated JSON file to eliminate merge conflicts.\n- **Sync Command**: Run \`npm run setup\` or click **Sync** to replicate changes peer-to-peer.`;
   }
 

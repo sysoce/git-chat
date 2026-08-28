@@ -135,4 +135,44 @@ describe('Cross-Device Synchronization & Decryption Suite', () => {
     assert.strictEqual(parsed.branch, 'git-chat');
     assert.strictEqual(parsed.password, 'my-vault-pass');
   });
+
+  it('successfully decrypts with decryptContentWithFallbacks across candidate keys', async () => {
+    const { decryptContentWithFallbacks } = await import('../src/security/cryptoVault.js');
+    const primaryKey = await deriveVaultKey('primary-secret', 'test-salt');
+    const fallbackKey1 = await deriveVaultKey('wrong-secret-1', 'test-salt');
+    const fallbackKey2 = await deriveVaultKey('fallback-vault-pass', 'test-salt');
+
+    const msg = 'Decrypted via fallback candidate keys!';
+    const encrypted = await encryptContent(msg, fallbackKey2);
+
+    // Candidate keys order: [wrongKey, wrongPrimaryKey, fallbackKey2]
+    const decrypted = await decryptContentWithFallbacks(encrypted, [fallbackKey1, primaryKey, fallbackKey2]);
+    assert.strictEqual(decrypted, msg);
+  });
+
+  it('enables seamless multi-user collaboration between User A, User B, and Human AI', async () => {
+    const workspaceId = 'sysoce/git-chat';
+    const channelId = 'chan_general';
+    const chanSalt = `git-chat-chan-sysoce-git-chat-${channelId}`;
+
+    // Workspace shared channel key
+    const workspaceChannelKey = await deriveVaultKey(workspaceId, chanSalt);
+
+    // User A posts message
+    const msgA = 'Message from User A';
+    const encA = await encryptContent(msgA, workspaceChannelKey);
+
+    // User B posts message
+    const msgB = 'Message from User B';
+    const encB = await encryptContent(msgB, workspaceChannelKey);
+
+    // Human AI posts message
+    const msgAI = 'Hello! Human autonomous agent here to help.';
+    const encAI = await encryptContent(msgAI, workspaceChannelKey);
+
+    // Both User A and User B can decrypt all messages
+    assert.strictEqual(await decryptContent(encA, workspaceChannelKey), msgA);
+    assert.strictEqual(await decryptContent(encB, workspaceChannelKey), msgB);
+    assert.strictEqual(await decryptContent(encAI, workspaceChannelKey), msgAI);
+  });
 });

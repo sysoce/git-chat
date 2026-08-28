@@ -566,6 +566,29 @@ export async function decryptContent(
 }
 
 /**
+ * Decrypts an EncryptedPayload by attempting multiple candidate keys in order.
+ * Returns the decrypted plaintext if any candidate key succeeds, or throws if all fail.
+ */
+export async function decryptContentWithFallbacks(
+  payload: EncryptedPayload,
+  candidateKeys: VaultKey[]
+): Promise<string> {
+  let lastError: Error | null = null;
+  for (const key of candidateKeys) {
+    if (!key) continue;
+    try {
+      const dec = await decryptContent(payload, key);
+      if (dec !== undefined && dec !== null) {
+        return dec;
+      }
+    } catch (err: any) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error('Decryption failed with all candidate keys');
+}
+
+/**
  * Encrypts arbitrary binary data (e.g. image, voice memo, PDF) using AES-GCM-256.
  */
 export async function encryptBinary(

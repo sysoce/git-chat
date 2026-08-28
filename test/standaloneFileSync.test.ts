@@ -19,6 +19,16 @@ describe('Standalone File:// Mode & URL Resolution Suite', () => {
       return base ? `${base}${cleanPath}` : cleanPath;
     }
 
+    function resolveAttachmentUrl(att: { url?: string; key?: string }, config: { backendUrl?: string }, protocol: string, origin: string) {
+      if (!att) return '';
+      const raw = att.url || (att.key ? `/api/s3/file/${att.key}` : '');
+      if (!raw) return '';
+      if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:') || raw.startsWith('blob:')) {
+        return raw;
+      }
+      return apiUrl(raw, config, protocol, origin);
+    }
+
     // 1. file:// with default empty backendUrl
     const fileUrl = apiUrl('/api/sync/pull', { backendUrl: '' }, 'file:', 'null');
     assert.strictEqual(fileUrl, 'http://localhost:4300/api/sync/pull');
@@ -30,6 +40,42 @@ describe('Standalone File:// Mode & URL Resolution Suite', () => {
     // 3. Normal http:// origin
     const httpUrl = apiUrl('/api/sync/pull', { backendUrl: '' }, 'http:', 'http://localhost:4300');
     assert.strictEqual(httpUrl, '/api/sync/pull');
+
+    // 4. Attachment with /api/s3/file path in file:// mode prefixes localhost:4300
+    const localS3AttUrl = resolveAttachmentUrl(
+      { url: '/api/s3/file/attachments/1787911682022_screenshot.png' },
+      { backendUrl: '' },
+      'file:',
+      'null'
+    );
+    assert.strictEqual(localS3AttUrl, 'http://localhost:4300/api/s3/file/attachments/1787911682022_screenshot.png');
+
+    // 5. Attachment with remote GitHub raw URL is preserved as-is
+    const rawGhAttUrl = resolveAttachmentUrl(
+      { url: 'https://raw.githubusercontent.com/alice/git-chat-media/main/attachments/photo.png' },
+      { backendUrl: '' },
+      'file:',
+      'null'
+    );
+    assert.strictEqual(rawGhAttUrl, 'https://raw.githubusercontent.com/alice/git-chat-media/main/attachments/photo.png');
+
+    // 6. Attachment with inline data: URI is preserved as-is
+    const dataAttUrl = resolveAttachmentUrl(
+      { url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' },
+      { backendUrl: '' },
+      'file:',
+      'null'
+    );
+    assert.strictEqual(dataAttUrl.startsWith('data:image/png;base64,'), true);
+
+    // 7. Attachment with only key in file:// mode resolves to full API url
+    const keyOnlyAttUrl = resolveAttachmentUrl(
+      { key: 'attachments/voice.wav' },
+      { backendUrl: '' },
+      'file:',
+      'null'
+    );
+    assert.strictEqual(keyOnlyAttUrl, 'http://localhost:4300/api/s3/file/attachments/voice.wav');
   });
 
   it('correctly parses discrete sync files for users, presence, channels, and messages', () => {
@@ -91,4 +137,29 @@ describe('Standalone File:// Mode & URL Resolution Suite', () => {
     assert.strictEqual(state.messages.length, 1);
     assert.strictEqual(state.messages[0].content, 'Hello from iPhone!');
   });
+
+  it('correctly classifies media MIME types and extensions for the built-in media viewer', () => {
+    function isImageMimeOrExt(mime: string, name: string) {
+      const m = (mime || '').toLowerCase();
+      const n = (name || '').toLowerCase();
+      return m.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(n);
+    }
+
+    function getMediaKind(mime: string, name: string): 'image' | 'video' | 'audio' | 'file' {
+      if (isImageMimeOrExt(mime, name)) return 'image';
+      const m = (mime || '').toLowerCase();
+      const n = (name || '').toLowerCase();
+      if (m.startsWith('video/') || /\.(mp4|webm|mov|mkv)$/i.test(n)) return 'video';
+      if (m.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac)$/i.test(n)) return 'audio';
+      return 'file';
+    }
+
+    assert.strictEqual(getMediaKind('image/png', 'photo.png'), 'image');
+    assert.strictEqual(getMediaKind('', 'Screenshot.JPEG'), 'image');
+    assert.strictEqual(getMediaKind('video/mp4', 'recording.mp4'), 'video');
+    assert.strictEqual(getMediaKind('', 'clip.mov'), 'video');
+    assert.strictEqual(getMediaKind('audio/mpeg', 'voice.mp3'), 'audio');
+    assert.strictEqual(getMediaKind('application/pdf', 'doc.pdf'), 'file');
+  });
 });
+

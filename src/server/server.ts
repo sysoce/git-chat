@@ -35,8 +35,46 @@ export function startGitChatServer(options: ServerOptions): http.Server {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
     try {
+      // API: Version Check & Auto-Update
+      if (url.pathname === '/api/version' && req.method === 'GET') {
+        let pkgVer = '1.0.0';
+        try {
+          const pkgRaw = await fs.readFile(path.join(workspaceRoot, 'package.json'), 'utf8');
+          pkgVer = JSON.parse(pkgRaw).version || '1.0.0';
+        } catch {}
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        });
+        res.end(JSON.stringify({ version: pkgVer, downloadUrl: '/download' }));
+        return;
+      }
+
+      // API: Download Standalone HTML Bundle for Firefox / Local Offline use
+      if (url.pathname === '/download' && req.method === 'GET') {
+        const indexPath = path.join(workspaceRoot, 'index.html');
+        let htmlContent = '';
+        try {
+          htmlContent = await fs.readFile(indexPath, 'utf8');
+        } catch {
+          htmlContent = `<!DOCTYPE html><html><head><title>git-chat</title></head><body><h1>git-chat bundle not found</h1></body></html>`;
+        }
+
+        const buf = Buffer.from(htmlContent, 'utf8');
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="git-chat.html"',
+          'Content-Length': buf.length,
+          'Cache-Control': 'no-cache',
+        });
+        res.end(buf);
+        return;
+      }
+
       // API: S3 Health and Configuration
       if (url.pathname === '/api/s3/status' && req.method === 'GET') {
+
         const health = await s3Client.checkHealth();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, ...health }));
@@ -177,10 +215,17 @@ export function startGitChatServer(options: ServerOptions): http.Server {
           content,
         }));
 
+        let pkgVer = '1.0.0';
+        try {
+          const pkgRaw = await fs.readFile(path.join(workspaceRoot, 'package.json'), 'utf8');
+          pkgVer = JSON.parse(pkgRaw).version || '1.0.0';
+        } catch {}
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, files: mergedFiles, timestamp: Date.now() }));
+        res.end(JSON.stringify({ success: true, appVersion: pkgVer, files: mergedFiles, timestamp: Date.now() }));
         return;
       }
+
 
       // API: Push discrete user files to local git-chat ref & live memory relay
       if (url.pathname === '/api/sync/push' && req.method === 'POST') {

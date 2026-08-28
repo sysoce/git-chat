@@ -5,7 +5,12 @@ export * from './security/cryptoVault';
 export * from './engine/chatEventProjector';
 export * from './engine/chatManifestGenerator';
 export * from './engine/agentResponder';
+export * from './engine/notificationManager';
 export * from './backend/chatGitPlumbing';
 export * from './backend/chatRemoteClient';
 export * from './server/server';
 export * from './cli/setupWizard';
+export * from './engine/version';
+export * from './engine/updateManager';
+export * from './engine/updateModal';
+
