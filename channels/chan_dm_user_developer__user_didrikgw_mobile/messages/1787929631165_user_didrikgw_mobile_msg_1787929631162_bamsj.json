@@ -1,0 +1,19 @@
+{
+  "id": "msg_1787929631162_bamsj",
+  "channelId": "chan_dm_user_developer__user_didrikgw_mobile",
+  "author": {
+    "id": "user_didrikgw_mobile",
+    "name": "didrikgw (Mobile)",
+    "avatar": "📱",
+    "role": "member"
+  },
+  "content": "[Encrypted Message]",
+  "encrypted": {
+    "v": 1,
+    "alg": "AES-GCM-256",
+    "iv": "i++YRCnkHHNJwAGr",
+    "ciphertext": "r5IEaX4c+YbaN/h0eymVMPue"
+  },
+  "reactions": {},
+  "timestamp": 1787929631165
+}
