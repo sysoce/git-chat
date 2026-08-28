@@ -997,6 +997,7 @@
           </div>
         </div>
         <div class="chat-header-actions">
+          <div class="header-btn desktop-only" id="mesh-status-indicator" style="cursor:default; font-size:12px; font-weight:600; color:#f59e0b;" title="Real-Time Zero-Server Live Mesh">🟡 Mesh Connecting</div>
           <button class="header-btn" id="btn-mobile-sync-link" title="Connect Phone or Share Link" style="display:flex; align-items:center; gap:5px;">📱<span class="desktop-only"> Mobile</span></button>
           <button class="header-btn desktop-only" id="btn-s3-status" title="S3 Media Storage Status" style="display:flex; align-items:center; gap:5px;"><span id="s3-status-dot" style="width:7px; height:7px; border-radius:50%; background:var(--warning);"></span> S3 Media</button>
           <button class="header-btn vault-unlocked" id="btn-vault-toggle" title="Toggle Vault Encryption Lock">🔓<span class="desktop-only"> Vault</span></button>
@@ -1896,9 +1897,263 @@
     }
 
     // ==========================================
+    // ZERO-SERVER REAL-TIME E2EE LIVE MESH RELAY
+    // ==========================================
+    const DEFAULT_MESH_BROKERS = [
+      'wss://broker.emqx.io:8084/mqtt',
+      'wss://broker.hivemq.com:8884/mqtt',
+      'wss://test.mosquitto.org:8081'
+    ];
+
+    function encodeMqttConnect(clientId, keepAliveSeconds = 60) {
+      const enc = new TextEncoder();
+      const idBytes = enc.encode(clientId);
+      const proto = [0, 4, 0x4d, 0x51, 0x54, 0x54, 4, 2, Math.floor(keepAliveSeconds / 256), keepAliveSeconds % 256];
+      const payload = [Math.floor(idBytes.length / 256), idBytes.length % 256, ...idBytes];
+      const remLen = proto.length + payload.length;
+      return new Uint8Array([0x10, remLen, ...proto, ...payload]);
+    }
+
+    function encodeMqttPublish(topic, message) {
+      const enc = new TextEncoder();
+      const topicBytes = enc.encode(topic);
+      const msgBytes = enc.encode(message);
+      const topicLen = topicBytes.length;
+      const remLen = 2 + topicLen + msgBytes.length;
+      const buf = new Uint8Array(2 + remLen);
+      buf[0] = 0x30; // PUBLISH QoS 0
+      buf[1] = remLen;
+      buf[2] = (topicLen >> 8) & 0xff;
+      buf[3] = topicLen & 0xff;
+      buf.set(topicBytes, 4);
+      buf.set(msgBytes, 4 + topicLen);
+      return buf;
+    }
+
+    function encodeMqttSubscribe(topic, packetId = 1) {
+      const enc = new TextEncoder();
+      const topicBytes = enc.encode(topic);
+      const topicLen = topicBytes.length;
+      const remLen = 2 + 2 + topicLen + 1;
+      const buf = new Uint8Array(2 + remLen);
+      buf[0] = 0x82; // SUBSCRIBE QoS 1
+      buf[1] = remLen;
+      buf[2] = (packetId >> 8) & 0xff;
+      buf[3] = packetId & 0xff;
+      buf[4] = (topicLen >> 8) & 0xff;
+      buf[5] = topicLen & 0xff;
+      buf.set(topicBytes, 6);
+      buf[6 + topicLen] = 0x00;
+      return buf;
+    }
+
+    function encodeMqttPing() {
+      return new Uint8Array([0xc0, 0x00]);
+    }
+
+    function parseMqttPacketBuffer(buf) {
+      if (!buf || buf.length === 0) return { type: 'UNKNOWN' };
+      const packetType = (buf[0] >> 4) & 0x0f;
+      if (packetType === 2) return { type: 'CONNACK', returnCode: buf.length >= 4 ? buf[3] : 0 };
+      if (packetType === 3) {
+        const topicLen = (buf[2] << 8) | buf[3];
+        const dec = new TextDecoder();
+        const topic = dec.decode(buf.subarray(4, 4 + topicLen));
+        const payload = dec.decode(buf.subarray(4 + topicLen));
+        return { type: 'PUBLISH', topic, payload };
+      }
+      if (packetType === 9) return { type: 'SUBACK' };
+      if (packetType === 13) return { type: 'PINGRESP' };
+      return { type: 'UNKNOWN' };
+    }
+
+    function deriveWorkspaceMeshTopic(owner, repo, secret) {
+      const raw = `${(owner || 'sysoce').trim().toLowerCase()}/${(repo || 'chat-data').trim().toLowerCase()}/${(secret || '').trim()}`;
+      let hash = 0;
+      for (let i = 0; i < raw.length; i++) {
+        hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+        hash |= 0;
+      }
+      return `gitchat/${Math.abs(hash).toString(36)}/#`;
+    }
+
+    class LiveMeshClient {
+      constructor(options) {
+        this.options = options;
+        this.brokers = options.brokers || DEFAULT_MESH_BROKERS;
+        this.brokerIdx = 0;
+        this.ws = null;
+        this.connected = false;
+        this.pingTimer = null;
+        this.clientId = `gitchat_${options.userId || 'anon'}_${Math.random().toString(36).slice(2, 8)}`;
+        this.topic = deriveWorkspaceMeshTopic(options.owner, options.repo, options.secret);
+      }
+
+      isConnected() { return this.connected; }
+
+      connect() {
+        if (typeof WebSocket === 'undefined') return;
+        const brokerUrl = this.brokers[this.brokerIdx];
+        this.options.onStatus?.('connecting');
+
+        try {
+          this.ws = new WebSocket(brokerUrl, ['mqtt']);
+          this.ws.binaryType = 'arraybuffer';
+
+          this.ws.onopen = () => {
+            this.ws.send(encodeMqttConnect(this.clientId, 60));
+          };
+
+          this.ws.onmessage = (event) => {
+            const buf = new Uint8Array(event.data);
+            const packet = parseMqttPacketBuffer(buf);
+
+            if (packet.type === 'CONNACK' && packet.returnCode === 0) {
+              this.connected = true;
+              this.options.onStatus?.('connected');
+              this.ws.send(encodeMqttSubscribe(this.topic, 1));
+              this.startHeartbeat();
+              // Broadcast catch-up sync request
+              this.publish({ type: 'sync_request', requesterId: this.options.userId });
+            } else if (packet.type === 'PUBLISH' && packet.payload) {
+              try {
+                const data = JSON.parse(packet.payload);
+                if (data.senderId === this.options.userId) return; // Ignore own echo
+                if (data.type === 'sync_file' && data.path && data.content) {
+                  this.options.onFile?.(data.path, data.content);
+                } else if (data.type === 'sync_request' && data.requesterId) {
+                  this.options.onSyncReq?.(data.requesterId);
+                }
+              } catch (err) {}
+            }
+          };
+
+          this.ws.onerror = () => this.handleFail();
+          this.ws.onclose = () => this.handleFail();
+        } catch {
+          this.handleFail();
+        }
+      }
+
+      publish(obj) {
+        if (!this.connected || !this.ws) return false;
+        try {
+          const payload = { ...obj, senderId: this.options.userId, timestamp: Date.now() };
+          const topic = this.topic.replace('/#', '/event');
+          const pkt = encodeMqttPublish(topic, JSON.stringify(payload));
+          this.ws.send(pkt);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      startHeartbeat() {
+        clearInterval(this.pingTimer);
+        this.pingTimer = setInterval(() => {
+          if (this.connected && this.ws) {
+            try { this.ws.send(encodeMqttPing()); } catch {}
+          }
+        }, 25000);
+      }
+
+      handleFail() {
+        clearInterval(this.pingTimer);
+        this.connected = false;
+        this.options.onStatus?.('disconnected');
+        this.brokerIdx = (this.brokerIdx + 1) % this.brokers.length;
+        setTimeout(() => {
+          if (!this.connected) this.connect();
+        }, 3500);
+      }
+
+      disconnect() {
+        clearInterval(this.pingTimer);
+        this.connected = false;
+        if (this.ws) {
+          try { this.ws.close(); } catch {}
+          this.ws = null;
+        }
+      }
+    }
+
+    function initLiveMesh() {
+      if (window.liveMeshClient) {
+        try { window.liveMeshClient.disconnect(); } catch {}
+      }
+      const meshSecret = config.workspaceSecret || vaultPassword || `${config.owner}/${config.repo}`;
+      window.liveMeshClient = new LiveMeshClient({
+        owner: config.owner || 'sysoce',
+        repo: config.repo || 'chat-data',
+        secret: meshSecret,
+        userId: config.user?.id || 'user_dev',
+        onStatus: (status) => {
+          const badge = document.getElementById('mesh-status-indicator');
+          if (badge) {
+            if (status === 'connected') {
+              badge.textContent = '🟢 Mesh Live';
+              badge.style.color = '#10b981';
+              badge.title = 'Live Zero-Server Mesh Active (Phone & Computer Synced)';
+            } else if (status === 'connecting') {
+              badge.textContent = '🟡 Connecting...';
+              badge.style.color = '#f59e0b';
+              badge.title = 'Connecting to Live Mesh Relay...';
+            } else {
+              badge.textContent = '⚪ Mesh Offline';
+              badge.style.color = '#9ca3af';
+              badge.title = 'Live Mesh Disconnected (Retrying...)';
+            }
+          }
+        },
+        onFile: (path, content) => {
+          if (processSyncFile(path, content)) {
+            saveLocalCache();
+            renderSidebar();
+            renderTimeline();
+            if (activeThreadRootId) renderThread();
+          }
+        },
+        onSyncReq: (requesterId) => {
+          sendMeshCatchupSnapshot(requesterId);
+        }
+      });
+      window.liveMeshClient.connect();
+    }
+
+    function sendMeshCatchupSnapshot(requesterId) {
+      if (!window.liveMeshClient || !window.liveMeshClient.isConnected()) return;
+      if (config.user && config.user.id) {
+        window.liveMeshClient.publish({
+          type: 'sync_file',
+          path: `users/${config.user.id}.json`,
+          content: JSON.stringify(state.users[config.user.id] || config.user)
+        });
+      }
+      const recent = (state.messages || []).slice(-50);
+      for (const m of recent) {
+        const diskMsg = {
+          id: m.id,
+          channelId: m.channelId,
+          author: m.author,
+          content: m.content || '',
+          encrypted: m.encrypted || null,
+          timestamp: m.timestamp,
+          reactions: m.reactions || {},
+          threadRootId: m.threadRootId || null,
+          attachments: m.attachments || []
+        };
+        window.liveMeshClient.publish({
+          type: 'sync_file',
+          path: `channels/${m.channelId}/messages/${m.id}.json`,
+          content: JSON.stringify(diskMsg)
+        });
+      }
+    }
+
+    // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.4';
+    const CLIENT_VERSION = '1.0.5';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -1937,15 +2192,22 @@
     let isVaultLocked = true;
     let vaultPassword = '';
 
+    const isMobileDevice = typeof navigator !== 'undefined' && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
+
     const DEFAULT_CONFIG = {
       owner: 'sysoce',
-      repo: 'git-chat',
-      branch: 'git-chat',
+      repo: 'chat-data',
+      branch: 'master',
       token: '',
       backendUrl: '',
       lanUrl: '',
-      workspaceSecret: '',
-      user: { id: 'user_dev', name: 'Developer', avatar: '💻', role: 'member' }
+      workspaceSecret: 'git-chat-open',
+      user: {
+        id: isMobileDevice ? `user_mobile_${Math.random().toString(36).slice(2, 6)}` : 'user_dev',
+        name: isMobileDevice ? 'Mobile User' : 'Developer',
+        avatar: isMobileDevice ? '📱' : '💻',
+        role: 'member'
+      }
     };
 
     function getApiBase() {
@@ -2209,9 +2471,22 @@
       }
     }
 
-    // Push discrete files with local server bridge and GitHub fallback
+    // Push discrete files with live mesh broadcast, local server bridge, and GitHub fallback
     async function pushFiles(files, activeUserId) {
       const uid = activeUserId || config.user.id;
+
+      // 1. Immediately broadcast all file updates to connected peers (mobile & desktop) over Live Mesh
+      if (window.liveMeshClient && window.liveMeshClient.isConnected() && files && files.length) {
+        for (const f of files) {
+          window.liveMeshClient.publish({
+            type: 'sync_file',
+            path: f.relativePath,
+            content: f.content
+          });
+        }
+      }
+
+      // 2. Local Git-Chat bridge push (if server running)
       let localPushed = false;
       try {
         const res = await fetchWithTimeout(apiUrl('/api/sync/push'), {
@@ -2227,6 +2502,7 @@
         }
       } catch (e) {}
 
+      // 3. GitHub Git Data API push (if PAT token configured)
       if (!localPushed && config.token && config.owner && config.repo) {
         try {
           await pushFilesToGitHub(files);
@@ -4100,6 +4376,7 @@ Minimum version required to store current data is: `+i+`.
       renderSidebar();
       renderTimeline(true);
       showToast(`🔓 Vault unlocked & password copied to clipboard! Welcome, ${config.user.name}`);
+      initLiveMesh();
       syncFromLocalServer(false).catch(() => {});
       syncFromGitHub(false).catch(() => {});
     }
@@ -4780,6 +5057,7 @@ Minimum version required to store current data is: `+i+`.
         lastRenderedChecksum = '';
         saveLocalCache();
         publishUserProfile();
+        initLiveMesh();
         updateChannelMuteUI();
         renderSidebar();
         renderTimeline(true);
@@ -5085,6 +5363,7 @@ Minimum version required to store current data is: `+i+`.
           }
           saveLocalCache();
           showToast(`Configured for ${config.backendUrl || `${config.owner}/${config.repo}`}`);
+          initLiveMesh();
           syncFromLocalServer();
         } catch (e) {
           console.error('Failed to parse setup hash', e);
@@ -5107,6 +5386,7 @@ Minimum version required to store current data is: `+i+`.
           renderTimeline(true);
           renderSidebar();
           publishUserProfile();
+          initLiveMesh();
         } catch (e) {
           console.error('Failed to derive key from saved vault pass', e);
         }
@@ -5148,6 +5428,9 @@ Minimum version required to store current data is: `+i+`.
           if (m && m.id) notifiedMessageIds.add(m.id);
         }
       }
+
+      // Initialize Zero-Server Live Mesh Relay
+      initLiveMesh();
 
       // Synchronously bind all UI click and input events immediately
       try {

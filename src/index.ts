@@ -13,4 +13,6 @@ export * from './cli/setupWizard';
 export * from './engine/version';
 export * from './engine/updateManager';
 export * from './engine/updateModal';
+export * from './engine/liveMeshClient';
+export * from './engine/liveMeshRelay';
 
