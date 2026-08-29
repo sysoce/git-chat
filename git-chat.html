@@ -997,7 +997,7 @@
           </div>
         </div>
         <div class="chat-header-actions">
-          <div class="header-btn desktop-only" id="mesh-status-indicator" style="cursor:default; font-size:12px; font-weight:600; color:#f59e0b;" title="Real-Time Zero-Server Live Mesh">🟡 Mesh Connecting</div>
+          <div class="header-btn" id="mesh-status-indicator" style="cursor:default; font-size:12px; font-weight:600; color:#f59e0b;" title="Real-Time Zero-Server Multi-Transport">🟡 Connecting...</div>
           <button class="header-btn" id="btn-mobile-sync-link" title="Connect Phone or Share Link" style="display:flex; align-items:center; gap:5px;">📱<span class="desktop-only"> Mobile</span></button>
           <button class="header-btn desktop-only" id="btn-s3-status" title="S3 Media Storage Status" style="display:flex; align-items:center; gap:5px;"><span id="s3-status-dot" style="width:7px; height:7px; border-radius:50%; background:var(--warning);"></span> S3 Media</button>
           <button class="header-btn vault-unlocked" id="btn-vault-toggle" title="Toggle Vault Encryption Lock">🔓<span class="desktop-only"> Vault</span></button>
@@ -1987,6 +1987,7 @@
         this.pingTimer = null;
         this.clientId = `gitchat_${options.userId || 'anon'}_${Math.random().toString(36).slice(2, 8)}`;
         this.topic = deriveWorkspaceMeshTopic(options.owner, options.repo, options.secret);
+        this.signalTopic = this.topic.replace('/#', '/signals');
       }
 
       isConnected() { return this.connected; }
@@ -2012,13 +2013,26 @@
               this.connected = true;
               this.options.onStatus?.('connected');
               this.ws.send(encodeMqttSubscribe(this.topic, 1));
+              this.ws.send(encodeMqttSubscribe(this.signalTopic, 2));
               this.startHeartbeat();
               // Broadcast catch-up sync request
               this.publish({ type: 'sync_request', requesterId: this.options.userId });
+              // Broadcast P2P peering discovery
+              if (window.p2pClient) {
+                window.p2pClient.broadcastDiscovery();
+              }
             } else if (packet.type === 'PUBLISH' && packet.payload) {
               try {
                 const data = JSON.parse(packet.payload);
                 if (data.senderId === this.options.userId) return; // Ignore own echo
+                if (packet.topic && packet.topic.includes('/signals')) {
+                  window.p2pClient?.handleSignal(data);
+                  return;
+                }
+                if (data.type === 'p2p_signal') {
+                  window.p2pClient?.handleSignal(data.signal);
+                  return;
+                }
                 if (data.type === 'sync_file' && data.path && data.content) {
                   this.options.onFile?.(data.path, data.content);
                 } else if (data.type === 'sync_request' && data.requesterId) {
@@ -2041,6 +2055,17 @@
           const payload = { ...obj, senderId: this.options.userId, timestamp: Date.now() };
           const topic = this.topic.replace('/#', '/event');
           const pkt = encodeMqttPublish(topic, JSON.stringify(payload));
+          this.ws.send(pkt);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      publishSignal(sig) {
+        if (!this.connected || !this.ws) return false;
+        try {
+          const pkt = encodeMqttPublish(this.signalTopic, JSON.stringify(sig));
           this.ws.send(pkt);
           return true;
         } catch {
@@ -2077,6 +2102,288 @@
       }
     }
 
+    class P2PClient {
+      constructor(options) {
+        this.options = options || {};
+        this.peerId = options.userId || `peer_${Math.random().toString(36).slice(2, 8)}`;
+        this.pc = null;
+        this.dc = null;
+        this.connected = false;
+        this.iceServers = [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun.services.mozilla.com:3478' }
+        ];
+        this.pingTimer = null;
+        this.pendingCandidates = [];
+      }
+
+      isConnected() {
+        return this.connected && this.dc && this.dc.readyState === 'open';
+      }
+
+      broadcastDiscovery() {
+        if (this.isConnected()) return;
+        this.initPeerConnection(true);
+      }
+
+      async initPeerConnection(isInitiator = false, remotePeerId = null) {
+        if (typeof RTCPeerConnection === 'undefined') return;
+        try {
+          this.options.onStatus?.('connecting');
+          this.pc = new RTCPeerConnection({ iceServers: this.iceServers });
+
+          this.pc.onicecandidate = (evt) => {
+            if (evt.candidate) {
+              this.sendSignal({
+                type: 'candidate',
+                senderId: this.peerId,
+                recipientId: remotePeerId,
+                candidate: evt.candidate.toJSON(),
+                timestamp: Date.now()
+              });
+            }
+          };
+
+          this.pc.onconnectionstatechange = () => {
+            if (!this.pc) return;
+            const cs = this.pc.connectionState;
+            if (cs === 'connected') {
+              // Wait for data channel
+            } else if (cs === 'disconnected' || cs === 'failed' || cs === 'closed') {
+              this.handleDisconnect();
+            }
+          };
+
+          if (isInitiator) {
+            this.dc = this.pc.createDataChannel('git-chat-mesh');
+            this.setupDataChannel(this.dc);
+            const offer = await this.pc.createOffer();
+            await this.pc.setLocalDescription(offer);
+            this.sendSignal({
+              type: 'offer',
+              senderId: this.peerId,
+              recipientId: remotePeerId,
+              sdp: offer,
+              timestamp: Date.now()
+            });
+          } else {
+            this.pc.ondatachannel = (evt) => {
+              this.dc = evt.channel;
+              this.setupDataChannel(this.dc);
+            };
+          }
+        } catch (err) {
+          console.warn('P2P init error:', err);
+          this.handleDisconnect();
+        }
+      }
+
+      setupDataChannel(channel) {
+        channel.onopen = () => {
+          this.connected = true;
+          this.options.onStatus?.('connected');
+          this.startHeartbeat();
+        };
+
+        channel.onmessage = (evt) => {
+          try {
+            const raw = typeof evt.data === 'string' ? evt.data : '';
+            if (!raw) return;
+            const msg = JSON.parse(raw);
+            if (msg.type === 'ping') {
+              channel.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+              return;
+            }
+            if (msg.type === 'pong') return;
+            if (msg.type === 'sync_file' && msg.path && msg.content) {
+              this.options.onFile?.(msg.path, msg.content);
+            }
+          } catch (e) {}
+        };
+
+        channel.onclose = () => this.handleDisconnect();
+        channel.onerror = () => this.handleDisconnect();
+      }
+
+      async handleSignal(signal) {
+        if (!signal || signal.senderId === this.peerId) return;
+        if (signal.recipientId && signal.recipientId !== this.peerId) return;
+
+        if (!this.pc) {
+          await this.initPeerConnection(false, signal.senderId);
+        }
+        if (!this.pc) return;
+
+        try {
+          if (signal.type === 'offer' && signal.sdp) {
+            await this.pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+            for (const cand of this.pendingCandidates) {
+              await this.pc.addIceCandidate(new RTCIceCandidate(cand));
+            }
+            this.pendingCandidates = [];
+            const answer = await this.pc.createAnswer();
+            await this.pc.setLocalDescription(answer);
+            this.sendSignal({
+              type: 'answer',
+              senderId: this.peerId,
+              recipientId: signal.senderId,
+              sdp: answer,
+              timestamp: Date.now()
+            });
+          } else if (signal.type === 'answer' && signal.sdp) {
+            await this.pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+            for (const cand of this.pendingCandidates) {
+              await this.pc.addIceCandidate(new RTCIceCandidate(cand));
+            }
+            this.pendingCandidates = [];
+          } else if (signal.type === 'candidate' && signal.candidate) {
+            if (this.pc.remoteDescription) {
+              await this.pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            } else {
+              this.pendingCandidates.push(signal.candidate);
+            }
+          }
+        } catch (err) {
+          console.warn('P2P handleSignal error:', err);
+        }
+      }
+
+      sendSignal(sig) {
+        if (window.liveMeshClient && window.liveMeshClient.isConnected()) {
+          window.liveMeshClient.publishSignal(sig);
+        }
+        const baseUrl = (config.backendUrl || (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : '')).replace(/\/+$/, '');
+        if (baseUrl) {
+          fetch(`${baseUrl}/api/p2p/signal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sig)
+          }).catch(() => {});
+        }
+      }
+
+      send(obj) {
+        if (!this.isConnected()) return false;
+        try {
+          this.dc.send(JSON.stringify(obj));
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      startHeartbeat() {
+        clearInterval(this.pingTimer);
+        this.pingTimer = setInterval(() => {
+          if (this.isConnected()) {
+            try { this.dc.send(JSON.stringify({ type: 'ping', timestamp: Date.now() })); } catch {}
+          }
+        }, 10000);
+      }
+
+      handleDisconnect() {
+        clearInterval(this.pingTimer);
+        this.connected = false;
+        this.options.onStatus?.('disconnected');
+        if (this.dc) { try { this.dc.close(); } catch {} this.dc = null; }
+        if (this.pc) { try { this.pc.close(); } catch {} this.pc = null; }
+      }
+
+      disconnect() {
+        this.handleDisconnect();
+      }
+    }
+
+    class ClientTransportRegistry {
+      constructor() {
+        this.statuses = {
+          'p2p': 'disconnected',
+          'live-mesh': 'disconnected',
+          'live-sse': 'disconnected',
+          'git-sync': 'disconnected'
+        };
+        this.activeMode = 'disconnected';
+      }
+
+      setStatus(mode, status) {
+        this.statuses[mode] = status;
+        this.evaluate();
+      }
+
+      evaluate() {
+        let best = 'offline';
+        if (this.statuses['p2p'] === 'connected') best = 'p2p';
+        else if (this.statuses['live-mesh'] === 'connected') best = 'live-mesh';
+        else if (this.statuses['live-sse'] === 'connected') best = 'live-sse';
+        else if (this.statuses['git-sync'] === 'connected') best = 'git-sync';
+        else if (this.statuses['p2p'] === 'connecting' || this.statuses['live-mesh'] === 'connecting' || this.statuses['live-sse'] === 'connecting') best = 'connecting';
+
+        this.activeMode = best;
+        this.updateUI();
+      }
+
+      updateUI() {
+        const badge = document.getElementById('mesh-status-indicator');
+        if (!badge) return;
+        if (this.activeMode === 'p2p') {
+          badge.textContent = '🟢 P2P Direct';
+          badge.style.color = '#10b981';
+          badge.title = 'WebRTC P2P Direct Active (Lowest Latency WAN/LAN)';
+        } else if (this.activeMode === 'live-mesh') {
+          badge.textContent = '🟢 Mesh Live';
+          badge.style.color = '#10b981';
+          badge.title = 'Zero-Server Live Mesh Active (Phone & Computer Synced)';
+        } else if (this.activeMode === 'live-sse') {
+          badge.textContent = '🟢 Live SSE';
+          badge.style.color = '#10b981';
+          badge.title = 'Server-Sent Events Stream Active';
+        } else if (this.activeMode === 'git-sync') {
+          badge.textContent = '🟢 GitHub Sync';
+          badge.style.color = '#10b981';
+          badge.title = 'GitHub Git Sync Active';
+        } else if (this.activeMode === 'connecting') {
+          badge.textContent = '🟡 Connecting...';
+          badge.style.color = '#f59e0b';
+          badge.title = 'Connecting to transports...';
+        } else {
+          badge.textContent = '⚪ Offline';
+          badge.style.color = '#9ca3af';
+          badge.title = 'Transports offline, retrying...';
+        }
+      }
+    }
+
+    const transportRegistry = new ClientTransportRegistry();
+    window.transportRegistry = transportRegistry;
+
+    function initClientTransports() {
+      initLiveMesh();
+      initP2P();
+      initLiveSse();
+    }
+
+    function initP2P() {
+      if (window.p2pClient) {
+        try { window.p2pClient.disconnect(); } catch {}
+      }
+      window.p2pClient = new P2PClient({
+        userId: config.user?.id || 'user_dev',
+        onStatus: (status) => {
+          transportRegistry.setStatus('p2p', status);
+        },
+        onFile: (path, content) => {
+          if (processSyncFile(path, content)) {
+            saveLocalCache();
+            renderSidebar();
+            renderTimeline();
+            if (activeThreadRootId) renderThread();
+          }
+        }
+      });
+    }
+
     function initLiveMesh() {
       if (window.liveMeshClient) {
         try { window.liveMeshClient.disconnect(); } catch {}
@@ -2088,22 +2395,7 @@
         secret: meshSecret,
         userId: config.user?.id || 'user_dev',
         onStatus: (status) => {
-          const badge = document.getElementById('mesh-status-indicator');
-          if (badge) {
-            if (status === 'connected') {
-              badge.textContent = '🟢 Mesh Live';
-              badge.style.color = '#10b981';
-              badge.title = 'Live Zero-Server Mesh Active (Phone & Computer Synced)';
-            } else if (status === 'connecting') {
-              badge.textContent = '🟡 Connecting...';
-              badge.style.color = '#f59e0b';
-              badge.title = 'Connecting to Live Mesh Relay...';
-            } else {
-              badge.textContent = '⚪ Mesh Offline';
-              badge.style.color = '#9ca3af';
-              badge.title = 'Live Mesh Disconnected (Retrying...)';
-            }
-          }
+          transportRegistry.setStatus('live-mesh', status);
         },
         onFile: (path, content) => {
           if (processSyncFile(path, content)) {
@@ -2163,12 +2455,7 @@
       try {
         liveSseSource = new EventSource(sseUrl);
         liveSseSource.onopen = () => {
-          const badge = document.getElementById('mesh-status-indicator');
-          if (badge) {
-            badge.textContent = '🟢 Live Stream';
-            badge.style.color = '#10b981';
-            badge.title = 'Live Server-Sent Event stream active (sub-second sync)';
-          }
+          transportRegistry.setStatus('live-sse', 'connected');
         };
         liveSseSource.addEventListener('sync_files', (evt) => {
           try {
@@ -2189,6 +2476,9 @@
             console.warn('SSE message parse error:', err);
           }
         });
+        liveSseSource.onerror = () => {
+          transportRegistry.setStatus('live-sse', 'disconnected');
+        };
       } catch (err) {
         console.warn('Could not initialize SSE stream:', err);
       }
@@ -2197,7 +2487,7 @@
     // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.6';
+    const CLIENT_VERSION = '1.0.7';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -2525,6 +2815,17 @@
     // Push discrete files with live mesh broadcast, local server bridge, and GitHub fallback
     async function pushFiles(files, activeUserId) {
       const uid = activeUserId || config.user.id;
+
+      // 0. Immediately broadcast to direct P2P connected peers
+      if (window.p2pClient && window.p2pClient.isConnected() && files && files.length) {
+        for (const f of files) {
+          window.p2pClient.send({
+            type: 'sync_file',
+            path: f.relativePath,
+            content: f.content
+          });
+        }
+      }
 
       // 1. Immediately broadcast all file updates to connected peers (mobile & desktop) over Live Mesh
       if (window.liveMeshClient && window.liveMeshClient.isConnected() && files && files.length) {
@@ -2976,6 +3277,7 @@
 
     let notificationConfig = { ...DEFAULT_NOTIFICATION_CONFIG };
     const notifiedMessageIds = new Set();
+    const answeredRemoteMessageIds = new Set();
     const appBootTimestamp = Date.now();
 
     function loadNotificationConfig() {
@@ -3974,6 +4276,28 @@
             state.messages.push(parsed);
             isChanged = true;
             notifyMessageIfEligible(parsed);
+
+            // Trigger autonomous Human AI partner response if remote message is in Talk to Human or mentions @Human
+            if (parsed.author && parsed.author.id !== 'agent_human' && parsed.author.id !== config.user?.id) {
+              const isAgentChan = parsed.channelId === 'chan_talk_to_a_human' || (parsed.channelId && parsed.channelId.includes('agent_human'));
+              const isAgentMention = /(@Human|@human|@agent|@SupervisorAgent|\/human|\/agent|\/ask)/i.test(parsed.content || '');
+              if (isAgentChan || isAgentMention) {
+                if (!answeredRemoteMessageIds.has(parsed.id) && config.user?.id !== 'agent_human') {
+                  answeredRemoteMessageIds.add(parsed.id);
+                  getEncryptionKeyForChannel(parsed.channelId).then(async (chanKey) => {
+                    let plainText = parsed.content;
+                    if ((!plainText || plainText === '[Encrypted Message]') && parsed.encrypted && chanKey) {
+                      try {
+                        plainText = await CryptoVault.decrypt(parsed.encrypted, chanKey);
+                      } catch {}
+                    }
+                    simulateAgentResponse(plainText || parsed.content || '', parsed.channelId, parsed.threadRootId);
+                  }).catch(() => {
+                    simulateAgentResponse(parsed.content || '', parsed.channelId, parsed.threadRootId);
+                  });
+                }
+              }
+            }
           } else {
             const existing = state.messages[idx];
             if (existing.timestamp !== parsed.timestamp || 
@@ -4446,8 +4770,7 @@ Minimum version required to store current data is: `+i+`.
       renderSidebar();
       renderTimeline(true);
       showToast(`🔓 Vault unlocked & password copied to clipboard! Welcome, ${config.user.name}`);
-      initLiveMesh();
-      initLiveSse();
+      initClientTransports();
       syncFromLocalServer(false).catch(() => {});
       syncFromGitHub(false).catch(() => {});
     }
@@ -5128,8 +5451,7 @@ Minimum version required to store current data is: `+i+`.
         lastRenderedChecksum = '';
         saveLocalCache();
         publishUserProfile();
-        initLiveMesh();
-        initLiveSse();
+        initClientTransports();
         updateChannelMuteUI();
         renderSidebar();
         renderTimeline(true);
@@ -5435,8 +5757,7 @@ Minimum version required to store current data is: `+i+`.
           }
           saveLocalCache();
           showToast(`Configured for ${config.backendUrl || `${config.owner}/${config.repo}`}`);
-          initLiveMesh();
-          initLiveSse();
+          initClientTransports();
           syncFromLocalServer();
         } catch (e) {
           console.error('Failed to parse setup hash', e);
@@ -5459,8 +5780,7 @@ Minimum version required to store current data is: `+i+`.
           renderTimeline(true);
           renderSidebar();
           publishUserProfile();
-          initLiveMesh();
-          initLiveSse();
+          initClientTransports();
         } catch (e) {
           console.error('Failed to derive key from saved vault pass', e);
         }
@@ -5503,9 +5823,8 @@ Minimum version required to store current data is: `+i+`.
         }
       }
 
-      // Initialize Zero-Server Live Mesh Relay & Live SSE Stream
-      initLiveMesh();
-      initLiveSse();
+      // Initialize Multi-Transport System (WebRTC P2P + Zero-Server Live Mesh Relay + Live SSE Stream)
+      initClientTransports();
 
       // Synchronously bind all UI click and input events immediately
       try {

@@ -6,6 +6,7 @@ import { DataIsolationGuard } from '../security/dataIsolationGuard';
 import { S3Client } from '../storage/s3Client';
 import { injectSetupIntoHtml, EmbeddedSetupPayload } from '../engine/setupInjector';
 import { SseEmitter } from './sseEmitter';
+import { handleP2PSignalRoute } from './p2pSignalRouter';
 
 export interface ServerOptions {
   port?: number;
@@ -38,6 +39,10 @@ export function startGitChatServer(options: ServerOptions): http.Server {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
     try {
+      // API: P2P WebRTC Signaling Exchange
+      if (await handleP2PSignalRoute(req, res, url.pathname, url)) {
+        return;
+      }
       // API: Version Check & Auto-Update
       if (url.pathname === '/api/version' && req.method === 'GET') {
         let pkgVer = '1.0.0';
