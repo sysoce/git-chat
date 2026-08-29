@@ -39,7 +39,7 @@ export class GitSyncWatcher {
       if (!prevCommit) return; // First poll baselines the head
 
       // Fetch changes and inspect modified files
-      execSync(`git fetch ${url} master:FETCH_HEAD`, { timeout: 7000 });
+      execSync(`git fetch --force ${url} master`, { timeout: 7000, stdio: 'pipe' });
       const files = execSync(`git diff-tree --no-commit-id --name-only -r ${currentHead}`, {
         encoding: 'utf-8'
       }).trim().split('\n');
