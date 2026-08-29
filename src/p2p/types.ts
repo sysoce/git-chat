@@ -1,11 +1,18 @@
-export type P2PSignalType = 'offer' | 'answer' | 'candidate' | 'bye' | 'ping' | 'pong';
+export type P2PSignalType = 'offer' | 'answer' | 'candidate' | 'discovery' | 'bye' | 'ping' | 'pong';
+
+export interface P2PIceCandidate {
+  candidate: string;
+  sdpMid?: string | null;
+  sdpMLineIndex?: number | null;
+  usernameFragment?: string | null;
+}
 
 export interface P2PSignalMessage {
   type: P2PSignalType;
   senderId: string;
   recipientId?: string;
   sdp?: any;
-  candidate?: any;
+  candidate?: P2PIceCandidate | any;
   timestamp: number;
 }
 

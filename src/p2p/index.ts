@@ -6,3 +6,5 @@ export * from './p2pDataChannel.js';
 export * from './p2pPeerConnection.js';
 export * from './p2pSignalingExchange.js';
 export * from './p2pTransportAdapter.js';
+export * from './p2pNegotiator.js';
+export * from './p2pDiscovery.js';
