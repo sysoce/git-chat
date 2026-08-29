@@ -16,6 +16,7 @@
     "clean": "tsx src/cli/cli.ts reset",
     "export": "tsx src/cli/cli.ts export",
     "test": "tsx --test test/*.test.ts",
+    "monitor": "tsx src/cli/liveMonitor.ts",
     "lint": "tsc --noEmit"
   },
   "keywords": [

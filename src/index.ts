@@ -21,3 +21,4 @@ export * from './storage/gitSyncEngine';
 export * from './transport/index';
 export * from './p2p/index';
 export * from './server/p2pSignalRouter';
+export * from './cli/liveMonitor';
