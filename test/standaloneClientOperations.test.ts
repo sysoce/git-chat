@@ -36,6 +36,23 @@ describe('Standalone client operational controls', () => {
     assert.ok(html.includes('id="btn-mob-connection"'));
   });
 
+  it('stabilizes transport status changes before repainting the badge', () => {
+    assert.ok(html.includes("this.displayMode = 'connecting'"));
+    assert.ok(html.includes('scheduleUITransition(nextMode)'));
+    assert.ok(html.includes('this.degradedSince = Date.now()'));
+    assert.ok(html.includes('12000 - (Date.now() - this.degradedSince)'),
+      'healthy status should survive a twelve-second reconnect grace period');
+    assert.ok(html.includes('const delayMs = nextConnected ? 1500'),
+      'new connections should be stable before display');
+    assert.ok(html.includes('const mode = this.displayMode'));
+  });
+
+  it('coalesces queued presence and profile heartbeats', () => {
+    assert.ok(html.includes("path.startsWith('presence/') || path.startsWith('users/')"));
+    assert.ok(html.includes('seenReplaceable.has(path)'));
+    assert.ok(html.includes('this.items = compacted'));
+  });
+
   it('provides one explicit manual refresh across all transports', () => {
     assert.ok(html.includes('async function manualRefreshAll()'));
     assert.ok(html.includes("type: 'sync_request'"));
