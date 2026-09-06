@@ -72,15 +72,18 @@ export async function runSetupWizard(options: SetupOptions | string = {}): Promi
   }
 
   const bestBackendUrl = (tunnelUrl || lanUrl).replace(/\/+$/, '');
+  const sharedSecret = opts.password || 'git-chat-open';
   const setupPayload = {
     owner,
     repo,
     branch,
     token: token || '',
-    password: opts.password || 'git-chat-open',
-    workspaceSecret: 'git-chat-open',
+    password: sharedSecret,
+    workspaceSecret: sharedSecret,
     backendUrl: bestBackendUrl,
     remoteUrl,
+    keyVersion: 2,
+    workspaceSchemaVersion: 2,
   };
 
   const encodedPayload = Buffer.from(JSON.stringify(setupPayload)).toString('base64');

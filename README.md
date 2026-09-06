@@ -25,13 +25,13 @@ For multi-device chat that survives closing the browser, use an authenticated cl
 
 ### Option A — Open the hosted app (no install)
 
-1. On each device open: **https://sysoce.github.io/git-chat/**
-2. Unlock the vault with password: **`git-chat-open`**
-3. Pick a display name. Default workspace is already `sysoce/chat-data` with secret `git-chat-open`.
-4. (Recommended) Settings → Workspace → paste a GitHub PAT with `repo` scope so messages persist.
-5. Send a message. Other devices on the same workspace decrypt it over Mesh Live immediately; GitHub Sync catches up as backup.
+1. On the first device open **https://sysoce.github.io/git-chat/** and unlock it.
+2. Click **Mobile**, then scan or copy its pairing link to every other device.
+3. Pick a different display name on each device.
+4. Send a message. The pairing link carries the exact repository and encryption secret, so every linked client derives the same key.
+5. (Recommended) Settings → Workspace → paste a GitHub PAT with `repo` scope so messages persist after every device closes.
 
-Devices that share the same **owner/repo + vault password / workspace secret** are in the same chat.
+Do not construct the second device manually when a pairing link is available. Devices must share the same **owner/repo + workspace secret**. The setup hash is removed from the address bar immediately after use because it may contain the secret or PAT.
 
 ### Option B — Local + QR pair (phone ↔ computer)
 
@@ -57,13 +57,26 @@ Scan the QR from your phone, or open the printed Pages URL. The `#setup=…` has
 |----------|------|--------|
 | 1 | P2P Direct (WebRTC) | STUN reachability |
 | 2 | Mesh Live (public MQTT) | Network |
-| 3 | Live SSE | `npm start` on LAN |
+| 3 | Live SSE | `npm start` with a matching local workspace |
 | 4 | GitHub Sync | Repo + optional PAT |
 | 5 | Gist Vault | Gist ID + token with `gist` scope |
 
 Offline writes queue locally and drain on reconnect.
 
+The local SSE bridge is accepted only when its git repository matches the selected workspace. This prevents a local checkout of the `git-chat` application from injecting its historical `git-chat` branch into a separate `chat-data` workspace.
+
 **Optional Gist backup:** Settings → Workspace → Gist Vault ID. Every encrypted update is mirrored there as a rolling off-site backup.
+
+The green connection badge is a button. Click it to cycle **Automatic → P2P → Mesh → SSE → Git → Gist**. Selecting an unavailable mode still permits automatic fallback. **Refresh** manually asks every live peer and configured storage backend for current messages; background delivery remains enabled.
+
+---
+
+## Key or old-history problems
+
+- **`Decryption failed` on only one device:** generate a fresh pairing link from a client that can read current messages, then open that link on the failing device.
+- **Old development messages:** version 1.0.10+ migrates the legacy `sysoce/git-chat` app-repo default to `sysoce/chat-data`. Its local encrypted messages are retained under the browser backup key `git_chat_legacy_messages_backup`, but are not mixed into the new workspace.
+- **Changing repositories:** Settings clears the visible cache before loading the selected repository, preventing histories from two workspaces from being combined.
+- **Search:** unlock the vault first; search covers decrypted body text, author names, and `#channel` names.
 
 ---
 

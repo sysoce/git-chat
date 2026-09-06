@@ -989,12 +989,12 @@
           </div>
         </div>
         <div class="chat-header-actions">
-          <div class="header-btn" id="mesh-status-indicator" style="cursor:default; font-size:12px; font-weight:600; color:#f59e0b;" title="Real-Time Zero-Server Multi-Transport">🟡 Connecting...</div>
+          <button class="header-btn" id="mesh-status-indicator" style="font-size:12px; font-weight:600; color:#f59e0b;" title="Click to choose connection mode">🟡 Connecting...</button>
           <button class="header-btn" id="btn-mobile-sync-link" title="Connect Phone or Share Link" style="display:flex; align-items:center; gap:5px;">📱<span class="desktop-only"> Mobile</span></button>
           <button class="header-btn desktop-only" id="btn-s3-status" title="S3 Media Storage Status" style="display:flex; align-items:center; gap:5px;"><span id="s3-status-dot" style="width:7px; height:7px; border-radius:50%; background:var(--warning);"></span> S3 Media</button>
           <button class="header-btn vault-unlocked" id="btn-vault-toggle" title="Toggle Vault Encryption Lock">🔓<span class="desktop-only"> Vault</span></button>
           <button class="header-btn desktop-only" id="btn-open-search">🔍 Search</button>
-          <button class="header-btn desktop-only" id="btn-sync-now"><span id="sync-icon">🔄</span> Sync</button>
+          <button class="header-btn desktop-only" id="btn-sync-now"><span id="sync-icon">🔄</span> Refresh</button>
           
           <!-- Mobile Overflow Menu Button -->
           <button class="header-btn mobile-overflow-btn" id="btn-mobile-overflow" style="display:none; padding:6px 10px;" aria-label="More options">⋮</button>
@@ -1003,7 +1003,8 @@
         <!-- Mobile Overflow Dropdown -->
         <div class="mobile-menu-dropdown" id="mobile-overflow-dropdown">
           <button class="dropdown-item" id="btn-mob-search">🔍 Search Messages</button>
-          <button class="dropdown-item" id="btn-mob-sync">🔄 Sync Git Now</button>
+          <button class="dropdown-item" id="btn-mob-sync">🔄 Refresh Messages</button>
+          <button class="dropdown-item" id="btn-mob-connection">🌐 Change Connection Mode</button>
           <button class="dropdown-item" id="btn-mob-s3">📦 S3 Media Status</button>
           <button class="dropdown-item" id="btn-mob-add-chan">➕ New Channel</button>
           <button class="dropdown-item" id="btn-mob-settings">⚙️ Workspace Settings</button>
@@ -2635,7 +2636,7 @@
         }
 
         const payload = {
-          version: window.CLIENT_VERSION || '1.0.9',
+          version: window.CLIENT_VERSION || '1.0.10',
           updatedAt: Date.now(),
           files: this.mergeFiles(existingFiles, normalized)
         };
@@ -2733,6 +2734,8 @@
           'git-sync': 'disconnected'
         };
         this.activeMode = 'disconnected';
+        this.preferredMode = localStorage.getItem('git_chat_preferred_transport') || 'auto';
+        this.modeCycle = ['auto', 'p2p', 'live-mesh', 'live-sse', 'git-sync', 'gist-sync'];
       }
 
       setStatus(mode, status) {
@@ -2742,7 +2745,9 @@
 
       evaluate() {
         let best = 'offline';
-        if (this.statuses['p2p'] === 'connected') best = 'p2p';
+        if (this.preferredMode !== 'auto' && this.statuses[this.preferredMode] === 'connected') {
+          best = this.preferredMode;
+        } else if (this.statuses['p2p'] === 'connected') best = 'p2p';
         else if (this.statuses['live-mesh'] === 'connected') best = 'live-mesh';
         else if (this.statuses['live-sse'] === 'connected') best = 'live-sse';
         else if (this.statuses['gist-sync'] === 'connected') best = 'gist-sync';
@@ -2753,30 +2758,43 @@
         this.updateUI();
       }
 
+      cyclePreferredMode() {
+        const currentIndex = this.modeCycle.indexOf(this.preferredMode);
+        this.preferredMode = this.modeCycle[(currentIndex + 1) % this.modeCycle.length];
+        localStorage.setItem('git_chat_preferred_transport', this.preferredMode);
+        this.evaluate();
+        const label = this.preferredMode === 'auto'
+          ? 'Automatic failover'
+          : this.preferredMode;
+        showToast(`🌐 Connection preference: ${label}`);
+        return this.preferredMode;
+      }
+
       updateUI() {
         const badge = document.getElementById('mesh-status-indicator');
         if (!badge) return;
         const pending = window.offlineQueue ? window.offlineQueue.size() : 0;
         const pendingSuffix = pending > 0 ? ` (${pending} pending)` : '';
+        const preferredSuffix = this.preferredMode === 'auto' ? '' : ' 📌';
 
         if (this.activeMode === 'p2p') {
-          badge.textContent = `🟢 P2P Direct${pendingSuffix}`;
+          badge.textContent = `🟢 P2P Direct${preferredSuffix}${pendingSuffix}`;
           badge.style.color = '#10b981';
           badge.title = 'WebRTC P2P Direct Active (Lowest Latency WAN/LAN)';
         } else if (this.activeMode === 'live-mesh') {
-          badge.textContent = `🟢 Mesh Live${pendingSuffix}`;
+          badge.textContent = `🟢 Mesh Live${preferredSuffix}${pendingSuffix}`;
           badge.style.color = '#10b981';
           badge.title = 'Zero-Server Live Mesh Active (Phone & Computer Synced)';
         } else if (this.activeMode === 'live-sse') {
-          badge.textContent = `🟢 Live SSE${pendingSuffix}`;
+          badge.textContent = `🟢 Live SSE${preferredSuffix}${pendingSuffix}`;
           badge.style.color = '#10b981';
           badge.title = 'Server-Sent Events Stream Active';
         } else if (this.activeMode === 'gist-sync') {
-          badge.textContent = `🟢 Gist Vault${pendingSuffix}`;
+          badge.textContent = `🟢 Gist Vault${preferredSuffix}${pendingSuffix}`;
           badge.style.color = '#10b981';
           badge.title = 'GitHub Gist Backup Active';
         } else if (this.activeMode === 'git-sync') {
-          badge.textContent = `🟢 GitHub Sync${pendingSuffix}`;
+          badge.textContent = `🟢 GitHub Sync${preferredSuffix}${pendingSuffix}`;
           badge.style.color = '#10b981';
           badge.title = 'GitHub Git Sync Active';
         } else if (this.activeMode === 'connecting') {
@@ -2788,6 +2806,7 @@
           badge.style.color = pending > 0 ? '#f59e0b' : '#9ca3af';
           badge.title = 'Transports offline, updates queued locally...';
         }
+        badge.title += ` Click to change mode (preference: ${this.preferredMode}).`;
       }
     }
 
@@ -2965,7 +2984,9 @@
       if (window.liveMeshClient) {
         try { window.liveMeshClient.disconnect(); } catch {}
       }
-      const meshSecret = config.workspaceSecret || vaultPassword || `${config.owner}/${config.repo}`;
+      // Mesh routing and message encryption must use the same canonical
+      // workspace secret or linked devices join different broker topics.
+      const meshSecret = getEffectiveWorkspaceSecret();
       window.liveMeshClient = new LiveMeshClient({
         owner: config.owner || 'sysoce',
         repo: config.repo || 'chat-data',
@@ -3021,6 +3042,8 @@
 
     let liveSseSource = null;
     let reachabilityTimer = null;
+    let localBridgeIdentityChecked = false;
+    let localBridgeCompatible = false;
 
     function startReachabilityProbe() {
       if (reachabilityTimer) return;
@@ -3049,6 +3072,10 @@
       if (liveSseSource) {
         try { liveSseSource.close(); } catch {}
         liveSseSource = null;
+      }
+      if (!localBridgeIdentityChecked || !localBridgeCompatible) {
+        transportRegistry.setStatus('live-sse', 'disconnected');
+        return;
       }
       const baseUrl = (config.backendUrl || (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : '')).replace(/\/+$/, '');
       if (!baseUrl && window.location.protocol === 'file:') return;
@@ -3092,7 +3119,7 @@
     // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.9';
+    const CLIENT_VERSION = '1.0.10';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -3110,9 +3137,40 @@
     }
     window.parseDmChannelUsers = parseDmChannelUsers;
 
-    async function getEncryptionKeyForChannel(channelId) {
-      if (isVaultLocked) return null;
-      const workspaceSecret = config.workspaceSecret || vaultPassword || `${config.owner}/${config.repo}`;
+    function getEffectiveWorkspaceSecret() {
+      const savedVaultPassword =
+        vaultPassword ||
+        sessionStorage.getItem('git_chat_vault_pass') ||
+        localStorage.getItem('git_chat_saved_vault_pass') ||
+        '';
+      const configuredSecret = String(config.workspaceSecret || '').trim();
+      // `git-chat-open` was the old hard-coded default. If the user chose a
+      // real vault password, use it instead; legacy decryption still tries the
+      // old default below.
+      const isLegacyDefault = configuredSecret === 'git-chat-open' &&
+        savedVaultPassword && savedVaultPassword !== 'git-chat-open';
+      return String(
+        (!isLegacyDefault && configuredSecret) ||
+        savedVaultPassword ||
+        `${config.owner}/${config.repo}`
+      ).trim();
+    }
+    window.getEffectiveWorkspaceSecret = getEffectiveWorkspaceSecret;
+
+    function getWorkspaceSecretCandidates() {
+      const candidates = [
+        getEffectiveWorkspaceSecret(),
+        vaultPassword,
+        sessionStorage.getItem('git_chat_vault_pass'),
+        localStorage.getItem('git_chat_saved_vault_pass'),
+        config.workspaceSecret,
+        'git-chat-open',
+        `${config.owner}/${config.repo}`
+      ];
+      return [...new Set(candidates.map(value => String(value || '').trim()).filter(Boolean))];
+    }
+
+    async function deriveConversationKey(channelId, workspaceSecret) {
       const dmUsers = parseDmChannelUsers(channelId);
       if (dmUsers) {
         const sorted = [...dmUsers].sort();
@@ -3123,6 +3181,35 @@
       const chanSalt = `git-chat-chan-${config.owner}-${config.repo}-${channelId}`;
       return await CryptoVault.deriveKey(workspaceSecret, chanSalt);
     }
+
+    async function getEncryptionKeyForChannel(channelId) {
+      if (isVaultLocked) return null;
+      return deriveConversationKey(channelId, getEffectiveWorkspaceSecret());
+    }
+
+    async function decryptMessage(msg, channelId = msg?.channelId) {
+      if (!msg) return null;
+      if (!msg.encrypted) return msg.content || '';
+      if (isVaultLocked || !channelId) return null;
+
+      for (const secret of getWorkspaceSecretCandidates()) {
+        try {
+          const key = await deriveConversationKey(channelId, secret);
+          const plaintext = await CryptoVault.decrypt(msg.encrypted, key);
+          if (plaintext) return plaintext;
+        } catch {}
+      }
+
+      // Very old clients encrypted directly with the unsalted vault key.
+      if (vaultKey) {
+        try {
+          const plaintext = await CryptoVault.decrypt(msg.encrypted, vaultKey);
+          if (plaintext) return plaintext;
+        } catch {}
+      }
+      return null;
+    }
+    window.decryptMessage = decryptMessage;
 
     // ==========================================
     // STATE & CONFIG
@@ -3142,7 +3229,8 @@
       lanUrl: '',
       gistId: '',
       gistToken: '',
-      workspaceSecret: 'git-chat-open',
+      workspaceSecret: '',
+      workspaceSchemaVersion: 2,
       user: {
         id: isMobileDevice ? `user_mobile_${Math.random().toString(36).slice(2, 6)}` : 'user_dev',
         name: isMobileDevice ? 'Mobile User' : 'Developer',
@@ -3184,6 +3272,7 @@
     }
 
     let config = { ...DEFAULT_CONFIG };
+    const CACHE_SCHEMA_VERSION = '3';
     let activeChannelId = 'chan_general';
     let activeThreadRootId = null;
     let state = {
@@ -3213,6 +3302,11 @@
         localStorage.setItem('git_chat_channels', JSON.stringify(state.channels));
         localStorage.setItem('git_chat_users', JSON.stringify(state.users));
         localStorage.setItem('git_chat_config', JSON.stringify(config));
+        localStorage.setItem('git_chat_cache_schema', CACHE_SCHEMA_VERSION);
+        localStorage.setItem(
+          'git_chat_cache_workspace',
+          `${config.owner}/${config.repo}@${config.branch || 'master'}`
+        );
         if (config.token) {
           localStorage.setItem('git_chat_token', config.token);
         }
@@ -3266,15 +3360,71 @@
 
         const savedCfg = localStorage.getItem('git_chat_config');
         if (savedCfg) {
-          config = { ...config, ...JSON.parse(savedCfg) };
+          const parsedConfig = JSON.parse(savedCfg);
+          const isLegacyAppRepo =
+            !Object.prototype.hasOwnProperty.call(parsedConfig, 'workspaceSchemaVersion') &&
+            parsedConfig.owner === 'sysoce' &&
+            parsedConfig.repo === 'git-chat';
+          config = { ...config, ...parsedConfig };
+
+          // Early standalone builds used the application source repo as their
+          // chat backend. Move that known default to the dedicated data repo so
+          // old development traffic does not appear in a newly linked client.
+          if (isLegacyAppRepo) {
+            if (savedMsgs) {
+              localStorage.setItem('git_chat_legacy_messages_backup', savedMsgs);
+            }
+            config.owner = 'sysoce';
+            config.repo = 'chat-data';
+            config.branch = 'master';
+            config.workspaceSecret = '';
+            config.workspaceSchemaVersion = 2;
+            state.messages = [];
+            state.events = [];
+            state.users = {};
+            localStorage.removeItem('git_chat_messages');
+            localStorage.removeItem('git_chat_events');
+            localStorage.removeItem('git_chat_users');
+            localStorage.setItem('git_chat_config', JSON.stringify(config));
+          }
         }
         const savedToken = localStorage.getItem('git_chat_token');
         if (savedToken && !config.token) {
           config.token = savedToken;
         }
+
+        const currentWorkspace = `${config.owner}/${config.repo}@${config.branch || 'master'}`;
+        const cachedWorkspace = localStorage.getItem('git_chat_cache_workspace');
+        const cachedSchema = localStorage.getItem('git_chat_cache_schema');
+        if (
+          cachedSchema !== CACHE_SCHEMA_VERSION ||
+          (cachedWorkspace && cachedWorkspace !== currentWorkspace)
+        ) {
+          if (savedMsgs && !localStorage.getItem('git_chat_legacy_messages_backup')) {
+            localStorage.setItem('git_chat_legacy_messages_backup', savedMsgs);
+          }
+          state.messages = [];
+          state.events = [];
+          state.users = {};
+          localStorage.removeItem('git_chat_messages');
+          localStorage.removeItem('git_chat_events');
+          localStorage.removeItem('git_chat_users');
+          localStorage.setItem('git_chat_cache_schema', CACHE_SCHEMA_VERSION);
+          localStorage.setItem('git_chat_cache_workspace', currentWorkspace);
+        }
       } catch (e) {
         console.warn('Failed to load state from localStorage', e);
       }
+    }
+
+    function normalizeRepoIdentity(value) {
+      const normalized = String(value || '')
+        .trim()
+        .replace(/\.git$/i, '')
+        .replace(/^git@[^:]+:/i, '')
+        .replace(/^https?:\/\/[^/]+\//i, '');
+      const parts = normalized.split('/').filter(Boolean);
+      return parts.length >= 2 ? `${parts[parts.length - 2]}/${parts[parts.length - 1]}` : normalized;
     }
 
     // Auto-detect identity from backend /api/identity
@@ -3284,12 +3434,25 @@
         if (res.ok) {
           const data = await res.json();
           const isMobileClient = data.isMobile || /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
+          const selectedWorkspace = normalizeRepoIdentity(`${config.owner}/${config.repo}`);
+          const bridgeWorkspace = normalizeRepoIdentity(data.remote);
+          localBridgeIdentityChecked = true;
+          localBridgeCompatible = !!bridgeWorkspace && bridgeWorkspace === selectedWorkspace;
+          if (localBridgeCompatible) {
+            initLiveSse();
+          } else {
+            if (liveSseSource) {
+              try { liveSseSource.close(); } catch {}
+              liveSseSource = null;
+            }
+            transportRegistry.setStatus('live-sse', 'disconnected');
+          }
 
           if (data.primaryLanUrl) {
             config.lanUrl = data.primaryLanUrl;
           }
 
-          if (data.remote && (!config.owner || config.owner === 'sysoce')) {
+          if (data.remote && (!config.owner || !config.repo)) {
             const parts = data.remote.split('/');
             if (parts.length === 2 && parts[0] && parts[1]) {
               config.owner = parts[0];
@@ -3313,7 +3476,11 @@
             }
           }
         }
-      } catch {}
+      } catch {
+        localBridgeIdentityChecked = true;
+        localBridgeCompatible = false;
+        transportRegistry.setStatus('live-sse', 'disconnected');
+      }
     }
 
     // Direct GitHub Git Data API Push helper with automatic conflict retry
@@ -3457,19 +3624,21 @@
 
       // 2. Local Git-Chat bridge push (if server running)
       let localPushed = false;
-      try {
-        const res = await fetchWithTimeout(apiUrl('/api/sync/push'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Active-User': uid },
-          body: JSON.stringify({
-            activeUserId: uid,
-            files: files
-          })
-        }, 2500);
-        if (res.ok) {
-          localPushed = true;
-        }
-      } catch (e) {}
+      if (localBridgeCompatible) {
+        try {
+          const res = await fetchWithTimeout(apiUrl('/api/sync/push'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Active-User': uid },
+            body: JSON.stringify({
+              activeUserId: uid,
+              files: files
+            })
+          }, 2500);
+          if (res.ok) {
+            localPushed = true;
+          }
+        } catch (e) {}
+      }
 
       // 3. GitHub Git Data API push serialized via gitCommitQueue with offline backup
       let remotePushed = false;
@@ -4105,10 +4274,7 @@
       let content = msg.content;
       if ((!content || content === '[Encrypted Message]') && msg.encrypted && !isVaultLocked) {
         try {
-          const chanKey = await getEncryptionKeyForChannel(msg.channelId);
-          if (chanKey) {
-            content = await CryptoVault.decrypt(msg.encrypted, chanKey);
-          }
+          content = await decryptMessage(msg, msg.channelId);
         } catch {}
       }
 
@@ -4461,7 +4627,7 @@
       }
 
       const chanKey = await getEncryptionKeyForChannel(activeChannelId);
-      const keyId = chanKey ? activeChannelId : 'none';
+      const keyId = chanKey ? `${activeChannelId}_${getEffectiveWorkspaceSecret()}` : 'none';
       const fragment = document.createDocumentFragment();
 
       for (const msg of chanMsgs) {
@@ -4478,10 +4644,7 @@
             if (cacheKey && decryptedMessageCache.has(cacheKey)) {
               displayContent = decryptedMessageCache.get(cacheKey);
             } else {
-              let dec = await CryptoVault.decrypt(msg.encrypted, chanKey);
-              if (!dec && vaultKey && vaultKey !== chanKey) {
-                dec = await CryptoVault.decrypt(msg.encrypted, vaultKey);
-              }
+              const dec = await decryptMessage(msg, activeChannelId);
               displayContent = dec || '🔒 *[Decryption failed - Incorrect Key]*';
               if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
             }
@@ -4663,7 +4826,7 @@
       if (!container) return;
 
       const chanKey = await getEncryptionKeyForChannel(activeChannelId);
-      const keyId = chanKey ? activeChannelId : 'none';
+      const keyId = chanKey ? `${activeChannelId}_${getEffectiveWorkspaceSecret()}` : 'none';
       const fragment = document.createDocumentFragment();
 
       if (rootMsg) {
@@ -4673,10 +4836,7 @@
           if (cacheKey && decryptedMessageCache.has(cacheKey)) {
             rootText = decryptedMessageCache.get(cacheKey);
           } else {
-            let dec = await CryptoVault.decrypt(rootMsg.encrypted, chanKey);
-            if (!dec && vaultKey && vaultKey !== chanKey) {
-              dec = await CryptoVault.decrypt(rootMsg.encrypted, vaultKey);
-            }
+            const dec = await decryptMessage(rootMsg, activeChannelId);
             rootText = dec || rootMsg.content;
             if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
           }
@@ -4703,10 +4863,7 @@
           if (cacheKey && decryptedMessageCache.has(cacheKey)) {
             repText = decryptedMessageCache.get(cacheKey);
           } else {
-            let dec = await CryptoVault.decrypt(rep.encrypted, chanKey);
-            if (!dec && vaultKey && vaultKey !== chanKey) {
-              dec = await CryptoVault.decrypt(rep.encrypted, vaultKey);
-            }
+            const dec = await decryptMessage(rep, activeChannelId);
             repText = dec || rep.content;
             if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
           }
@@ -5027,6 +5184,13 @@
 
     // Pull Sync from Local Server Bridge with Automatic GitHub Fallback
     async function syncFromLocalServer(manual = false) {
+      if (!localBridgeCompatible) {
+        localBridgeHealthy = false;
+        if (config.owner && config.repo) {
+          await syncFromGitHub(manual);
+        }
+        return;
+      }
       const syncIcon = document.getElementById('sync-icon');
       if (syncIcon) syncIcon.classList.add('spin');
       let localBridgeSucceeded = false;
@@ -5064,6 +5228,49 @@
       }
     }
     window.syncFromLocalServer = syncFromLocalServer;
+
+    let manualRefreshInFlight = false;
+    async function manualRefreshAll() {
+      if (manualRefreshInFlight) return;
+      manualRefreshInFlight = true;
+      const syncIcon = document.getElementById('sync-icon');
+      if (syncIcon) syncIcon.classList.add('spin');
+      showToast('🔄 Refreshing all connection modes…');
+
+      try {
+        markLocalActivity();
+        if (window.p2pClient) window.p2pClient.broadcastDiscovery();
+        if (window.liveMeshClient?.isConnected()) {
+          window.liveMeshClient.publish({
+            type: 'sync_request',
+            requesterId: config.user?.id || 'user'
+          });
+        }
+
+        const pulls = [syncFromLocalServer(true)];
+        if (window.gistClient?.isConfigured()) {
+          pulls.push(window.gistClient.poll());
+        }
+        await Promise.allSettled(pulls);
+
+        decryptedMessageCache.clear();
+        lastRenderedChecksum = '';
+        saveLocalCache();
+        renderSidebar();
+        await renderTimeline(true);
+        if (activeThreadRootId) await renderThread();
+        transportRegistry.evaluate();
+        showToast(`✅ Refreshed · ${transportRegistry.activeMode}`);
+      } catch (err) {
+        console.error('Manual refresh failed:', err);
+        showToast('⚠️ Refresh failed — local changes remain queued');
+      } finally {
+        manualRefreshInFlight = false;
+        if (syncIcon) syncIcon.classList.remove('spin');
+        scheduleAdaptiveSync();
+      }
+    }
+    window.manualRefreshAll = manualRefreshAll;
 
     // Text formatting helper
     function wrapText(before, after) {
@@ -5130,9 +5337,14 @@ Minimum version required to store current data is: `+i+`.
         branch: config.branch || 'master',
         token: config.token || '',
         password: pass,
-        workspaceSecret: config.workspaceSecret || '',
-        backendUrl: (config.lanUrl || config.backendUrl || 'http://192.168.1.111:4300').replace(/\/+$/, ''),
-        user: config.user || { id: 'user_dev', name: 'User', avatar: '💻' }
+        workspaceSecret: getEffectiveWorkspaceSecret(),
+        gistId: config.gistId || '',
+        gistToken: config.gistToken || '',
+        backendUrl: targetType === 'lan'
+          ? (config.lanUrl || config.backendUrl || '').replace(/\/+$/, '')
+          : (config.backendUrl || '').replace(/\/+$/, ''),
+        keyVersion: 2,
+        workspaceSchemaVersion: 2
       };
 
       let b64 = '';
@@ -5203,9 +5415,12 @@ Minimum version required to store current data is: `+i+`.
         branch: config.branch || 'master',
         token: config.token || '',
         password: pass,
-        workspaceSecret: config.workspaceSecret || '',
-        backendUrl: (config.backendUrl || (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://192.168.1.111:4300')).replace(/\/+$/, ''),
-        user: config.user || { id: 'user_dev', name: 'User', avatar: '💻' }
+        workspaceSecret: getEffectiveWorkspaceSecret(),
+        gistId: config.gistId || '',
+        gistToken: config.gistToken || '',
+        backendUrl: (config.backendUrl || '').replace(/\/+$/, ''),
+        keyVersion: 2,
+        workspaceSchemaVersion: 2
       };
     }
 
@@ -5262,6 +5477,32 @@ Minimum version required to store current data is: `+i+`.
       if (el) {
         el.onclick = handler;
       }
+    }
+
+    function openSearchModal() {
+      const modal = document.getElementById('search-modal');
+      const input = document.getElementById('search-query-input');
+      const results = document.getElementById('search-results-list');
+      if (modal) modal.classList.add('open');
+      if (results) {
+        results.innerHTML = '<div style="color:var(--text-dim); padding:10px; text-align:center;">Type to search decrypted messages across every channel.</div>';
+      }
+      if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 0);
+      }
+    }
+    window.openSearchModal = openSearchModal;
+
+    // Bind the critical header actions first. If a later optional integration
+    // fails to initialize, navigation, search, mode selection and refresh must
+    // remain usable.
+    function bindCriticalHeaderControls() {
+      setClickHandler('mesh-status-indicator', () => transportRegistry.cyclePreferredMode());
+      setClickHandler('btn-sync-now', manualRefreshAll);
+      setClickHandler('btn-open-search', openSearchModal);
+      setClickHandler('btn-mobile-sync-link', () => openMobileModal('gh_pages'));
+      setClickHandler('btn-open-settings', openSettingsHandler);
     }
 
     // ==========================================
@@ -5481,6 +5722,7 @@ Minimum version required to store current data is: `+i+`.
 
     // Synchronously bind all UI click and input events
     function bindEventListeners() {
+      bindCriticalHeaderControls();
       initVisualViewportHandler();
 
       // S3 Attach button and file input
@@ -5961,6 +6203,7 @@ Minimum version required to store current data is: `+i+`.
 
       // Save Settings
       setClickHandler('btn-save-settings', async () => {
+        const previousWorkspace = `${config.owner}/${config.repo}@${config.branch || 'master'}`;
         config.user.name = document.getElementById('cfg-user-name')?.value || 'User';
         config.user.id = document.getElementById('cfg-user-id')?.value || 'user_dev';
         config.user.avatar = document.getElementById('cfg-avatar')?.value || '💻';
@@ -5974,6 +6217,17 @@ Minimum version required to store current data is: `+i+`.
         config.workspaceSecret = document.getElementById('cfg-workspace-secret')?.value.trim() || '';
         config.gistId = (document.getElementById('cfg-gist-id')?.value || '').trim();
         config.gistToken = (document.getElementById('cfg-gist-token')?.value || '').trim();
+        config.workspaceSchemaVersion = 2;
+        const nextWorkspace = `${config.owner}/${config.repo}@${config.branch || 'master'}`;
+        if (nextWorkspace !== previousWorkspace) {
+          state.messages = [];
+          state.events = [];
+          state.users = {};
+          localStorage.removeItem('git_chat_messages');
+          localStorage.removeItem('git_chat_events');
+          localStorage.removeItem('git_chat_users');
+          showToast(`Switched workspace to ${nextWorkspace}; loading its history…`);
+        }
 
         // Storage Settings
         const storageProvider = document.getElementById('cfg-storage-provider')?.value || 'github';
@@ -6062,22 +6316,23 @@ Minimum version required to store current data is: `+i+`.
       const searchModal = document.getElementById('search-modal');
       const searchInput = document.getElementById('search-query-input');
       const searchResults = document.getElementById('search-results-list');
-      setClickHandler('btn-open-search', () => {
-        if (searchModal) searchModal.classList.add('open');
-        if (searchInput) {
-          searchInput.value = '';
-          searchInput.focus();
-        }
-        if (searchResults) searchResults.innerHTML = '';
-      });
+      let searchRequestId = 0;
+      setClickHandler('btn-open-search', openSearchModal);
       setClickHandler('btn-close-search', () => {
         if (searchModal) searchModal.classList.remove('open');
       });
       if (searchInput && searchResults) {
         searchInput.oninput = async () => {
           const q = searchInput.value.toLowerCase().trim();
+          const requestId = ++searchRequestId;
           searchResults.innerHTML = '';
           if (!q) return;
+          if (isVaultLocked) {
+            searchResults.innerHTML = '<div style="color:var(--text-dim); padding:10px; text-align:center;">Unlock the vault to search encrypted messages.</div>';
+            return;
+          }
+          searchResults.innerHTML = '<div style="color:var(--text-dim); padding:10px; text-align:center;">Searching…</div>';
+          const needle = q.replace(/^#/, '');
           const matches = [];
           for (const m of state.messages) {
             let text = m.content || '';
@@ -6085,10 +6340,19 @@ Minimum version required to store current data is: `+i+`.
               const dec = await decryptMessage(m, m.channelId);
               if (dec) text = dec;
             }
-            if (text && text.toLowerCase().includes(q)) {
+            if (requestId !== searchRequestId) return;
+            const channelName = state.channels[m.channelId]?.name || m.channelId || '';
+            const authorName = m.author?.name || '';
+            if (
+              (text && text.toLowerCase().includes(needle)) ||
+              channelName.toLowerCase().includes(needle) ||
+              authorName.toLowerCase().includes(needle)
+            ) {
               matches.push({ msg: m, text });
             }
           }
+          if (requestId !== searchRequestId) return;
+          searchResults.innerHTML = '';
           if (matches.length === 0) {
             searchResults.innerHTML = '<div style="color:var(--text-dim); padding:10px; text-align:center;">No matching messages found</div>';
             return;
@@ -6112,7 +6376,7 @@ Minimum version required to store current data is: `+i+`.
       }
 
       // Sync button
-      setClickHandler('btn-sync-now', () => syncFromLocalServer(true));
+      setClickHandler('btn-sync-now', manualRefreshAll);
 
       // ==========================================
       // MOBILE INTERACTIONS & TOUCH GESTURES
@@ -6140,7 +6404,11 @@ Minimum version required to store current data is: `+i+`.
       });
       setClickHandler('btn-mob-sync', () => {
         if (overflowDropdown) overflowDropdown.classList.remove('open');
-        syncFromLocalServer(true);
+        manualRefreshAll();
+      });
+      setClickHandler('btn-mob-connection', () => {
+        if (overflowDropdown) overflowDropdown.classList.remove('open');
+        transportRegistry.cyclePreferredMode();
       });
       setClickHandler('btn-mob-s3', () => {
         if (overflowDropdown) overflowDropdown.classList.remove('open');
@@ -6264,11 +6532,14 @@ Minimum version required to store current data is: `+i+`.
           if (embedded.owner) config.owner = embedded.owner;
           if (embedded.repo) config.repo = embedded.repo;
           if (embedded.branch) config.branch = embedded.branch;
-          if (embedded.workspaceSecret) config.workspaceSecret = embedded.workspaceSecret;
+          if (Object.prototype.hasOwnProperty.call(embedded, 'workspaceSecret')) {
+            config.workspaceSecret = String(embedded.workspaceSecret || '');
+          }
           if (embedded.backendUrl) config.backendUrl = embedded.backendUrl;
           if (embedded.token) config.token = embedded.token;
           if (embedded.gistId) config.gistId = embedded.gistId;
           if (embedded.gistToken) config.gistToken = embedded.gistToken;
+          config.workspaceSchemaVersion = embedded.workspaceSchemaVersion || 2;
           if (embedded.user && typeof embedded.user === 'object') {
             if (embedded.user.name) config.user.name = embedded.user.name;
             if (embedded.user.id) config.user.id = embedded.user.id;
@@ -6300,11 +6571,14 @@ Minimum version required to store current data is: `+i+`.
           if (parsed.owner) config.owner = parsed.owner;
           if (parsed.repo) config.repo = parsed.repo;
           if (parsed.branch) config.branch = parsed.branch;
-          if (parsed.workspaceSecret) config.workspaceSecret = parsed.workspaceSecret;
+          if (Object.prototype.hasOwnProperty.call(parsed, 'workspaceSecret')) {
+            config.workspaceSecret = String(parsed.workspaceSecret || '');
+          }
           if (parsed.backendUrl) config.backendUrl = parsed.backendUrl;
           if (parsed.token) config.token = parsed.token;
           if (parsed.gistId) config.gistId = parsed.gistId;
           if (parsed.gistToken) config.gistToken = parsed.gistToken;
+          config.workspaceSchemaVersion = parsed.workspaceSchemaVersion || 2;
           if (parsed.password) {
             vaultPassword = parsed.password;
             vaultKey = await CryptoVault.deriveKey(vaultPassword);
@@ -6323,6 +6597,11 @@ Minimum version required to store current data is: `+i+`.
           }
           saveLocalCache();
           showToast(`Configured for ${config.backendUrl || `${config.owner}/${config.repo}`}`);
+          // Setup hashes may contain a password or PAT. Remove them from the
+          // address bar and browser history as soon as they are applied.
+          if (window.history?.replaceState) {
+            window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+          }
           initClientTransports();
           syncFromLocalServer();
         } catch (e) {
