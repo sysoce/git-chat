@@ -69,6 +69,14 @@ export class TransportRegistry {
     return active.send(message);
   }
 
+  public async sendToChannel(channelId: string, message: TransportMessage): Promise<boolean> {
+    return this.broadcast({ ...message, channelId });
+  }
+
+  public async sendPrivateMessage(recipientId: string, message: TransportMessage): Promise<boolean> {
+    return this.broadcast({ ...message, recipientId });
+  }
+
   public onActiveTransportChange(listener: (active: TransportAdapter | null) => void): () => void {
     this.activeListeners.add(listener);
     return () => this.activeListeners.delete(listener);

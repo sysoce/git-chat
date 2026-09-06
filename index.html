@@ -960,14 +960,6 @@
         </div>
 
         <div class="nav-section">
-          <div class="section-title"><span>Autonomous Agents</span></div>
-          <div class="nav-item" id="nav-agent-item" data-id="agent_human">
-            <div class="nav-item-left"><span>👤</span> <span>Human</span></div>
-            <span class="badge" style="background:var(--agent-badge)">AI</span>
-          </div>
-        </div>
-
-        <div class="nav-section">
           <div class="section-title">
             <span>Direct Messages</span>
           </div>
@@ -1030,7 +1022,6 @@
             <button class="tool-btn" id="tb-italic" title="Italic"><i>I</i></button>
             <button class="tool-btn" id="tb-code" title="Code Block">&lt;/&gt;</button>
             <button class="tool-btn" id="tb-quote" title="Quote">”</button>
-            <button class="tool-btn" id="tb-agent" title="Ask Human">👤 @Human</button>
             <button class="tool-btn" id="tb-attach" title="Attach Media / Files to S3" style="font-size:14px; margin-left:auto; color:var(--accent-blue);">📎 Attach</button>
             <input type="file" id="file-upload-input" style="display:none;" multiple />
           </div>
@@ -1069,9 +1060,10 @@
         <span>🔐 Workspace Vault Login</span>
       </div>
       <div style="background:rgba(18, 100, 163, 0.12); border:1px solid var(--mention-border); border-radius:8px; padding:12px; margin-bottom:16px; font-size:13px; line-height:1.5;">
-        <b>🔑 How Cross-Device & Team Messaging Works:</b><br/>
-        • <b>Connect Phone or Computer:</b> Enter the <u>same Vault Password</u> and <u>same Git Backend Repo</u> across your devices.<br/>
-        • <b>End-to-End Encryption:</b> Messages in common channels & 1-on-1 DMs are encrypted and isolated on <code>refs/heads/git-chat</code>.
+        <b>🔑 Multi-device chat in 30 seconds:</b><br/>
+        • Open this same page on each device (or <a href="https://sysoce.github.io/git-chat/" style="color:var(--accent-blue);">sysoce.github.io/git-chat</a>).<br/>
+        • Unlock with the <u>same vault password</u>. Demo default: <code>git-chat-open</code><br/>
+        • Keep the same data repo (default <code>sysoce/chat-data</code>). Mesh Live syncs instantly; add a GitHub PAT in Settings for durable git backup.
       </div>
       <form id="vault-login-form" onsubmit="return false;" autocomplete="on">
         <div class="form-group">
@@ -1088,9 +1080,10 @@
             <button type="button" id="btn-gen-pass" style="background:none; border:none; color:var(--accent-blue); font-size:12px; cursor:pointer; font-weight:600;">🎲 Generate</button>
           </div>
           <div style="position:relative; display:flex; align-items:center;">
-            <input class="form-input" type="password" id="vault-password" name="password" autocomplete="current-password" placeholder="Choose or enter vault password..." autofocus style="padding-right:44px;" />
+            <input class="form-input" type="password" id="vault-password" name="password" autocomplete="current-password" placeholder="git-chat-open" autofocus style="padding-right:44px;" />
             <button type="button" id="btn-toggle-pwd-vis" style="position:absolute; right:10px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; padding:6px;" title="Show/Hide Password">👁️</button>
           </div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Demo workspace password is <code>git-chat-open</code>. Change it for a private team.</div>
         </div>
 
         <!-- Collapsible Advanced Data Backend -->
@@ -1098,8 +1091,8 @@
           <summary style="cursor:pointer; color:var(--text-muted); font-weight:600;">⚙️ Advanced: Backend Repository Config</summary>
           <div style="margin-top:10px;">
             <label class="form-label" for="vault-backend-repo">Data Repository (owner/repo)</label>
-            <input class="form-input" id="vault-backend-repo" name="repository" value="sysoce/git-chat" placeholder="e.g. sysoce/git-chat or org/chat-data" />
-            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Messages sync to this repository's <code>refs/heads/git-chat</code> branch.</div>
+            <input class="form-input" id="vault-backend-repo" name="repository" value="sysoce/chat-data" placeholder="e.g. sysoce/chat-data" />
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Encrypted messages sync to this repository (branch <code>master</code> by default).</div>
           </div>
         </details>
 
@@ -1197,6 +1190,16 @@
             <label class="form-label">Shared Workspace Encryption Secret [Optional]</label>
             <input class="form-input" type="password" id="cfg-workspace-secret" placeholder="Defaults to repository identity" />
             <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Optional custom shared passphrase for team channels. If empty, uses repository identity.</div>
+          </div>
+          <div class="form-group" style="padding-top:10px; border-top:1px solid var(--border);">
+            <label class="form-label">Gist Vault ID [Optional / Extra Fallback &amp; Off-site Backup]</label>
+            <input class="form-input" id="cfg-gist-id" placeholder="e.g. 8f14e45fceea167a5a36dedd4bea2543" />
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">A Gist is a full git repo needing no provisioning. Git-Chat mirrors every encrypted update here as a rolling backup, and syncs through it when the data repository is unreachable.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gist Access Token [Optional]</label>
+            <input class="form-input" type="password" id="cfg-gist-token" placeholder="Defaults to the Git PAT above" />
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Needs the <code>gist</code> scope. Leave empty to reuse the token above.</div>
           </div>
         </div>
 
@@ -2442,12 +2445,291 @@
       }
     }
 
+    // ==========================================
+    // GIST VAULT TRANSPORT (git-backed fallback & rolling backup)
+    // A Gist is a full git repository reachable with a bare token and no
+    // repo provisioning, so it works as both an extra sync tier and an
+    // off-site backup when the primary data repo is unreachable.
+    // ==========================================
+    const GIST_SYNC_FILENAME = 'chat-sync.json';
+    const GIST_MAX_FILES = 500;
+    const GIST_MAX_PAYLOAD_BYTES = 900 * 1024;
+
+    function createGistRateLimitState() {
+      return { rateLimitReset: 0, isRateLimited: false, remaining: 5000, limit: 5000, resetAt: 0, consecutiveFailures: 0 };
+    }
+
+    // Mirrors src/transport/gistHttp.ts updateRateLimitFromResponse
+    function updateRateLimitFromResponse(state, res) {
+      const retryAfter = res.headers.get('retry-after');
+      const remaining = res.headers.get('x-ratelimit-remaining');
+      const reset = res.headers.get('x-ratelimit-reset');
+      const limit = res.headers.get('x-ratelimit-limit');
+
+      if (limit) state.limit = parseInt(limit, 10) || 5000;
+      if (remaining) state.remaining = parseInt(remaining, 10) || 0;
+      // Track the refill deadline even on success so polling can be paced to it.
+      if (reset) state.resetAt = (parseInt(reset, 10) || 0) * 1000;
+
+      if (retryAfter) {
+        const seconds = parseInt(retryAfter, 10) || 60;
+        state.rateLimitReset = Date.now() + seconds * 1000;
+        state.isRateLimited = true;
+        state.consecutiveFailures++;
+        return;
+      }
+
+      if (res.status === 403 || res.status === 429 || res.status === 409) {
+        state.consecutiveFailures++;
+        const backoffSeconds = Math.min(120, 30 * Math.pow(2, Math.min(state.consecutiveFailures - 1, 3)));
+        if (remaining && parseInt(remaining, 10) === 0 && reset) {
+          state.rateLimitReset = parseInt(reset, 10) * 1000;
+        } else {
+          state.rateLimitReset = Date.now() + backoffSeconds * 1000;
+        }
+        state.isRateLimited = true;
+      } else if (remaining && parseInt(remaining, 10) === 0 && reset) {
+        state.rateLimitReset = parseInt(reset, 10) * 1000;
+        state.isRateLimited = true;
+      } else if (res.ok && remaining && parseInt(remaining, 10) > 0) {
+        state.isRateLimited = false;
+        state.consecutiveFailures = 0;
+      }
+    }
+
+    function isRateLimitActive(state) {
+      return !!state && state.isRateLimited && Date.now() < state.rateLimitReset;
+    }
+
+    function isNetworkOrOfflineError(err) {
+      if (!err) return false;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+      const msg = typeof err === 'string' ? err : (err && err.message) || '';
+      const lower = msg.toLowerCase();
+      return lower.includes('failed to fetch') || lower.includes('networkerror') ||
+        lower.includes('load failed') || lower.includes('fetch failed') ||
+        lower.includes('aborterror') || lower.includes('timeout');
+    }
+
+    class GistSyncClient {
+      constructor(options) {
+        this.options = options || {};
+        this.token = (this.options.token || '').trim();
+        this.gistId = (this.options.gistId || '').trim();
+        this.baseUrl = (this.options.baseUrl || 'https://api.github.com').replace(/\/+$/, '');
+        this.rate = createGistRateLimitState();
+        this.lastEtag = null;
+        this.connected = false;
+        this.pollTimer = null;
+        this.inFlight = false;
+      }
+
+      isConfigured() {
+        return !!(this.token && this.gistId);
+      }
+
+      isConnected() {
+        return this.connected;
+      }
+
+      getRateLimitInfo() {
+        return { ...this.rate };
+      }
+
+      buildHeaders(etag, isWrite) {
+        const h = {
+          'Authorization': `Bearer ${this.token}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        };
+        if (isWrite) h['Content-Type'] = 'application/json';
+        if (etag) h['If-None-Match'] = etag;
+        return h;
+      }
+
+      setStatus(status) {
+        this.connected = status === 'connected';
+        this.options.onStatus?.(status);
+      }
+
+      async fetchSyncState() {
+        if (!this.isConfigured()) return { notModified: true };
+        if (isRateLimitActive(this.rate)) return { notModified: true, rateLimited: true };
+
+        const url = `${this.baseUrl}/gists/${this.gistId}`;
+        let res;
+        try {
+          res = await fetch(url, { headers: this.buildHeaders(this.lastEtag), cache: 'no-store' });
+        } catch (err) {
+          if (isNetworkOrOfflineError(err)) return { notModified: true, offline: true };
+          throw err;
+        }
+
+        updateRateLimitFromResponse(this.rate, res);
+
+        if (res.status === 304) return { notModified: true, etag: this.lastEtag };
+        if (!res.ok) throw new Error(`Gist API error (${res.status})`);
+
+        const newEtag = res.headers.get('ETag');
+        if (newEtag) this.lastEtag = newEtag;
+
+        const gistData = await res.json();
+        const syncFile = gistData.files && gistData.files[GIST_SYNC_FILENAME];
+        if (!syncFile || !syncFile.content) {
+          return { notModified: false, etag: newEtag, data: { files: [] } };
+        }
+        try {
+          return { notModified: false, etag: newEtag, data: JSON.parse(syncFile.content) };
+        } catch {
+          return { notModified: false, etag: newEtag, data: { files: [] } };
+        }
+      }
+
+      // Merge discrete sync files into the gist payload, pruning the oldest
+      // message entries so the vault stays a bounded rolling backup window.
+      mergeFiles(existing, incoming) {
+        const byPath = new Map();
+        for (const f of existing || []) {
+          if (f && f.path) byPath.set(f.path, f);
+        }
+        const now = Date.now();
+        for (const f of incoming || []) {
+          if (f && f.path) byPath.set(f.path, { path: f.path, content: f.content, updatedAt: now });
+        }
+
+        let merged = Array.from(byPath.values());
+        const isPrunable = (p) => p.includes('/messages/') || p.includes('/threads/') || p.startsWith('presence/');
+        const sortOldestFirst = (a, b) => (a.updatedAt || 0) - (b.updatedAt || 0);
+
+        const overBudget = () => merged.length > GIST_MAX_FILES ||
+          JSON.stringify(merged).length > GIST_MAX_PAYLOAD_BYTES;
+
+        if (overBudget()) {
+          const prunable = merged.filter(f => isPrunable(f.path)).sort(sortOldestFirst);
+          const keep = new Set(merged.map(f => f.path));
+          for (const candidate of prunable) {
+            if (!overBudget()) break;
+            keep.delete(candidate.path);
+            merged = merged.filter(f => keep.has(f.path));
+          }
+        }
+        return merged;
+      }
+
+      async pushSyncFiles(files) {
+        if (!this.isConfigured() || !files || !files.length) return false;
+        if (isRateLimitActive(this.rate)) return false;
+
+        const normalized = files.map(f => ({
+          path: f.path || f.relativePath,
+          content: f.content
+        })).filter(f => f.path);
+        if (!normalized.length) return false;
+
+        let existingFiles = [];
+        try {
+          const current = await this.fetchSyncState();
+          existingFiles = (current.data && current.data.files) || [];
+        } catch {
+          existingFiles = [];
+        }
+
+        const payload = {
+          version: window.CLIENT_VERSION || '1.0.9',
+          updatedAt: Date.now(),
+          files: this.mergeFiles(existingFiles, normalized)
+        };
+
+        const body = JSON.stringify({
+          files: { [GIST_SYNC_FILENAME]: { content: JSON.stringify(payload, null, 2) } }
+        });
+
+        let res;
+        try {
+          res = await fetch(`${this.baseUrl}/gists/${this.gistId}`, {
+            method: 'PATCH',
+            headers: this.buildHeaders(undefined, true),
+            body
+          });
+        } catch (err) {
+          if (isNetworkOrOfflineError(err)) {
+            this.setStatus('offline');
+            return false;
+          }
+          throw err;
+        }
+
+        updateRateLimitFromResponse(this.rate, res);
+        if (!res.ok) {
+          this.setStatus(res.status === 401 || res.status === 404 ? 'failed' : 'disconnected');
+          return false;
+        }
+        // A successful write invalidates our cached read ETag.
+        this.lastEtag = null;
+        this.setStatus('connected');
+        return true;
+      }
+
+      async poll() {
+        if (!this.isConfigured() || this.inFlight) return 0;
+        this.inFlight = true;
+        try {
+          const result = await this.fetchSyncState();
+          if (result.offline) {
+            this.setStatus('offline');
+            return 0;
+          }
+          if (result.rateLimited) return 0;
+
+          this.setStatus('connected');
+          if (result.notModified || !result.data) return 0;
+
+          let count = 0;
+          for (const f of result.data.files || []) {
+            if (f && f.path && this.options.onFile?.(f.path, f.content)) count++;
+          }
+          return count;
+        } catch (err) {
+          this.setStatus(isRateLimitActive(this.rate) ? 'disconnected' : 'failed');
+          return 0;
+        } finally {
+          this.inFlight = false;
+        }
+      }
+
+      start(intervalMs) {
+        this.stop();
+        if (!this.isConfigured()) {
+          this.setStatus('disconnected');
+          return;
+        }
+        this.setStatus('connecting');
+        this.poll().then(n => { if (n > 0) this.options.onApplied?.(n); });
+        this.pollTimer = setInterval(() => {
+          this.poll().then(n => { if (n > 0) this.options.onApplied?.(n); });
+        }, Math.max(5000, intervalMs || 20000));
+      }
+
+      stop() {
+        if (this.pollTimer) {
+          clearInterval(this.pollTimer);
+          this.pollTimer = null;
+        }
+      }
+
+      disconnect() {
+        this.stop();
+        this.setStatus('disconnected');
+      }
+    }
+
     class ClientTransportRegistry {
       constructor() {
         this.statuses = {
           'p2p': 'disconnected',
           'live-mesh': 'disconnected',
           'live-sse': 'disconnected',
+          'gist-sync': 'disconnected',
           'git-sync': 'disconnected'
         };
         this.activeMode = 'disconnected';
@@ -2463,6 +2745,7 @@
         if (this.statuses['p2p'] === 'connected') best = 'p2p';
         else if (this.statuses['live-mesh'] === 'connected') best = 'live-mesh';
         else if (this.statuses['live-sse'] === 'connected') best = 'live-sse';
+        else if (this.statuses['gist-sync'] === 'connected') best = 'gist-sync';
         else if (this.statuses['git-sync'] === 'connected') best = 'git-sync';
         else if (this.statuses['p2p'] === 'connecting' || this.statuses['live-mesh'] === 'connecting' || this.statuses['live-sse'] === 'connecting') best = 'connecting';
 
@@ -2488,6 +2771,10 @@
           badge.textContent = `🟢 Live SSE${pendingSuffix}`;
           badge.style.color = '#10b981';
           badge.title = 'Server-Sent Events Stream Active';
+        } else if (this.activeMode === 'gist-sync') {
+          badge.textContent = `🟢 Gist Vault${pendingSuffix}`;
+          badge.style.color = '#10b981';
+          badge.title = 'GitHub Gist Backup Active';
         } else if (this.activeMode === 'git-sync') {
           badge.textContent = `🟢 GitHub Sync${pendingSuffix}`;
           badge.style.color = '#10b981';
@@ -2507,6 +2794,118 @@
     const transportRegistry = new ClientTransportRegistry();
     window.transportRegistry = transportRegistry;
 
+    // ==========================================
+    // ADAPTIVE SYNC SCHEDULING
+    // Mirrors src/transport/syncPollingPolicy.ts. A fixed fast poll burns the
+    // GitHub quota within an hour and keeps polling hidden tabs, which makes
+    // the remote tiers die exactly when they are the only ones left.
+    // ==========================================
+    const CLIENT_POLL_INTERVALS = {
+      ACTIVE_AWAITING_MS: 6000,
+      FOREGROUND_IDLE_MS: 15000,
+      BACKGROUND_MS: 45000,
+      LOW_QUOTA_MS: 45000,
+      AWAITING_TIMEOUT_MS: 90000
+    };
+    const LOCAL_BRIDGE_POLL_MS = 3000;
+    const LIVE_TRANSPORT_BACKSTOP_MS = 60000;
+    const QUOTA_RESERVE_FRACTION = 0.2;
+    const DEFAULT_QUOTA_WINDOW_MS = 3600000;
+
+    // Mirrors computeQuotaSafeIntervalMs in src/transport/syncPollingPolicy.ts.
+    // GitHub grants unauthenticated clients only 60 requests/hour, so a static
+    // tokenless deployment needs pacing derived from the real quota rather than
+    // thresholds sized for the 5000/hour authenticated budget.
+    function computeQuotaSafeIntervalMs(ctx) {
+      const { remaining, resetAtMs, requestsPerPoll, nowMs } = ctx || {};
+      if (typeof remaining !== 'number' || !Number.isFinite(remaining)) return 0;
+
+      const now = typeof nowMs === 'number' ? nowMs : Date.now();
+      const perPoll = Math.max(1, requestsPerPoll === undefined ? 2 : requestsPerPoll);
+      const windowMs = resetAtMs && resetAtMs > now ? resetAtMs - now : DEFAULT_QUOTA_WINDOW_MS;
+
+      const spendable = Math.floor(remaining * (1 - QUOTA_RESERVE_FRACTION));
+      const affordablePolls = Math.floor(spendable / perPoll);
+      if (affordablePolls < 1) return windowMs;
+
+      return Math.ceil(windowMs / affordablePolls);
+    }
+    window.computeQuotaSafeIntervalMs = computeQuotaSafeIntervalMs;
+
+    function computeClientPollInterval(ctx) {
+      const { isAwaitingResponse, awaitingStartedAt, isHidden, remainingQuota } = ctx || {};
+
+      if (typeof remainingQuota === 'number' && remainingQuota < 50) {
+        return CLIENT_POLL_INTERVALS.LOW_QUOTA_MS;
+      }
+      if (isHidden) {
+        return CLIENT_POLL_INTERVALS.BACKGROUND_MS;
+      }
+      if (isAwaitingResponse) {
+        const elapsed = awaitingStartedAt ? Date.now() - awaitingStartedAt : 0;
+        if (elapsed < CLIENT_POLL_INTERVALS.AWAITING_TIMEOUT_MS) {
+          return CLIENT_POLL_INTERVALS.ACTIVE_AWAITING_MS;
+        }
+      }
+      return CLIENT_POLL_INTERVALS.FOREGROUND_IDLE_MS;
+    }
+    window.computeClientPollInterval = computeClientPollInterval;
+
+    let localBridgeHealthy = false;
+    let lastLocalActivityAt = Date.now();
+    let adaptiveSyncTimer = null;
+
+    function markLocalActivity() {
+      lastLocalActivityAt = Date.now();
+    }
+    window.markLocalActivity = markLocalActivity;
+
+    function computeSyncDelayMs() {
+      // The local bridge is unmetered, so stay snappy whenever it is answering.
+      if (localBridgeHealthy) return LOCAL_BRIDGE_POLL_MS;
+
+      // An explicit rate-limit window overrides everything: wait it out.
+      if (isRateLimitActive(gitHubRateLimit)) {
+        const waitMs = gitHubRateLimit.rateLimitReset - Date.now();
+        return Math.max(5000, Math.min(120000, waitMs));
+      }
+
+      // Never poll faster than the remaining quota can sustain.
+      const quotaFloorMs = computeQuotaSafeIntervalMs({
+        remaining: gitHubRateLimit.remaining,
+        resetAtMs: gitHubRateLimit.resetAt,
+        requestsPerPoll: 2
+      });
+
+      // A connected realtime tier already delivers messages, so remote polling
+      // only needs to be a slow correctness backstop.
+      const liveModes = ['p2p', 'live-mesh', 'live-sse'];
+      if (liveModes.includes(transportRegistry.activeMode)) {
+        return Math.max(LIVE_TRANSPORT_BACKSTOP_MS, quotaFloorMs);
+      }
+
+      const policyMs = computeClientPollInterval({
+        isHidden: typeof document !== 'undefined' && document.visibilityState === 'hidden',
+        isAwaitingResponse: true,
+        awaitingStartedAt: lastLocalActivityAt,
+        remainingQuota: gitHubRateLimit.remaining
+      });
+
+      return Math.max(policyMs, quotaFloorMs);
+    }
+    window.computeSyncDelayMs = computeSyncDelayMs;
+
+    function scheduleAdaptiveSync() {
+      if (adaptiveSyncTimer) clearTimeout(adaptiveSyncTimer);
+      adaptiveSyncTimer = setTimeout(async () => {
+        try {
+          await syncFromLocalServer(false);
+        } catch {}
+        scheduleAdaptiveSync();
+      }, computeSyncDelayMs());
+    }
+    window.scheduleAdaptiveSync = scheduleAdaptiveSync;
+
     function initClientTransports() {
       if (!window.offlineQueue) {
         window.offlineQueue = new OfflineQueue('git-chat-offline-queue');
@@ -2517,6 +2916,28 @@
       initLiveMesh();
       initP2P();
       initLiveSse();
+      initGist();
+    }
+
+    function initGist() {
+      if (window.gistClient) {
+        try { window.gistClient.disconnect(); } catch {}
+      }
+      window.gistClient = new GistSyncClient({
+        token: config.gistToken || config.token,
+        gistId: config.gistId,
+        onStatus: (status) => {
+          transportRegistry.setStatus('gist-sync', status);
+        },
+        onFile: (path, content) => processSyncFile(path, content),
+        onApplied: () => {
+          saveLocalCache();
+          renderSidebar();
+          renderTimeline();
+          if (activeThreadRootId) renderThread();
+        }
+      });
+      window.gistClient.start(20000);
     }
 
     function initP2P() {
@@ -2599,6 +3020,31 @@
     }
 
     let liveSseSource = null;
+    let reachabilityTimer = null;
+
+    function startReachabilityProbe() {
+      if (reachabilityTimer) return;
+      reachabilityTimer = setInterval(async () => {
+        const baseUrl = (config.backendUrl || (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : '')).replace(/\/+$/, '');
+        if (!baseUrl && window.location.protocol === 'file:') return;
+        const pingUrl = baseUrl ? `${baseUrl}/api/version` : '/api/version';
+        try {
+          const res = await fetchWithTimeout(pingUrl, { cache: 'no-store' }, 2500);
+          if (res && (res.ok || res.status === 401 || res.status === 403)) {
+            stopReachabilityProbe();
+            initLiveSse();
+          }
+        } catch {}
+      }, 15000);
+    }
+
+    function stopReachabilityProbe() {
+      if (reachabilityTimer) {
+        clearInterval(reachabilityTimer);
+        reachabilityTimer = null;
+      }
+    }
+
     function initLiveSse() {
       if (liveSseSource) {
         try { liveSseSource.close(); } catch {}
@@ -2611,6 +3057,7 @@
       try {
         liveSseSource = new EventSource(sseUrl);
         liveSseSource.onopen = () => {
+          stopReachabilityProbe();
           transportRegistry.setStatus('live-sse', 'connected');
         };
         liveSseSource.addEventListener('sync_files', (evt) => {
@@ -2634,16 +3081,18 @@
         });
         liveSseSource.onerror = () => {
           transportRegistry.setStatus('live-sse', 'disconnected');
+          startReachabilityProbe();
         };
       } catch (err) {
         console.warn('Could not initialize SSE stream:', err);
+        startReachabilityProbe();
       }
     }
 
     // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.8';
+    const CLIENT_VERSION = '1.0.9';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -2691,6 +3140,8 @@
       token: '',
       backendUrl: '',
       lanUrl: '',
+      gistId: '',
+      gistToken: '',
       workspaceSecret: 'git-chat-open',
       user: {
         id: isMobileDevice ? `user_mobile_${Math.random().toString(36).slice(2, 6)}` : 'user_dev',
@@ -2737,14 +3188,9 @@
     let activeThreadRootId = null;
     let state = {
       channels: {
-        'chan_general': { id: 'chan_general', name: 'general', topic: 'Company-wide announcements and work-based matters' },
-        'chan_talk_to_a_human': { id: 'chan_talk_to_a_human', name: 'Talk to a Human', topic: 'Always-open direct channel with Human' },
-        'chan_engineering': { id: 'chan_engineering', name: 'engineering', topic: 'Architecture, PRs, and technical discussions' },
-        'chan_random': { id: 'chan_random', name: 'random', topic: 'Water cooler banter and fun links' }
+        'chan_general': { id: 'chan_general', name: 'general', topic: 'Company-wide announcements and work-based matters' }
       },
-      users: {
-        'agent_human': { id: 'agent_human', name: 'Human', avatar: '👤', role: 'agent', isBot: true }
-      },
+      users: {},
       presence: {},
       messages: [],
       events: []
@@ -2793,21 +3239,12 @@
           }
         }
 
-        // Always guarantee builtin Talk to a Human channel and Human user
-        if (!state.channels['chan_talk_to_a_human']) {
-          state.channels['chan_talk_to_a_human'] = {
-            id: 'chan_talk_to_a_human',
-            name: 'Talk to a Human',
-            topic: 'Always-open direct channel with Human'
-          };
-        }
-        if (!state.users['agent_human']) {
-          state.users['agent_human'] = {
-            id: 'agent_human',
-            name: 'Human',
-            avatar: '👤',
-            role: 'agent',
-            isBot: true
+        // Guarantee general channel exists
+        if (!state.channels['chan_general']) {
+          state.channels['chan_general'] = {
+            id: 'chan_general',
+            name: 'general',
+            topic: 'Company-wide announcements and work-based matters'
           };
         }
 
@@ -3035,18 +3472,32 @@
       } catch (e) {}
 
       // 3. GitHub Git Data API push serialized via gitCommitQueue with offline backup
+      let remotePushed = false;
       if (!localPushed && config.token && config.owner && config.repo) {
         if (window.gitCommitQueue) {
-          await window.gitCommitQueue.push(files);
+          const result = await window.gitCommitQueue.push(files);
+          remotePushed = result === true || !!(result && result.success);
         } else {
           try {
-            await pushFilesToGitHub(files);
+            remotePushed = await pushFilesToGitHub(files);
           } catch (err) {
             console.warn('GitHub direct push fallback failed, queueing offline:', err);
             if (window.offlineQueue) window.offlineQueue.enqueue(files);
           }
         }
       }
+
+      // 4. Gist vault: mirrors every update as an off-site rolling backup, and
+      // becomes the delivery path when the primary data repo is unreachable.
+      if (window.gistClient && window.gistClient.isConfigured()) {
+        try {
+          await window.gistClient.pushSyncFiles(files);
+        } catch (err) {
+          console.warn('Gist vault mirror failed:', err);
+        }
+      }
+
+      return localPushed || remotePushed;
     }
 
     // Publish User Profile & Heartbeat Presence
@@ -3462,7 +3913,6 @@
 
     let notificationConfig = { ...DEFAULT_NOTIFICATION_CONFIG };
     const notifiedMessageIds = new Set();
-    const answeredRemoteMessageIds = new Set();
     const appBootTimestamp = Date.now();
 
     function loadNotificationConfig() {
@@ -3490,9 +3940,6 @@
 
       if (nameRegex.test(lower) || idRegex.test(lower)) return true;
       if (/\b@(everyone|channel|here)\b/i.test(lower)) return true;
-      if (currentUserId === 'user_human_agent' && (/\b@human\b/i.test(lower) || /\/human\b/i.test(lower))) {
-        return true;
-      }
       return false;
     }
 
@@ -3878,24 +4325,12 @@
           if (chan.isDm) continue; // DMs are rendered in the DM section
           const item = document.createElement('div');
           item.className = `nav-item ${chan.id === activeChannelId ? 'active' : ''}`;
-          const prefix = chan.id === 'chan_talk_to_a_human' ? '💬' : '#';
           const isMuted = isChannelMuted(chan.id, notificationConfig);
           const muteBadge = isMuted ? `<span class="nav-item-mute-icon" style="font-size:11px; opacity:0.65; margin-left:auto;" title="Channel Muted">🔕</span>` : '';
-          item.innerHTML = `<div class="nav-item-left"><span>${prefix}</span> <span>${chan.name}</span></div>${muteBadge}`;
+          item.innerHTML = `<div class="nav-item-left"><span>#</span> <span>${chan.name}</span></div>${muteBadge}`;
           item.onclick = () => selectChannel(chan.id);
           listEl.appendChild(item);
         }
-      }
-
-      const agentItem = document.getElementById('nav-agent-item');
-      if (agentItem) {
-        const agentDmId = getDmChannelId(config.user.id, 'agent_human');
-        const isAgentActive = activeChannelId === 'chan_talk_to_a_human' || activeChannelId === agentDmId;
-        const isMuted = isChannelMuted('chan_talk_to_a_human', notificationConfig) || isChannelMuted(agentDmId, notificationConfig);
-        const muteBadge = isMuted ? `<span class="nav-item-mute-icon" style="font-size:11px; opacity:0.65; margin-left:auto; margin-right:4px;" title="Agent Muted">🔕</span>` : '';
-        agentItem.className = `nav-item ${isAgentActive ? 'active' : ''}`;
-        agentItem.innerHTML = `<div class="nav-item-left"><span>👤</span> <span>Talk to a Human</span></div>${muteBadge}<span class="user-online-dot" style="background:var(--accent-blue)" title="Autonomous AI Teammate"></span>`;
-        agentItem.onclick = () => selectChannel('chan_talk_to_a_human');
       }
 
       renderDmList();
@@ -3916,7 +4351,7 @@
       if (!dmListEl) return;
       dmListEl.innerHTML = '';
 
-      const users = Object.values(state.users).filter(u => u.id !== config.user.id && u.id !== 'agent_human' && u.id !== 'agent_supervisor');
+      const users = Object.values(state.users).filter(u => u.id !== config.user.id);
 
       if (users.length === 0) {
         dmListEl.innerHTML = `<div style="font-size:12px; color:var(--text-dim); padding:4px 10px;">No other users discovered yet</div>`;
@@ -3950,7 +4385,7 @@
     function openDm(targetUserId) {
       const dmId = getDmChannelId(config.user.id, targetUserId);
       const targetUser = state.users[targetUserId];
-      const targetName = targetUser ? targetUser.name : (targetUserId === 'agent_human' || targetUserId === 'agent_supervisor' ? 'Human' : targetUserId);
+      const targetName = targetUser ? targetUser.name : targetUserId;
 
       if (!state.channels[dmId]) {
         state.channels[dmId] = {
@@ -4090,7 +4525,6 @@
           <div class="msg-body">
             <div class="msg-meta">
               <span class="msg-author">${msg.author.name}</span>
-              ${msg.author.isBot ? '<span class="bot-tag">BOT</span>' : ''}
               <span class="msg-time">${timeStr}</span>
             </div>
             <div class="msg-content">${renderMarkdown(displayContent)}</div>
@@ -4135,6 +4569,8 @@
         showToast('Please unlock your vault to send encrypted messages');
         return;
       }
+
+      markLocalActivity();
 
       const msgId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const targetChannelId = activeChannelId;
@@ -4191,87 +4627,12 @@
           // Push to Git backend
           const diskMsg = { ...newMsg, content: '[Encrypted Message]' }; // Plaintext omitted on git ref
           pushFiles([{ relativePath, content: JSON.stringify(diskMsg, null, 2) }], config.user.id);
-
-          // Agent mention or message in Talk to a Human / Human DM
-          const isAgentChannel = targetChannelId === 'chan_talk_to_a_human' || targetChannelId === getDmChannelId(config.user.id, 'agent_human');
-          const isAgentMention = /(@Human|@human|@agent|@SupervisorAgent|\/human|\/agent|\/ask)/i.test(text);
-
-          if (isAgentChannel || isAgentMention) {
-            simulateAgentResponse(text, targetChannelId, threadRootId || (isAgentChannel && !threadRootId ? undefined : newMsg.id));
-          }
         } catch (err) {
           console.error('Background send / encryption error:', err);
         }
       })();
     }
     window.sendMessage = sendMessage;
-
-    // Autonomous Human Agent reply generator
-    function generateAgentText(prompt, channelId) {
-      const cleanPrompt = (prompt || '').replace(/@Human|@human|@agent|@SupervisorAgent|\/human|\/agent|\/ask/gi, '').trim();
-      const lower = cleanPrompt.toLowerCase();
-
-      if (!cleanPrompt || /^(hi|hello|hey|greetings|howdy|yo)\b/i.test(lower)) {
-        return `👋 Hello **${config.user.name || 'there'}**! I'm **Human**, your built-in autonomous AI partner.\n\nI'm always active here in **#Talk to a Human** to help you brainstorm, code, debug, manage Git workflows, and navigate this workspace. What would you like to work on today?`;
-      }
-
-      if (lower.startsWith('/help') || lower.includes('what can you do') || lower.includes('help me')) {
-        return `### 👤 Human Assistant Guide\n\n- 🔒 **Encrypted Collaboration**: Discuss code securely with AES-GCM-256 E2EE on \`refs/heads/git-chat\`.\n- 💡 **Instant Answers**: Ask about JavaScript, TypeScript, Python, algorithms, or architecture.\n- 🚀 **Git Operations**: Assistance with branches, staging, remotes, and discrete commit workflows.\n- 💬 **Always Open**: This **#Talk to a Human** channel is your dedicated private AI partner channel.\n\n*Type any question or prompt to get started!*`;
-      }
-
-      if (lower.includes('e2ee') || lower.includes('encrypt') || lower.includes('vault') || lower.includes('aes') || lower.includes('security')) {
-        return `🔒 **Git-Chat End-to-End Encryption**:\n\n- **Client-Side AES-GCM-256**: Messages are encrypted in your browser before ever touching disk or network.\n- **Discrete Atomic Files**: Each message is committed as a separate JSON payload onto \`refs/heads/git-chat\`.\n- **Protected Codebase**: \`DataIsolationGuard\` mathematically prevents chat users from altering system code or repository configs.`;
-      }
-
-      if (lower.includes('typescript') || lower.includes('javascript') || lower.includes('code') || lower.includes('function')) {
-        return `Here is an example demonstrating clean typing and modular design:\n\n\`\`\`typescript\nexport interface WorkspaceTask {\n  id: string;\n  title: string;\n  completed: boolean;\n}\n\nexport function completeTask(task: WorkspaceTask): WorkspaceTask {\n  return { ...task, completed: true };\n}\n\`\`\`\n\nLet me know if you would like me to adapt this for your specific use case!`;
-      }
-
-      if (lower.includes('git') || lower.includes('branch') || lower.includes('commit') || lower.includes('push') || lower.includes('remote')) {
-        return `💡 **Git Sync Details**:\n\n- **Isolated Data Branch**: \`refs/heads/git-chat\` stores all discrete message files.\n- **Zero Conflicts**: Messages and reactions are separate immutable files, avoiding git merge conflicts.\n- **Live Relay**: Localhost and LAN clients broadcast real-time updates seamlessly.`;
-      }
-
-      return `🤖 **Human Response**:\n\nI have received your prompt: *"${cleanPrompt.slice(0, 120)}"*.\n\nI am actively working with you in this channel. Let me know if you need code generation, testing assistance, or architectural guidance!`;
-    }
-
-    // Simulate Human Agent autonomous reply
-    async function simulateAgentResponse(prompt, channelId, rootId) {
-      setTimeout(async () => {
-        const replyText = generateAgentText(prompt, channelId);
-        const chanKey = await getEncryptionKeyForChannel(channelId);
-        let enc = null;
-        if (chanKey) {
-          enc = await CryptoVault.encrypt(replyText, chanKey);
-        }
-
-        const agentReply = {
-          id: `msg_${Date.now()}_agent_${Math.random().toString(36).slice(2, 6)}`,
-          channelId: channelId,
-          threadRootId: rootId || undefined,
-          author: { id: 'agent_human', name: 'Human', avatar: '👤', isBot: true },
-          content: replyText,
-          encrypted: enc || undefined,
-          timestamp: Date.now()
-        };
-
-        if (enc && chanKey) {
-          const cacheKey = getMsgDecryptCacheKey(agentReply, isVaultLocked, channelId);
-          if (cacheKey) decryptedMessageCache.set(cacheKey, replyText);
-        }
-
-        state.messages.push(agentReply);
-        notifyMessageIfEligible(agentReply);
-        saveLocalCache();
-        renderTimeline();
-        if (activeThreadRootId === rootId) renderThread();
-
-        const agentPath = rootId
-          ? `channels/${channelId}/threads/${rootId}/${agentReply.timestamp}_agent_human_${agentReply.id}.json`
-          : `channels/${channelId}/messages/${agentReply.timestamp}_agent_human_${agentReply.id}.json`;
-        const diskAgentMsg = { ...agentReply, content: '[Encrypted Message]' };
-        pushFiles([{ relativePath: agentPath, content: JSON.stringify(diskAgentMsg, null, 2) }], 'agent_human');
-      }, 500);
-    }
 
     // Delete message
     window.deleteMessage = function(msgId) {
@@ -4461,28 +4822,6 @@
             state.messages.push(parsed);
             isChanged = true;
             notifyMessageIfEligible(parsed);
-
-            // Trigger autonomous Human AI partner response if remote message is in Talk to Human or mentions @Human
-            if (parsed.author && parsed.author.id !== 'agent_human' && parsed.author.id !== config.user?.id) {
-              const isAgentChan = parsed.channelId === 'chan_talk_to_a_human' || (parsed.channelId && parsed.channelId.includes('agent_human'));
-              const isAgentMention = /(@Human|@human|@agent|@SupervisorAgent|\/human|\/agent|\/ask)/i.test(parsed.content || '');
-              if (isAgentChan || isAgentMention) {
-                if (!answeredRemoteMessageIds.has(parsed.id) && config.user?.id !== 'agent_human') {
-                  answeredRemoteMessageIds.add(parsed.id);
-                  getEncryptionKeyForChannel(parsed.channelId).then(async (chanKey) => {
-                    let plainText = parsed.content;
-                    if ((!plainText || plainText === '[Encrypted Message]') && parsed.encrypted && chanKey) {
-                      try {
-                        plainText = await CryptoVault.decrypt(parsed.encrypted, chanKey);
-                      } catch {}
-                    }
-                    simulateAgentResponse(plainText || parsed.content || '', parsed.channelId, parsed.threadRootId);
-                  }).catch(() => {
-                    simulateAgentResponse(parsed.content || '', parsed.channelId, parsed.threadRootId);
-                  });
-                }
-              }
-            }
           } else {
             const existing = state.messages[idx];
             if (existing.timestamp !== parsed.timestamp || 
@@ -4564,9 +4903,19 @@
     // Direct GitHub REST API Sync (for standalone zero-backend mode with ETag caching)
     let lastGitHubTreeSha = '';
     let lastGitHubEtag = '';
+    const gitHubRateLimit = createGistRateLimitState();
+    window.gitHubRateLimit = gitHubRateLimit;
 
     async function syncFromGitHub(manual = false) {
       if (!config.owner || !config.repo) return;
+
+      // Respect an active rate-limit window so we recover instead of hammering
+      // a quota-exhausted endpoint and staying permanently degraded.
+      if (isRateLimitActive(gitHubRateLimit) && !manual) {
+        transportRegistry.setStatus('git-sync', 'disconnected');
+        return;
+      }
+
       try {
         const branch = config.branch || 'master';
         const token = (config.token || '').trim();
@@ -4583,16 +4932,30 @@
 
         // Get branch commit and tree SHA safely
         let branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/${encodeURIComponent(branch)}`, { headers });
+        updateRateLimitFromResponse(gitHubRateLimit, branchRes);
+
         if (branchRes.status === 304 && !manual) {
+          transportRegistry.setStatus('git-sync', 'connected');
           return; // Not modified, save rate limit
+        }
+        if (isRateLimitActive(gitHubRateLimit)) {
+          transportRegistry.setStatus('git-sync', 'disconnected');
+          const waitSec = Math.max(1, Math.ceil((gitHubRateLimit.rateLimitReset - Date.now()) / 1000));
+          if (manual) showToast(`GitHub rate limit reached — retrying in ${waitSec}s`);
+          return;
         }
         if (!branchRes.ok && branch !== 'master' && branch !== 'main') {
           branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/master`, { headers });
+          updateRateLimitFromResponse(gitHubRateLimit, branchRes);
           if (!branchRes.ok) {
             branchRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/branches/main`, { headers });
+            updateRateLimitFromResponse(gitHubRateLimit, branchRes);
           }
         }
-        if (!branchRes.ok) return;
+        if (!branchRes.ok) {
+          transportRegistry.setStatus('git-sync', branchRes.status === 401 || branchRes.status === 404 ? 'failed' : 'disconnected');
+          return;
+        }
 
         const newEtag = branchRes.headers.get('etag');
         if (newEtag) lastGitHubEtag = newEtag;
@@ -4600,10 +4963,14 @@
         const branchData = await branchRes.json();
         const treeSha = branchData.commit?.commit?.tree?.sha;
         if (!treeSha) return;
+
+        // Reaching a readable branch head means this tier is carrying data.
+        transportRegistry.setStatus('git-sync', 'connected');
         if (treeSha === lastGitHubTreeSha && !manual) return; // Tree unchanged
 
         const treeUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/git/trees/${treeSha}?recursive=1`;
         const treeRes = await fetch(treeUrl, { headers });
+        updateRateLimitFromResponse(gitHubRateLimit, treeRes);
         if (!treeRes.ok) return;
 
         const treeData = await treeRes.json();
@@ -4653,6 +5020,7 @@
           }).catch(() => {});
         }
       } catch (e) {
+        transportRegistry.setStatus('git-sync', isNetworkOrOfflineError(e) ? 'offline' : 'failed');
         console.warn('syncFromGitHub failed:', e);
       }
     }
@@ -4688,6 +5056,8 @@
       } finally {
         if (syncIcon) syncIcon.classList.remove('spin');
       }
+
+      localBridgeHealthy = localBridgeSucceeded;
 
       if (!localBridgeSucceeded && config.owner && config.repo) {
         await syncFromGitHub(manual);
@@ -4985,6 +5355,10 @@ Minimum version required to store current data is: `+i+`.
       if (uBackend) uBackend.value = config.backendUrl || (window.location.protocol === 'file:' ? 'http://localhost:4300' : '');
       const uSecret = document.getElementById('cfg-workspace-secret');
       if (uSecret) uSecret.value = config.workspaceSecret || '';
+      const uGistId = document.getElementById('cfg-gist-id');
+      if (uGistId) uGistId.value = config.gistId || '';
+      const uGistToken = document.getElementById('cfg-gist-token');
+      if (uGistToken) uGistToken.value = config.gistToken || '';
       const autoUpChk = document.getElementById('cfg-auto-update-enabled');
       if (autoUpChk) autoUpChk.checked = isAutoUpdateEnabled();
       const verSpan = document.getElementById('settings-client-version');
@@ -5295,13 +5669,6 @@ Minimum version required to store current data is: `+i+`.
       setClickHandler('tb-italic', () => wrapText('*', '*'));
       setClickHandler('tb-code', () => wrapText('```\n', '\n```'));
       setClickHandler('tb-quote', () => wrapText('> ', ''));
-      setClickHandler('tb-agent', () => {
-        const input = document.getElementById('message-input');
-        if (input) {
-          input.value += '@Human ';
-          input.focus();
-        }
-      });
 
       // Composer Send
       const input = document.getElementById('message-input');
@@ -5605,6 +5972,8 @@ Minimum version required to store current data is: `+i+`.
         config.token = (document.getElementById('cfg-token')?.value || '').trim();
         config.backendUrl = document.getElementById('cfg-backend-url')?.value.trim() || '';
         config.workspaceSecret = document.getElementById('cfg-workspace-secret')?.value.trim() || '';
+        config.gistId = (document.getElementById('cfg-gist-id')?.value || '').trim();
+        config.gistToken = (document.getElementById('cfg-gist-token')?.value || '').trim();
 
         // Storage Settings
         const storageProvider = document.getElementById('cfg-storage-provider')?.value || 'github';
@@ -5649,6 +6018,7 @@ Minimum version required to store current data is: `+i+`.
         renderTimeline(true);
         checkS3Status();
         syncFromLocalServer(true);
+        scheduleAdaptiveSync();
         if (settingsModal) settingsModal.classList.remove('open');
         showToast('Settings saved & synced successfully');
       });
@@ -5897,6 +6267,8 @@ Minimum version required to store current data is: `+i+`.
           if (embedded.workspaceSecret) config.workspaceSecret = embedded.workspaceSecret;
           if (embedded.backendUrl) config.backendUrl = embedded.backendUrl;
           if (embedded.token) config.token = embedded.token;
+          if (embedded.gistId) config.gistId = embedded.gistId;
+          if (embedded.gistToken) config.gistToken = embedded.gistToken;
           if (embedded.user && typeof embedded.user === 'object') {
             if (embedded.user.name) config.user.name = embedded.user.name;
             if (embedded.user.id) config.user.id = embedded.user.id;
@@ -5931,6 +6303,8 @@ Minimum version required to store current data is: `+i+`.
           if (parsed.workspaceSecret) config.workspaceSecret = parsed.workspaceSecret;
           if (parsed.backendUrl) config.backendUrl = parsed.backendUrl;
           if (parsed.token) config.token = parsed.token;
+          if (parsed.gistId) config.gistId = parsed.gistId;
+          if (parsed.gistToken) config.gistToken = parsed.gistToken;
           if (parsed.password) {
             vaultPassword = parsed.password;
             vaultKey = await CryptoVault.deriveKey(vaultPassword);
@@ -6053,7 +6427,7 @@ Minimum version required to store current data is: `+i+`.
       // Periodic background sync & heartbeats (ensure registered only once)
       if (!window.__gitChatIntervalsStarted) {
         window.__gitChatIntervalsStarted = true;
-        setInterval(() => syncFromLocalServer(false), 3000);
+        scheduleAdaptiveSync();
         setInterval(publishPresence, 20000);
         setInterval(checkS3Status, 15000);
         setInterval(() => checkForUpdates(false), 30000);
@@ -6071,7 +6445,9 @@ Minimum version required to store current data is: `+i+`.
           }
           if (window.p2pClient) window.p2pClient.broadcastDiscovery();
           if (window.liveMeshClient && !window.liveMeshClient.isConnected()) window.liveMeshClient.connect();
+          markLocalActivity();
           syncFromGitHub(false).catch(() => {});
+          scheduleAdaptiveSync();
         });
 
         document.addEventListener('visibilitychange', () => {
@@ -6081,8 +6457,11 @@ Minimum version required to store current data is: `+i+`.
             }
             if (window.p2pClient) window.p2pClient.broadcastDiscovery();
             if (window.liveMeshClient && !window.liveMeshClient.isConnected()) window.liveMeshClient.connect();
+            markLocalActivity();
             syncFromGitHub(false).catch(() => {});
           }
+          // Re-evaluate cadence immediately on foreground/background transition.
+          scheduleAdaptiveSync();
         });
       }
     }

@@ -3,3 +3,4 @@ export * from './gitSyncEngine.js';
 export * from './gitCommitQueue.js';
 export * from './offlineQueue.js';
 export * from './s3Client.js';
+export * from './gistClient.js';

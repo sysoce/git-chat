@@ -19,16 +19,11 @@ export async function resetWorkspace(workspaceRoot: string, port = 4300): Promis
     version: "1.0.0",
     channels: [
       { id: "chan_general", name: "general", topic: "Company-wide announcements and work-based matters", isPrivate: false },
-      { id: "chan_talk_to_a_human", name: "Talk to a Human", topic: "Always-open direct channel with Human", isPrivate: false },
-      { id: "chan_engineering", name: "engineering", topic: "Architecture, PRs, CI/CD, and technical discussions", isPrivate: false },
-      { id: "chan_random", name: "random", topic: "Non-work banter, water cooler chats, and fun links", isPrivate: false },
     ],
   };
 
   const stagedFiles = [
     { relativePath: "workspace.json", content: JSON.stringify(workspaceConfig, null, 2) },
-    { relativePath: "users/agent_human.json", content: JSON.stringify({ id: "agent_human", name: "Human", avatar: "👤", role: "agent", isBot: true }, null, 2) },
-    { relativePath: "presence/agent_human.json", content: JSON.stringify({ userId: "agent_human", status: "online", emoji: "👤", lastSeen: Date.now() }, null, 2) },
     ...workspaceConfig.channels.map(c => ({ relativePath: "channels/" + c.id + "/meta.json", content: JSON.stringify(c, null, 2) })),
   ];
 

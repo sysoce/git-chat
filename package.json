@@ -1,7 +1,7 @@
 {
   "name": "git-chat",
-  "version": "1.0.8",
-  "description": "Zero-backend, single-file Slack clone with isolated Git data sync and autonomous agent support",
+  "version": "1.0.9",
+  "description": "Zero-backend, single-file, end-to-end encrypted chat with Git-hosted sync, P2P, and multi-transport fallbacks",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -25,7 +25,8 @@
     "slack-clone",
     "serverless",
     "realtime",
-    "autonomous-agents",
+    "e2ee",
+    "p2p",
     "single-file",
     "zero-backend"
   ],

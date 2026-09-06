@@ -1,10 +1,10 @@
 export * from './notifications';
+export * from './dm';
 
 export interface ChatAuthor {
   id: string;
   name: string;
   avatar?: string;
-  isBot?: boolean;
 }
 
 export interface ChatAttachment {
@@ -49,16 +49,13 @@ export interface ChatChannel {
   createdBy?: string;
 }
 
-export * from './dm';
-
 export interface ChatUser {
   id: string;
   name: string;
   avatar?: string;
   email?: string;
-  role?: 'admin' | 'member' | 'agent';
+  role?: 'admin' | 'member';
   pubkey?: string;
-  isBot?: boolean;
 }
 
 export interface ChatPresence {
@@ -151,4 +148,3 @@ export interface ChatManifest {
   activeUsersCount: number;
   totalMessagesCount: number;
 }
-

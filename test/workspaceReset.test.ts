@@ -41,6 +41,6 @@ describe("Workspace Clean Slate & Reset Suite", () => {
     assert.strictEqual(messageFiles.length, 0, "All old messages must be purged on clean slate");
 
     const channelMeta = afterFiles.filter(f => f.relativePath.endsWith("/meta.json"));
-    assert.strictEqual(channelMeta.length, 4, "Must contain the 4 standard default channels");
+    assert.strictEqual(channelMeta.length, 1, "Must contain only the standard general default channel");
   });
 });

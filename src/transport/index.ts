@@ -3,3 +3,8 @@ export * from './transportRegistry.js';
 export * from './liveMeshTransportAdapter.js';
 export * from './sseTransportAdapter.js';
 export * from './gitTransportAdapter.js';
+export * from './gistHttp.js';
+export * from './syncPollingPolicy.js';
+export * from './gistTransportAdapter.js';
+export * from './liveReachabilityProbe.js';
+export * from './syncStateMachine.js';

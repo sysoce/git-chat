@@ -23,9 +23,6 @@ export function isMentioned(content: string, currentUserId: string, currentUserN
 
   if (nameRegex.test(lower) || idRegex.test(lower)) return true;
   if (/\b@(everyone|channel|here)\b/i.test(lower)) return true;
-  if (currentUserId === 'user_human_agent' && (/\b@human\b/i.test(lower) || /\/human\b/i.test(lower))) {
-    return true;
-  }
   return false;
 }
 
