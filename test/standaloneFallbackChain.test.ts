@@ -47,7 +47,11 @@ interface SchedulerHarness {
     rateLimitReset: number;
     consecutiveFailures: number;
   };
-  registry: { activeMode: string };
+  registry: {
+    activeMode: string;
+    displayMode: string;
+    isLiveMode: (mode: string) => boolean;
+  };
 }
 
 /**
@@ -66,7 +70,13 @@ function loadScheduler(html: string): SchedulerHarness {
   );
   assert.ok(schedulerBlock, 'index.html must define the adaptive scheduling section');
 
-  const registry = { activeMode: 'offline' };
+  const registry = {
+    activeMode: 'offline',
+    displayMode: 'offline',
+    isLiveMode(mode: string) {
+      return ['p2p', 'live-mesh', 'live-sse'].includes(mode);
+    },
+  };
   const sandbox: Record<string, unknown> = {
     window: {},
     document: { visibilityState: 'visible' },

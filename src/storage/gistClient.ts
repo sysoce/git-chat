@@ -146,7 +146,7 @@ export class GistClient {
     const existingFiles = fetchRes.data?.files || [];
 
     const updatedPayload: GistSyncPayload = {
-      version: '1.0.11',
+      version: '1.0.12',
       updatedAt: Date.now(),
       files: mergeGistSyncFiles(existingFiles, files),
     };

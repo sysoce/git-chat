@@ -1,6 +1,7 @@
-import { detectGitConfig, createChatCommit, pushChatBranch } from "../backend/chatGitPlumbing.js";
+import { detectGitConfig, createChatCommit, pushChatBranch, readChatBranchFiles } from "../backend/chatGitPlumbing.js";
 import { generateQrMatrix } from "../qr/qrEncoder.js";
 import { renderQrToTerminal } from "../qr/qrRenderer.js";
+import { buildResetWorkspaceConfig, normalizeHistoryEpoch } from "../engine/syncIngestPolicy.js";
 import type { SetupResult } from "./setupWizard.js";
 import type { ChatWorkspaceConfig } from "../types/chat.js";
 
@@ -11,12 +12,26 @@ export async function resetWorkspace(workspaceRoot: string, port = 4300): Promis
   const repo = gitConfig.info?.repo || "git-chat";
   const branch = "git-chat";
 
+  let previousEpoch = 1;
+  try {
+    const existing = await readChatBranchFiles(workspaceRoot, branch);
+    const workspaceFile = existing.find((file) => file.relativePath === "workspace.json");
+    if (workspaceFile) {
+      const parsed = JSON.parse(workspaceFile.content);
+      previousEpoch = normalizeHistoryEpoch(parsed.historyEpoch);
+    }
+  } catch {}
+
+  const resetMeta = buildResetWorkspaceConfig({ historyEpoch: previousEpoch }, "user_admin");
   const workspaceConfig: ChatWorkspaceConfig = {
     name: "Git-Chat Workspace",
     description: "Serverless Slack powered by Git data sync",
     defaultChannelId: "chan_general",
     createdAt: Date.now(),
     version: "1.0.0",
+    historyEpoch: resetMeta.historyEpoch,
+    historyResetAt: resetMeta.historyResetAt,
+    historyResetBy: resetMeta.historyResetBy,
     channels: [
       { id: "chan_general", name: "general", topic: "Company-wide announcements and work-based matters", isPrivate: false },
     ],
@@ -59,6 +74,7 @@ export async function resetWorkspace(workspaceRoot: string, port = 4300): Promis
     branch,
     remoteUrl,
     backendUrl: lanUrl,
+    historyEpoch: workspaceConfig.historyEpoch,
   };
 
   const encodedPayload = Buffer.from(JSON.stringify(setupPayload)).toString("base64");

@@ -1,6 +1,6 @@
 {
   "name": "git-chat",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Zero-backend, single-file, end-to-end encrypted chat with Git-hosted sync, P2P, and multi-transport fallbacks",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,7 +15,7 @@
     "reset": "tsx src/cli/cli.ts reset",
     "clean": "tsx src/cli/cli.ts reset",
     "export": "tsx src/cli/cli.ts export",
-    "test": "tsx --test test/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 test/*.test.ts",
     "monitor": "tsx src/cli/liveMonitor.ts",
     "lint": "tsc --noEmit"
   },

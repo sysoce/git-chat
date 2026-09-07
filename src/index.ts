@@ -4,6 +4,7 @@ export * from './security/dataIsolationGuard';
 export * from './security/cryptoVault';
 export * from './engine/chatEventProjector';
 export * from './engine/chatManifestGenerator';
+export * from './engine/syncIngestPolicy';
 export * from './engine/notificationManager';
 export * from './backend/chatGitPlumbing';
 export * from './backend/chatRemoteClient';

@@ -1,9 +1,25 @@
 import { describe, it, before, after } from 'node:test';
 import * as assert from 'node:assert';
 import * as http from 'node:http';
+import * as net from 'node:net';
 import { S3Client } from '../src/storage/s3Client';
 import { startGitChatServer } from '../src/server/server';
 import * as path from 'node:path';
+
+async function probeMinio(port = 9000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const finish = (ok: boolean) => {
+      socket.destroy();
+      resolve(ok);
+    };
+    socket.setTimeout(400);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+    socket.connect(port, '127.0.0.1');
+  });
+}
 
 describe('S3 Storage & Media Integration Suite', () => {
   const client = new S3Client({
@@ -12,14 +28,21 @@ describe('S3 Storage & Media Integration Suite', () => {
     accessKey: 'minioadmin',
     secretKey: 'minioadminpassword'
   });
+  let minioOnline = false;
 
-  it('checks S3 server health status', async () => {
+  before(async () => {
+    minioOnline = await probeMinio();
+  });
+
+  it('checks S3 server health status', async (t) => {
+    if (!minioOnline) return t.skip('MinIO not reachable on :9000');
     const health = await client.checkHealth();
     assert.strictEqual(health.online, true, 'MinIO S3 server should be online');
     assert.strictEqual(health.bucket, 'git-chat-media');
   });
 
-  it('uploads an image buffer to S3 and verifies returned metadata', async () => {
+  it('uploads an image buffer to S3 and verifies returned metadata', async (t) => {
+    if (!minioOnline) return t.skip('MinIO not reachable on :9000');
     const sampleImageBuffer = Buffer.from('GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;');
     const result = await client.uploadObject('test-avatar.gif', 'image/gif', sampleImageBuffer);
 
@@ -29,13 +52,13 @@ describe('S3 Storage & Media Integration Suite', () => {
     assert.match(result.key, /^attachments\/.+\.gif$/);
     assert.match(result.url, /^\/api\/s3\/file\/attachments\/.+\.gif$/);
 
-    // Retrieve and verify data
     const fetched = await client.getObject(result.key);
     assert.strictEqual(fetched.contentType, 'image/gif');
     assert.strictEqual(fetched.data.equals(sampleImageBuffer), true);
   });
 
-  it('uploads a document file to S3 and retrieves it', async () => {
+  it('uploads a document file to S3 and retrieves it', async (t) => {
+    if (!minioOnline) return t.skip('MinIO not reachable on :9000');
     const textData = Buffer.from('# Architecture Document\nMinIO local S3 storage for git-chat.', 'utf8');
     const result = await client.uploadObject('architecture.md', 'text/markdown', textData);
 
@@ -53,6 +76,7 @@ describe('S3 Storage & Media Integration Suite', () => {
     const rootDir = path.resolve(__dirname, '..');
 
     before(async () => {
+      if (!minioOnline) return;
       server = startGitChatServer({
         port: testPort,
         host: '127.0.0.1',
@@ -69,7 +93,8 @@ describe('S3 Storage & Media Integration Suite', () => {
       }
     });
 
-    it('GET /api/s3/status returns online status', async () => {
+    it('GET /api/s3/status returns online status', async (t) => {
+      if (!minioOnline) return t.skip('MinIO not reachable on :9000');
       const res = await fetch(`http://127.0.0.1:${testPort}/api/s3/status`, {
         headers: { 'Connection': 'close' }
       });
@@ -80,7 +105,8 @@ describe('S3 Storage & Media Integration Suite', () => {
       assert.strictEqual(data.bucket, 'git-chat-media');
     });
 
-    it('POST /api/s3/upload uploads base64 data and GET /api/s3/file/:key serves it', async () => {
+    it('POST /api/s3/upload uploads base64 data and GET /api/s3/file/:key serves it', async (t) => {
+      if (!minioOnline) return t.skip('MinIO not reachable on :9000');
       const payloadContent = 'Audio speech sample data 12345';
       const base64Data = Buffer.from(payloadContent).toString('base64');
 
@@ -100,7 +126,6 @@ describe('S3 Storage & Media Integration Suite', () => {
       assert.strictEqual(uploadJson.attachment.name, 'voice-memo.wav');
       assert.strictEqual(uploadJson.attachment.type, 'audio/wav');
 
-      // Fetch file from server
       const fileRes = await fetch(`http://127.0.0.1:${testPort}${uploadJson.attachment.url}`, {
         headers: { 'Connection': 'close' }
       });

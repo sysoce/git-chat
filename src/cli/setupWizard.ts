@@ -83,7 +83,8 @@ export async function runSetupWizard(options: SetupOptions | string = {}): Promi
     backendUrl: bestBackendUrl,
     remoteUrl,
     keyVersion: 2,
-    workspaceSchemaVersion: 2,
+    workspaceSchemaVersion: 3,
+    historyEpoch: 1,
   };
 
   const encodedPayload = Buffer.from(JSON.stringify(setupPayload)).toString('base64');

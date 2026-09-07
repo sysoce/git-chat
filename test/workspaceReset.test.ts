@@ -42,5 +42,11 @@ describe("Workspace Clean Slate & Reset Suite", () => {
 
     const channelMeta = afterFiles.filter(f => f.relativePath.endsWith("/meta.json"));
     assert.strictEqual(channelMeta.length, 1, "Must contain only the standard general default channel");
+
+    const workspaceFile = afterFiles.find(f => f.relativePath === "workspace.json");
+    assert.ok(workspaceFile, "reset must write workspace.json");
+    const workspace = JSON.parse(workspaceFile!.content);
+    assert.ok(Number(workspace.historyEpoch) >= 2, "clean slate must bump historyEpoch");
+    assert.ok(workspace.historyResetAt, "clean slate must stamp historyResetAt");
   });
 });

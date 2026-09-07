@@ -34,6 +34,8 @@ export interface ChatMessage {
   lastReplyAt?: number;
   editedAt?: number;
   deletedAt?: number;
+  deliveryState?: 'pending' | 'sent' | 'failed' | 'queued';
+  epoch?: number;
   timestamp: number;
 }
 
@@ -47,6 +49,10 @@ export interface ChatChannel {
   members?: string[];
   createdAt?: number;
   createdBy?: string;
+  updatedAt?: number;
+  updatedBy?: string;
+  archivedAt?: number;
+  archivedBy?: string;
 }
 
 export interface ChatUser {
@@ -78,6 +84,7 @@ export interface ChatEvent {
   targetMessageId?: string;
   emoji?: string;
   payload?: any;
+  epoch?: number;
   timestamp: number;
 }
 
@@ -129,6 +136,9 @@ export interface ChatWorkspaceConfig {
   membershipPolicy?: MembershipPolicy;
   createdAt: number;
   version: string;
+  historyEpoch?: number;
+  historyResetAt?: number;
+  historyResetBy?: string;
 }
 
 export interface ChatManifestChannelSummary {

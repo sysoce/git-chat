@@ -200,6 +200,50 @@
       background: var(--bg-sidebar-hover);
       color: var(--text-heading);
     }
+    .nav-item-unread {
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      background: var(--accent-blue);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+    }
+    .mention-picker {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+      display: none;
+      z-index: 20;
+    }
+    .mention-picker.open { display: block; }
+    .mention-picker button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      color: var(--text-heading);
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .mention-picker button:hover { background: var(--bg-sidebar-hover); }
+    .typing-line {
+      min-height: 18px;
+      font-size: 12px;
+      color: var(--text-dim);
+      padding: 0 16px 6px;
+    }
     .nav-item.active {
       background: var(--bg-sidebar-active);
       color: #fff;
@@ -987,6 +1031,8 @@
             <h2 id="active-channel-title"># general</h2>
             <div class="channel-topic" id="active-channel-topic">Company-wide announcements and work-based matters</div>
           </div>
+          <button class="header-btn" id="btn-channel-mute-toggle" title="Mute this channel" aria-label="Mute channel" style="padding:4px 9px; min-height:30px;">🔔</button>
+          <button class="header-btn" id="btn-channel-actions" title="Edit or archive this channel" aria-label="Channel actions" style="display:none; padding:4px 9px; min-height:30px;">•••</button>
         </div>
         <div class="chat-header-actions">
           <button class="header-btn" id="mesh-status-indicator" style="font-size:12px; font-weight:600; color:#f59e0b;" title="Click to choose connection mode">🟡 Connecting...</button>
@@ -1002,6 +1048,7 @@
 
         <!-- Mobile Overflow Dropdown -->
         <div class="mobile-menu-dropdown" id="mobile-overflow-dropdown">
+          <button class="dropdown-item" id="btn-mob-mute">🔔 Mute Channel</button>
           <button class="dropdown-item" id="btn-mob-search">🔍 Search Messages</button>
           <button class="dropdown-item" id="btn-mob-sync">🔄 Refresh Messages</button>
           <button class="dropdown-item" id="btn-mob-connection">🌐 Change Connection Mode</button>
@@ -1017,7 +1064,7 @@
 
       <!-- COMPOSER -->
       <div id="composer-container">
-        <div class="composer-box" id="composer-box">
+        <div class="composer-box" id="composer-box" style="position:relative;">
           <div class="composer-toolbar">
             <button class="tool-btn" id="tb-bold" title="Bold"><b>B</b></button>
             <button class="tool-btn" id="tb-italic" title="Italic"><i>I</i></button>
@@ -1027,7 +1074,9 @@
             <input type="file" id="file-upload-input" style="display:none;" multiple />
           </div>
           <div id="composer-staged-attachments" style="display:none; padding:8px 12px; gap:8px; flex-wrap:wrap; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border-light);"></div>
+          <div id="mention-picker" class="mention-picker" role="listbox" aria-label="Mention suggestions"></div>
           <textarea class="composer-textarea" id="message-input" placeholder="Message #general (Type / for commands, @ for mentions)..." rows="1"></textarea>
+          <div class="typing-line" id="typing-indicator"></div>
           <div class="composer-bottom">
             <div class="isolation-pill" id="encryption-indicator">🔒 E2EE Active</div>
             <button class="send-btn" id="btn-send-message">Send ↵</button>
@@ -1046,7 +1095,9 @@
       <div id="thread-timeline" style="flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px;"></div>
       <div style="padding:10px 14px calc(12px + var(--safe-bottom)) 14px; border-top:1px solid var(--border); background:var(--bg-main);">
         <textarea class="composer-textarea" id="thread-input" style="min-height:50px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;" placeholder="Reply in thread..."></textarea>
-        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+          <button class="tool-btn" id="tb-thread-attach" title="Attach to thread">📎</button>
+          <input type="file" id="thread-file-upload-input" style="display:none;" multiple />
           <button class="send-btn" id="btn-send-thread">Reply ↵</button>
         </div>
       </div>
@@ -1126,6 +1177,30 @@
     </div>
   </div>
 
+  <!-- EDIT / ARCHIVE CHANNEL MODAL -->
+  <div class="modal-overlay" id="manage-chan-modal">
+    <div class="modal-card">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-title">
+        <span>Channel Settings</span>
+        <button class="close-btn" id="btn-close-manage-chan">×</button>
+      </div>
+      <div id="manage-chan-permission-note" style="font-size:12px; color:var(--text-dim); margin-bottom:12px;"></div>
+      <div class="form-group">
+        <label class="form-label" for="edit-chan-name">Channel Name</label>
+        <input class="form-input" id="edit-chan-name" maxlength="80" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="edit-chan-topic">Topic / Description</label>
+        <input class="form-input" id="edit-chan-topic" maxlength="250" />
+      </div>
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="btn-secondary" id="btn-archive-channel" style="color:var(--danger); border-color:rgba(239,68,68,0.45);">Archive Channel</button>
+        <button class="btn-primary" id="btn-save-channel" style="flex:1;">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SETTINGS MODAL -->
   <div class="modal-overlay" id="settings-modal">
     <div class="modal-card" style="max-width:560px; max-height:85vh; display:flex; flex-direction:column;">
@@ -1171,12 +1246,12 @@
           </div>
           <div class="form-group">
             <label class="form-label">Git Data Repository (owner/repo)</label>
-            <input class="form-input" id="cfg-repo" value="sysoce/git-chat" />
+            <input class="form-input" id="cfg-repo" value="sysoce/chat-data" />
             <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Can be any repository on GitHub or Gita. All users pointing here communicate.</div>
           </div>
           <div class="form-group">
             <label class="form-label">Data Branch</label>
-            <input class="form-input" id="cfg-branch" value="git-chat" />
+            <input class="form-input" id="cfg-branch" value="master" />
           </div>
           <div class="form-group">
             <label class="form-label">Git Personal Access Token (PAT) [Optional / Standalone Remote Sync]</label>
@@ -2041,6 +2116,8 @@
                   this.options.onFile?.(data.path, data.content);
                 } else if (data.type === 'sync_request' && data.requesterId) {
                   this.options.onSyncReq?.(data.requesterId);
+                } else if (data.type === 'typing') {
+                  this.options.onTyping?.(data);
                 }
               } catch (err) {}
             }
@@ -2141,6 +2218,21 @@
         this.save();
         if (window.transportRegistry) window.transportRegistry.evaluate();
         return it;
+      }
+      purgeBelowEpoch(epoch) {
+        const minEpoch = Number(epoch || 1);
+        this.items = this.items.filter(item => {
+          item.files = (item.files || []).filter(file => {
+            try {
+              const parsed = JSON.parse(file.content || '{}');
+              return normalizeHistoryEpoch(parsed.epoch) >= minEpoch;
+            } catch {
+              return true;
+            }
+          });
+          return item.files.length > 0;
+        });
+        this.save();
       }
       async drain(pusher) {
         let count = 0;
@@ -2670,8 +2762,9 @@
         }
 
         const payload = {
-          version: window.CLIENT_VERSION || '1.0.11',
+          version: window.CLIENT_VERSION || '1.0.12',
           updatedAt: Date.now(),
+          epoch: currentEpochStamp(),
           files: this.mergeFiles(existingFiles, normalized)
         };
 
@@ -2703,6 +2796,26 @@
         this.lastEtag = null;
         this.setStatus('connected');
         return true;
+      }
+
+      async replaceVault(files) {
+        if (!this.isConfigured()) return false;
+        const payload = {
+          version: window.CLIENT_VERSION || '1.0.12',
+          updatedAt: Date.now(),
+          epoch: currentEpochStamp(),
+          files: files || []
+        };
+        const body = JSON.stringify({
+          files: { [GIST_SYNC_FILENAME]: { content: JSON.stringify(payload, null, 2) } }
+        });
+        const res = await fetch(`${this.baseUrl}/gists/${this.gistId}`, {
+          method: 'PATCH',
+          headers: this.buildHeaders(undefined, true),
+          body
+        });
+        this.lastEtag = null;
+        return res.ok;
       }
 
       async poll() {
@@ -2787,12 +2900,16 @@
         } else if (this.statuses['p2p'] === 'connected') best = 'p2p';
         else if (this.statuses['live-mesh'] === 'connected') best = 'live-mesh';
         else if (this.statuses['live-sse'] === 'connected') best = 'live-sse';
+        else if (this.statuses['p2p'] === 'connecting' || this.statuses['live-mesh'] === 'connecting' || this.statuses['live-sse'] === 'connecting') best = 'connecting';
         else if (this.statuses['gist-sync'] === 'connected') best = 'gist-sync';
         else if (this.statuses['git-sync'] === 'connected') best = 'git-sync';
-        else if (this.statuses['p2p'] === 'connecting' || this.statuses['live-mesh'] === 'connecting' || this.statuses['live-sse'] === 'connecting') best = 'connecting';
 
         this.activeMode = best;
         this.scheduleUITransition(best);
+      }
+
+      isLiveMode(mode) {
+        return ['p2p', 'live-mesh', 'live-sse'].includes(mode);
       }
 
       isConnectedMode(mode) {
@@ -2989,8 +3106,9 @@
 
       // A connected realtime tier already delivers messages, so remote polling
       // only needs to be a slow correctness backstop.
-      const liveModes = ['p2p', 'live-mesh', 'live-sse'];
-      if (liveModes.includes(transportRegistry.activeMode)) {
+      if (typeof transportRegistry?.isLiveMode === 'function' &&
+          (transportRegistry.isLiveMode(transportRegistry.activeMode) ||
+           transportRegistry.isLiveMode(transportRegistry.displayMode))) {
         return Math.max(LIVE_TRANSPORT_BACKSTOP_MS, quotaFloorMs);
       }
 
@@ -3096,6 +3214,9 @@
         },
         onSyncReq: (requesterId) => {
           sendMeshCatchupSnapshot(requesterId);
+        },
+        onTyping: (data) => {
+          handleRemoteTyping(data);
         }
       });
       window.liveMeshClient.connect();
@@ -3103,6 +3224,20 @@
 
     function sendMeshCatchupSnapshot(requesterId) {
       if (!window.liveMeshClient || !window.liveMeshClient.isConnected()) return;
+      window.liveMeshClient.publish({
+        type: 'sync_file',
+        path: 'workspace.json',
+        content: JSON.stringify({
+          name: `${config.owner}/${config.repo}`,
+          defaultChannelId: 'chan_general',
+          historyEpoch: currentEpochStamp(),
+          historyResetAt: Number(config.historyResetAt || historyResetAt || 0),
+          historyResetBy: config.historyResetBy || config.user.id,
+          createdAt: Date.now(),
+          version: CLIENT_VERSION,
+          channels: Object.values(state.channels || {}).filter(c => !c.isDm && !c.archivedAt)
+        })
+      });
       if (config.user && config.user.id) {
         window.liveMeshClient.publish({
           type: 'sync_file',
@@ -3110,22 +3245,43 @@
           content: JSON.stringify(state.users[config.user.id] || config.user)
         });
       }
-      const recent = (state.messages || []).slice(-50);
+      if (state.membersConfig) {
+        window.liveMeshClient.publish({
+          type: 'sync_file',
+          path: 'config/members.json',
+          content: JSON.stringify(state.membersConfig)
+        });
+      }
+      for (const channel of Object.values(state.channels || {})) {
+        if (channel.isDm) continue;
+        window.liveMeshClient.publish({
+          type: 'sync_file',
+          path: `channels/${channel.id}/meta.json`,
+          content: JSON.stringify(channel)
+        });
+      }
+      const recent = (state.messages || [])
+        .filter(m => shouldIngestChatPayload(m, `channels/${m.channelId}/messages/`))
+        .slice(-50);
       for (const m of recent) {
         const diskMsg = {
           id: m.id,
           channelId: m.channelId,
           author: m.author,
-          content: m.content || '',
+          content: '[Encrypted Message]',
           encrypted: m.encrypted || null,
           timestamp: m.timestamp,
           reactions: m.reactions || {},
           threadRootId: m.threadRootId || null,
-          attachments: m.attachments || []
+          attachments: sanitizeAttachmentsForDisk(m.attachments),
+          epoch: currentEpochStamp()
         };
+        const relativePath = m.threadRootId
+          ? `channels/${m.channelId}/threads/${m.threadRootId}/${m.timestamp}_${m.author?.id || 'user'}_${m.id}.json`
+          : `channels/${m.channelId}/messages/${m.timestamp}_${m.author?.id || 'user'}_${m.id}.json`;
         window.liveMeshClient.publish({
           type: 'sync_file',
-          path: `channels/${m.channelId}/messages/${m.id}.json`,
+          path: relativePath,
           content: JSON.stringify(diskMsg)
         });
       }
@@ -3210,7 +3366,7 @@
     // ==========================================
     // DM & CHANNEL HELPERS & VERSIONING
     // ==========================================
-    const CLIENT_VERSION = '1.0.11';
+    const CLIENT_VERSION = '1.0.12';
     window.CLIENT_VERSION = CLIENT_VERSION;
 
     function getDmChannelId(userAId, userBId) {
@@ -3321,7 +3477,9 @@
       gistId: '',
       gistToken: '',
       workspaceSecret: '',
-      workspaceSchemaVersion: 2,
+      workspaceSchemaVersion: 3,
+      historyEpoch: 1,
+      historyResetAt: 0,
       user: {
         id: isMobileDevice ? `user_mobile_${Math.random().toString(36).slice(2, 6)}` : 'user_dev',
         name: isMobileDevice ? 'Mobile User' : 'Developer',
@@ -3363,7 +3521,7 @@
     }
 
     let config = { ...DEFAULT_CONFIG };
-    const CACHE_SCHEMA_VERSION = '3';
+    const CACHE_SCHEMA_VERSION = '4';
     let activeChannelId = 'chan_general';
     let activeThreadRootId = null;
     let state = {
@@ -3377,6 +3535,86 @@
     };
     window.state = state;
     window.config = config;
+    let workspaceEpoch = 1;
+    let historyResetAt = 0;
+
+    function normalizeHistoryEpoch(value) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : 1;
+    }
+
+    function getHistoryWorkspace() {
+      return {
+        historyEpoch: normalizeHistoryEpoch(config.historyEpoch || workspaceEpoch),
+        historyResetAt: Number(config.historyResetAt || historyResetAt || 0)
+      };
+    }
+
+    function shouldIngestChatPayload(parsed, relativePath) {
+      if (!parsed || typeof parsed !== 'object') return false;
+      const workspace = getHistoryWorkspace();
+      const msgEpoch = normalizeHistoryEpoch(parsed.epoch);
+      if (msgEpoch < workspace.historyEpoch) return false;
+      const isHistoryBlob = String(relativePath || '').includes('/messages/') || String(relativePath || '').includes('/threads/');
+      if (
+        isHistoryBlob &&
+        workspace.historyResetAt &&
+        Number(parsed.timestamp) > 0 &&
+        Number(parsed.timestamp) < workspace.historyResetAt
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    function applyIncomingWorkspaceConfig(parsed) {
+      if (!parsed || typeof parsed !== 'object') return false;
+      const incomingEpoch = normalizeHistoryEpoch(parsed.historyEpoch);
+      const currentEpoch = normalizeHistoryEpoch(config.historyEpoch || workspaceEpoch);
+      if (incomingEpoch < currentEpoch) return false;
+      const advanced = incomingEpoch > currentEpoch;
+      workspaceEpoch = incomingEpoch;
+      historyResetAt = Number(parsed.historyResetAt || historyResetAt || 0);
+      config.historyEpoch = incomingEpoch;
+      config.historyResetAt = historyResetAt;
+      config.historyResetBy = parsed.historyResetBy || config.historyResetBy;
+      if (advanced) {
+        state.messages = (state.messages || []).filter(m => shouldIngestChatPayload(m, `channels/${m.channelId}/messages/`));
+        state.events = (state.events || []).filter(e => normalizeHistoryEpoch(e.epoch) >= incomingEpoch);
+        if (window.offlineQueue?.purgeBelowEpoch) window.offlineQueue.purgeBelowEpoch(incomingEpoch);
+        if (window.gistClient?.replaceVault) window.gistClient.replaceVault([]);
+      }
+      if (Array.isArray(parsed.channels)) {
+        for (const channel of parsed.channels) {
+          if (channel?.id && !state.channels[channel.id]) state.channels[channel.id] = channel;
+        }
+      }
+      return true;
+    }
+
+    function currentEpochStamp() {
+      return normalizeHistoryEpoch(config.historyEpoch || workspaceEpoch);
+    }
+
+    function sanitizeAttachmentsForDisk(attachments) {
+      if (!Array.isArray(attachments)) return undefined;
+      return attachments
+        .filter(att => att && att.url && !String(att.url).startsWith('data:'))
+        .map(att => ({
+          name: att.name,
+          type: att.type,
+          size: att.size,
+          url: att.url
+        }));
+    }
+
+    function resolveAttachmentUrl(att) {
+      if (!att) return '';
+      const raw = att.url || (att.key ? `/api/s3/file/${att.key}` : '');
+      if (!raw) return '';
+      if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+      return apiUrl(raw);
+    }
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -3469,13 +3707,17 @@
             config.repo = 'chat-data';
             config.branch = 'master';
             config.workspaceSecret = '';
-            config.workspaceSchemaVersion = 2;
+            config.workspaceSchemaVersion = 3;
             state.messages = [];
             state.events = [];
             state.users = {};
+            state.channels = {
+              chan_general: { id: 'chan_general', name: 'general', topic: 'Company-wide announcements and work-based matters' }
+            };
             localStorage.removeItem('git_chat_messages');
             localStorage.removeItem('git_chat_events');
             localStorage.removeItem('git_chat_users');
+            localStorage.removeItem('git_chat_channels');
             localStorage.setItem('git_chat_config', JSON.stringify(config));
           }
         }
@@ -3497,12 +3739,22 @@
           state.messages = [];
           state.events = [];
           state.users = {};
+          state.channels = {
+            chan_general: { id: 'chan_general', name: 'general', topic: 'Company-wide announcements and work-based matters' }
+          };
           localStorage.removeItem('git_chat_messages');
           localStorage.removeItem('git_chat_events');
           localStorage.removeItem('git_chat_users');
+          localStorage.removeItem('git_chat_channels');
+          try { localStorage.removeItem('git-chat-offline-queue'); } catch {}
           localStorage.setItem('git_chat_cache_schema', CACHE_SCHEMA_VERSION);
           localStorage.setItem('git_chat_cache_workspace', currentWorkspace);
         }
+        workspaceEpoch = normalizeHistoryEpoch(config.historyEpoch || 1);
+        historyResetAt = Number(config.historyResetAt || 0);
+        config.historyEpoch = workspaceEpoch;
+        config.historyResetAt = historyResetAt;
+        state.messages = (state.messages || []).filter(m => shouldIngestChatPayload(m, `channels/${m.channelId}/messages/`));
       } catch (e) {
         console.warn('Failed to load state from localStorage', e);
       }
@@ -3575,8 +3827,9 @@
     }
 
     // Direct GitHub Git Data API Push helper with automatic conflict retry
-    async function pushFilesToGitHub(files) {
+    async function pushFilesToGitHub(files, options = {}) {
       if (!config.token || !config.owner || !config.repo || !files || !files.length) return false;
+      if (options.forceReset) files._forceReset = true;
       const token = config.token.trim();
       const authHeader = token.startsWith('github_pat_') || token.startsWith('ghp_') ? `Bearer ${token}` : `token ${token}`;
       const headers = {
@@ -3632,6 +3885,7 @@
           if (!commitRes.ok) throw new Error(`Parent commit fetch failed with HTTP ${commitRes.status}`);
           const commitData = await commitRes.json();
           const baseTreeSha = commitData.tree?.sha;
+          const forceReset = !!(options.forceReset || files._forceReset);
 
           const treeItems = files.map(f => ({
             path: f.relativePath,
@@ -3640,10 +3894,14 @@
             content: f.content
           }));
 
+          // Clean slate must replace the tip tree, not merge onto old message blobs.
+          const treeBody = forceReset
+            ? { tree: treeItems }
+            : { base_tree: baseTreeSha, tree: treeItems };
           const createTreeRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/trees`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ base_tree: baseTreeSha, tree: treeItems })
+            body: JSON.stringify(treeBody)
           });
           if (!createTreeRes.ok) throw new Error(`Tree creation failed with HTTP ${createTreeRes.status}`);
           const newTreeData = await createTreeRes.json();
@@ -3652,7 +3910,9 @@
             method: 'POST',
             headers,
             body: JSON.stringify({
-              message: `git-chat: ${files.length} discrete sync updates`,
+              message: forceReset
+                ? `chore: clean slate reset (historyEpoch ${currentEpochStamp()})`
+                : `git-chat: ${files.length} discrete sync updates`,
               tree: newTreeData.sha,
               parents: [parentCommitSha]
             })
@@ -3663,7 +3923,7 @@
           const updateRefRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/refs/heads/${encodeURIComponent(branch)}`, {
             method: 'PATCH',
             headers,
-            body: JSON.stringify({ sha: newCommitData.sha, force: true })
+            body: JSON.stringify({ sha: newCommitData.sha, force: forceReset })
           });
 
           if (updateRefRes.ok) {
@@ -3687,11 +3947,80 @@
       return false;
     }
 
-    // Push discrete files with live mesh broadcast, local server bridge, and GitHub fallback
+    async function resetRemoteWorkspace() {
+      const resetMeta = {
+        historyEpoch: currentEpochStamp() + 1,
+        historyResetAt: Date.now(),
+        historyResetBy: config.user.id
+      };
+      workspaceEpoch = resetMeta.historyEpoch;
+      historyResetAt = resetMeta.historyResetAt;
+      config.historyEpoch = resetMeta.historyEpoch;
+      config.historyResetAt = resetMeta.historyResetAt;
+      config.historyResetBy = resetMeta.historyResetBy;
+      const general = { id: 'chan_general', name: 'general', topic: 'Company-wide announcements and work-based matters', isPrivate: false };
+      const workspaceConfig = {
+        name: `${config.owner}/${config.repo}`,
+        description: 'Reset workspace',
+        defaultChannelId: 'chan_general',
+        createdAt: Date.now(),
+        version: CLIENT_VERSION,
+        historyEpoch: resetMeta.historyEpoch,
+        historyResetAt: resetMeta.historyResetAt,
+        historyResetBy: resetMeta.historyResetBy,
+        channels: [general]
+      };
+      const files = [
+        { relativePath: 'workspace.json', content: JSON.stringify(workspaceConfig, null, 2) },
+        { relativePath: 'channels/chan_general/meta.json', content: JSON.stringify(general, null, 2) }
+      ];
+      files._forceReset = true;
+      if (config.token && config.owner && config.repo) {
+        lastGitHubTreeSha = '';
+        lastGitHubEtag = '';
+        await pushFilesToGitHub(files, { forceReset: true });
+      }
+      try { await fetch(apiUrl('/api/workspace/reset'), { method: 'POST' }); } catch {}
+      if (window.gistClient?.replaceVault) await window.gistClient.replaceVault([]);
+      if (window.offlineQueue) {
+        window.offlineQueue.items = [];
+        window.offlineQueue.save();
+      }
+      state.messages = [];
+      state.events = [];
+      state.users = {};
+      state.channels = { chan_general: general };
+      localStorage.removeItem('git_chat_messages');
+      localStorage.removeItem('git_chat_events');
+      localStorage.removeItem('git_chat_users');
+      localStorage.removeItem('git_chat_channels');
+      localStorage.removeItem('git-chat-offline-queue');
+      saveLocalCache();
+      return true;
+    }
+
+    function isLiveTransportConnected() {
+      return !!(
+        (window.p2pClient && window.p2pClient.isConnected()) ||
+        (window.liveMeshClient && window.liveMeshClient.isConnected()) ||
+        (liveSseSource && transportRegistry.statuses['live-sse'] === 'connected')
+      );
+    }
+
+    async function drainOutboxBestEffort() {
+      if (!window.offlineQueue || !window.offlineQueue.size()) return 0;
+      return window.offlineQueue.drain(async (files) => {
+        const result = await pushFiles(files, config.user.id);
+        return !!(result && (result.live || result.backup));
+      });
+    }
+
+    // Live-first fan-out. Git/Gist are backup only and never block composer success.
     async function pushFiles(files, activeUserId) {
       const uid = activeUserId || config.user.id;
+      let liveDelivered = false;
+      let backupDelivered = false;
 
-      // 0. Immediately broadcast to direct P2P connected peers
       if (window.p2pClient && window.p2pClient.isConnected() && files && files.length) {
         for (const f of files) {
           window.p2pClient.send({
@@ -3700,9 +4029,9 @@
             content: f.content
           });
         }
+        liveDelivered = true;
       }
 
-      // 1. Immediately broadcast all file updates to connected peers (mobile & desktop) over Live Mesh
       if (window.liveMeshClient && window.liveMeshClient.isConnected() && files && files.length) {
         for (const f of files) {
           window.liveMeshClient.publish({
@@ -3711,10 +4040,9 @@
             content: f.content
           });
         }
+        liveDelivered = true;
       }
 
-      // 2. Local Git-Chat bridge push (if server running)
-      let localPushed = false;
       if (localBridgeCompatible) {
         try {
           const res = await fetchWithTimeout(apiUrl('/api/sync/push'), {
@@ -3725,39 +4053,47 @@
               files: files
             })
           }, 2500);
-          if (res.ok) {
-            localPushed = true;
-          }
+          if (res.ok) liveDelivered = true;
         } catch (e) {}
       }
 
-      // 3. GitHub Git Data API push serialized via gitCommitQueue with offline backup
-      let remotePushed = false;
-      if (!localPushed && config.token && config.owner && config.repo) {
-        if (window.gitCommitQueue) {
-          const result = await window.gitCommitQueue.push(files);
-          remotePushed = result === true || !!(result && result.success);
-        } else {
-          try {
-            remotePushed = await pushFilesToGitHub(files);
-          } catch (err) {
-            console.warn('GitHub direct push fallback failed, queueing offline:', err);
-            if (window.offlineQueue) window.offlineQueue.enqueue(files);
+      const persistBackup = async () => {
+        let remotePushed = false;
+        if (config.token && config.owner && config.repo) {
+          if (window.gitCommitQueue) {
+            const result = await window.gitCommitQueue.push(files);
+            remotePushed = result === true || !!(result && result.success);
+          } else {
+            try {
+              remotePushed = await pushFilesToGitHub(files);
+            } catch (err) {
+              console.warn('GitHub direct push fallback failed, queueing offline:', err);
+              if (window.offlineQueue) window.offlineQueue.enqueue(files);
+            }
           }
         }
-      }
-
-      // 4. Gist vault: mirrors every update as an off-site rolling backup, and
-      // becomes the delivery path when the primary data repo is unreachable.
-      if (window.gistClient && window.gistClient.isConfigured()) {
-        try {
-          await window.gistClient.pushSyncFiles(files);
-        } catch (err) {
-          console.warn('Gist vault mirror failed:', err);
+        if (window.gistClient && window.gistClient.isConfigured()) {
+          try {
+            await window.gistClient.pushSyncFiles(files);
+            remotePushed = true;
+          } catch (err) {
+            console.warn('Gist vault mirror failed:', err);
+          }
         }
+        if (!remotePushed && !liveDelivered && window.offlineQueue) {
+          window.offlineQueue.enqueue(files);
+          return true;
+        }
+        return remotePushed;
+      };
+
+      if (liveDelivered) {
+        persistBackup().catch(() => {});
+        return { live: true, backup: false };
       }
 
-      return localPushed || remotePushed;
+      backupDelivered = await persistBackup();
+      return { live: false, backup: backupDelivered };
     }
 
     // Publish User Profile & Heartbeat Presence
@@ -3809,7 +4145,7 @@
       if (!attachments || !attachments.length) return '';
       let html = '<div class="msg-attachments-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
       for (const att of attachments) {
-        const url = att.url || apiUrl(`/api/s3/file/${att.key}`);
+        const url = resolveAttachmentUrl(att);
         const mime = (att.type || '').toLowerCase();
         const name = att.name || 'file';
         const sizeStr = formatFileSize(att.size);
@@ -3852,6 +4188,7 @@
 
     // Staged Attachments in Composer
     let stagedAttachments = [];
+    let uploadInProgress = 0;
 
     function renderStagedAttachments() {
       const box = document.getElementById('composer-staged-attachments');
@@ -3880,8 +4217,36 @@
     // ==========================================
     class BrowserGitStorage {
       static getVolumeRepo(username, volumeIndex = 1) {
-        const clean = (username || 'user').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
-        return volumeIndex <= 1 ? `${clean}/git-chat-media` : `${clean}/git-chat-media-vol${volumeIndex}`;
+        const ownerHint = (config.owner || '').trim();
+        const raw = (username || ownerHint || 'user').trim();
+        const clean = raw.includes('/') ? raw.split('/').pop() : raw.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+        const ns = ownerHint || clean;
+        return volumeIndex <= 1 ? `${ns}/git-chat-media` : `${ns}/git-chat-media-vol${volumeIndex}`;
+      }
+
+      static async ensureVolume(repoName, token, provider = 'github') {
+        const targetRepo = repoName || BrowserGitStorage.getVolumeRepo(config.owner || config.user?.id, 1);
+        if (!token) return { repo: targetRepo, isCreated: false };
+        try {
+          const res = await fetch(`https://api.github.com/repos/${targetRepo}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+          if (res.ok) return { repo: targetRepo, isCreated: false };
+          if (res.status === 404) {
+            const repoNameOnly = targetRepo.split('/')[1] || 'git-chat-media';
+            const createRes = await fetch('https://api.github.com/user/repos', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ name: repoNameOnly, private: false, auto_init: true })
+            });
+            if (createRes.ok) return { repo: targetRepo, isCreated: true };
+          }
+        } catch {}
+        return { repo: targetRepo, isCreated: false };
       }
 
       static getRawUrl(repo, branch, filePath, provider = 'github') {
@@ -3894,10 +4259,13 @@
 
       static async uploadMedia(file, authorId = 'user') {
         const provider = localStorage.getItem('git_chat_storage_provider') || 'github';
-        const defaultRepo = BrowserGitStorage.getVolumeRepo(config.user?.name || config.user?.id || authorId, 1);
+        const defaultRepo = BrowserGitStorage.getVolumeRepo(config.owner || config.user?.id || authorId, 1);
         const userRepo = localStorage.getItem('git_chat_storage_repo') || defaultRepo;
         const token = localStorage.getItem('git_chat_storage_token') || config.token || '';
         const branch = localStorage.getItem('git_chat_storage_branch') || 'main';
+        if (token && userRepo && provider === 'github') {
+          await BrowserGitStorage.ensureVolume(userRepo, token, provider);
+        }
 
         const safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
         const ext = safeName.includes('.') ? safeName.split('.').pop().toLowerCase() : 'bin';
@@ -3984,8 +4352,8 @@
           }
         } catch {}
 
-        // Tier 3: Inline Data URL Fallback (<2MB)
-        if (size < 2 * 1024 * 1024) {
+        // Tiny preview only — never embed large data URLs into git JSON.
+        if (size < 200 * 1024) {
           return {
             name: file.name,
             type: file.type || 'application/octet-stream',
@@ -3994,13 +4362,16 @@
           };
         }
 
-        throw new Error('File exceeds 2MB and personal Git storage token is missing. Please configure in Settings > Git-S3 Storage.');
+        throw new Error('File needs media storage. Add a GitHub PAT in Settings → Git-S3 Storage.');
       }
     }
 
     // Upload Files to Git-S3
     async function uploadFilesToS3(files) {
       if (!files || !files.length) return;
+      const attachBtn = document.getElementById('tb-attach');
+      uploadInProgress += files.length;
+      if (attachBtn) attachBtn.disabled = true;
       for (const file of files) {
         showToast(`Uploading ${file.name}...`);
         try {
@@ -4010,8 +4381,11 @@
           showToast(`✅ Uploaded ${file.name}!`);
         } catch (err) {
           showToast(`❌ Upload failed: ${err.message}`);
+        } finally {
+          uploadInProgress = Math.max(0, uploadInProgress - 1);
         }
       }
+      if (attachBtn && uploadInProgress === 0) attachBtn.disabled = false;
     }
 
     // Check Git-S3 Storage Health Status
@@ -4096,6 +4470,7 @@
         state.membersConfig = {
           workspaceId: 'workspace_default',
           membershipPolicy: 'open',
+          updatedAt: Date.now(),
           members: [
             { id: config.user.id, gitUsername: config.user.name.toLowerCase().replace(/\s+/g, '_'), name: config.user.name, role: 'admin', joinedAt: Date.now() }
           ]
@@ -4132,6 +4507,7 @@
     window.removeMemberFromRoster = function(memberId) {
       if (!state.membersConfig || !state.membersConfig.members) return;
       state.membersConfig.members = state.membersConfig.members.filter(m => m.id !== memberId);
+      state.membersConfig.updatedAt = Date.now();
       saveLocalCache();
       renderMembersRoster();
       pushFiles([{ relativePath: 'config/members.json', content: JSON.stringify(state.membersConfig, null, 2) }], config.user.id);
@@ -4543,8 +4919,17 @@
       escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
       escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
       escaped = escaped.replace(/^> (.*)$/gm, '<blockquote>$1</blockquote>');
-      escaped = escaped.replace(/(@[a-zA-Z0-9_-]+)/g, '<span style="background:var(--mention-bg); color:var(--text-heading); padding:1px 4px; border-radius:3px; font-weight:600;">$1</span>');
+      escaped = escaped.replace(/(@[a-zA-Z0-9_-]+)/g, '<span class="mention-chip" style="background:var(--mention-bg); color:var(--text-heading); padding:1px 4px; border-radius:3px; font-weight:600;">$1</span>');
       return escaped.replace(/\n/g, '<br/>');
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
     // ==========================================
@@ -4573,19 +4958,150 @@
       }
     }
 
+    const DEFAULT_CHANNEL_IDS = new Set([
+      'chan_general',
+      'chan_engineering',
+      'chan_random',
+      'chan_talk_to_a_human'
+    ]);
+    let managedChannelId = null;
+
+    function getCurrentWorkspaceRole() {
+      const members = state.membersConfig?.members || [];
+      const member = members.find(item =>
+        item.id === config.user.id ||
+        item.gitUsername === config.user.id ||
+        item.gitUsername === config.user.name
+      );
+      return member?.role || config.user.role || 'member';
+    }
+
+    function canManageChannel(channel) {
+      if (!channel || channel.isDm || channel.archivedAt) return false;
+      if (getCurrentWorkspaceRole() === 'admin') return true;
+      if (channel.createdBy) return channel.createdBy === config.user.id;
+      // Channels created before ownership metadata was introduced remain
+      // manageable for compatibility. New channels always record an owner.
+      return !DEFAULT_CHANNEL_IDS.has(channel.id);
+    }
+
+    function updateChannelActionButton() {
+      const button = document.getElementById('btn-channel-actions');
+      const channel = state.channels[activeChannelId];
+      if (!button) return;
+      button.style.display = canManageChannel(channel) ? 'flex' : 'none';
+    }
+
+    function openChannelManager(channelId = activeChannelId) {
+      const channel = state.channels[channelId];
+      if (!canManageChannel(channel)) {
+        showToast('Only the channel owner or a workspace admin can manage this channel.');
+        return;
+      }
+      managedChannelId = channelId;
+      const nameInput = document.getElementById('edit-chan-name');
+      const topicInput = document.getElementById('edit-chan-topic');
+      const note = document.getElementById('manage-chan-permission-note');
+      const archiveButton = document.getElementById('btn-archive-channel');
+      if (nameInput) nameInput.value = channel.name || '';
+      if (topicInput) topicInput.value = channel.topic || channel.description || '';
+      if (note) {
+        const ownerLabel = channel.createdBy === config.user.id
+          ? 'You created this channel.'
+          : getCurrentWorkspaceRole() === 'admin'
+            ? 'You can manage this channel as a workspace admin.'
+            : 'Legacy channel ownership is being upgraded when you save.';
+        note.textContent = ownerLabel;
+      }
+      if (archiveButton) {
+        archiveButton.style.display = channel.id === 'chan_general' ? 'none' : 'block';
+      }
+      document.getElementById('manage-chan-modal')?.classList.add('open');
+      setTimeout(() => nameInput?.focus(), 0);
+    }
+    window.openChannelManager = openChannelManager;
+
+    async function persistChannelMetadata(channel) {
+      saveLocalCache();
+      renderSidebar();
+      await pushFiles([{
+        relativePath: `channels/${channel.id}/meta.json`,
+        content: JSON.stringify(channel, null, 2)
+      }], config.user.id);
+    }
+
+    async function saveManagedChannel() {
+      const channel = state.channels[managedChannelId];
+      if (!canManageChannel(channel)) return;
+      const rawName = document.getElementById('edit-chan-name')?.value || '';
+      const topic = document.getElementById('edit-chan-topic')?.value?.trim() || '';
+      const cleanName = rawName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+      if (!cleanName) {
+        showToast('Channel name cannot be empty.');
+        return;
+      }
+      const duplicate = Object.values(state.channels).find(item =>
+        item.id !== channel.id && !item.archivedAt && item.name === cleanName
+      );
+      if (duplicate) {
+        showToast(`Channel #${cleanName} already exists.`);
+        return;
+      }
+
+      channel.name = cleanName;
+      channel.topic = topic || `Discussion for #${cleanName}`;
+      channel.createdBy = channel.createdBy || config.user.id;
+      channel.updatedAt = Date.now();
+      channel.updatedBy = config.user.id;
+      await persistChannelMetadata(channel);
+      document.getElementById('manage-chan-modal')?.classList.remove('open');
+      selectChannel(channel.id);
+      showToast(`Saved #${cleanName}`);
+    }
+
+    async function archiveManagedChannel() {
+      const channel = state.channels[managedChannelId];
+      if (!canManageChannel(channel) || channel.id === 'chan_general') return;
+      if (!window.confirm(`Archive #${channel.name}? Its history is retained but the channel is removed from active lists.`)) {
+        return;
+      }
+
+      channel.archivedAt = Date.now();
+      channel.archivedBy = config.user.id;
+      channel.updatedAt = channel.archivedAt;
+      channel.updatedBy = config.user.id;
+      await persistChannelMetadata(channel);
+      document.getElementById('manage-chan-modal')?.classList.remove('open');
+      managedChannelId = null;
+      selectChannel('chan_general');
+      showToast(`#${channel.name} archived`);
+    }
+
     // Render Channel Sidebar & DM Section
     function renderSidebar() {
       const listEl = document.getElementById('channel-list');
       if (listEl) {
         listEl.innerHTML = '';
         for (const chan of Object.values(state.channels)) {
-          if (chan.isDm) continue; // DMs are rendered in the DM section
+          if (chan.isDm || chan.archivedAt) continue; // DMs and archived channels are hidden
           const item = document.createElement('div');
           item.className = `nav-item ${chan.id === activeChannelId ? 'active' : ''}`;
           const isMuted = isChannelMuted(chan.id, notificationConfig);
+          const unread = unreadCountFor(chan.id);
+          const unreadBadge = unread > 0 ? `<span class="nav-item-unread">${unread > 99 ? '99+' : unread}</span>` : '';
           const muteBadge = isMuted ? `<span class="nav-item-mute-icon" style="font-size:11px; opacity:0.65; margin-left:auto;" title="Channel Muted">🔕</span>` : '';
-          item.innerHTML = `<div class="nav-item-left"><span>#</span> <span>${chan.name}</span></div>${muteBadge}`;
+          const manageButton = canManageChannel(chan)
+            ? '<button class="channel-manage-button" title="Channel settings" aria-label="Channel settings" style="background:none; border:none; color:inherit; cursor:pointer; margin-left:6px; padding:2px 5px;">•••</button>'
+            : '';
+          item.innerHTML = `<div class="nav-item-left"><span>#</span> <span>${escapeHtml(chan.name)}</span></div><div style="display:flex;align-items:center;">${unreadBadge}${muteBadge}${manageButton}</div>`;
           item.onclick = () => selectChannel(chan.id);
+          const actionButton = item.querySelector('.channel-manage-button');
+          if (actionButton) {
+            actionButton.onclick = event => {
+              event.stopPropagation();
+              openChannelManager(chan.id);
+            };
+          }
           listEl.appendChild(item);
         }
       }
@@ -4601,6 +5117,7 @@
       document.getElementById('current-user-role').innerHTML = isVaultLocked
         ? '<span style="color:var(--danger)">🔒 Locked</span>'
         : '<span style="color:var(--success)">🔓 E2EE Vault Active</span>';
+      updateChannelActionButton();
     }
 
     function renderDmList() {
@@ -4660,6 +5177,7 @@
 
     function selectChannel(chanId) {
       activeChannelId = chanId;
+      markChannelRead(chanId);
       closeSidebarDrawer();
       const chan = state.channels[chanId];
       if (chan) {
@@ -4697,7 +5215,7 @@
       if (!container) return;
 
       const chanMsgs = state.messages
-        .filter(m => m.channelId === activeChannelId && !m.threadRootId)
+        .filter(m => m.channelId === activeChannelId && !m.threadRootId && !m.deletedAt)
         .sort((a,b) => a.timestamp - b.timestamp);
 
       const isScrolledToBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 60;
@@ -4736,6 +5254,7 @@
               displayContent = decryptedMessageCache.get(cacheKey);
             } else {
               const dec = await decryptMessage(msg, activeChannelId);
+              if (!dec && Number(msg.timestamp) < Number(config.historyResetAt || 0)) continue;
               displayContent = dec || '🔒 *[Decryption failed - Incorrect Key]*';
               if (cacheKey && dec) decryptedMessageCache.set(cacheKey, dec);
             }
@@ -4745,7 +5264,7 @@
         }
 
         // Thread count
-        const replies = state.messages.filter(m => m.threadRootId === msg.id);
+        const replies = state.messages.filter(m => m.threadRootId === msg.id && !m.deletedAt);
         let threadHtml = '';
         if (replies.length > 0) {
           threadHtml = `<div class="thread-link-btn" onclick="openThread('${msg.id}')">💬 ${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</div>`;
@@ -4769,6 +5288,9 @@
           <button class="action-btn" onclick="openThread('${msg.id}')" title="Reply in thread">💬</button>
         `;
         if (isAuthor) {
+          actionsHtml += `<button class="action-btn" onclick="editMessage('${msg.id}')" title="Edit message">✏️</button>`;
+          actionsHtml += `<button class="action-btn" onclick="deleteMessage('${msg.id}')" title="Delete message" style="color:var(--danger)">🗑️</button>`;
+        } else if (getCurrentWorkspaceRole() === 'admin') {
           actionsHtml += `<button class="action-btn" onclick="deleteMessage('${msg.id}')" title="Delete message" style="color:var(--danger)">🗑️</button>`;
         }
 
@@ -4779,7 +5301,7 @@
           <div class="msg-body">
             <div class="msg-meta">
               <span class="msg-author">${msg.author.name}</span>
-              <span class="msg-time">${timeStr}</span>
+              <span class="msg-time">${timeStr}${msg.editedAt ? ' · edited' : ''}${msg.deliveryState === 'pending' ? ' · sending' : msg.deliveryState === 'failed' ? ' · failed' : msg.deliveryState === 'queued' ? ' · queued' : ''}</span>
             </div>
             <div class="msg-content">${renderMarkdown(displayContent)}</div>
             ${attachmentsHtml}
@@ -4812,11 +5334,25 @@
       }
     }
 
-    // Send Message (with Instant Optimistic UI Append & Background E2EE)
+    function attachmentReadyForSend(att) {
+      return !!(att && att.url && !String(att.url).startsWith('data:'));
+    }
+
+    // Send Message (optimistic UI + awaited live delivery, Git as backup)
     async function sendMessage(content, threadRootId = null, attachments = null) {
       const currentAttachments = attachments || (stagedAttachments.length > 0 ? [...stagedAttachments] : undefined);
       if ((!content || !content.trim()) && (!currentAttachments || !currentAttachments.length)) return;
+      if (uploadInProgress > 0) {
+        showToast('Wait for attachments to finish uploading.');
+        return;
+      }
       const text = (content || '').trim();
+      const targetChannel = state.channels[activeChannelId];
+      if (!targetChannel || targetChannel.archivedAt) {
+        showToast('This channel is archived and cannot accept new messages.');
+        selectChannel('chan_general');
+        return;
+      }
 
       if (isVaultLocked) {
         document.getElementById('vault-modal').classList.add('open');
@@ -4824,11 +5360,23 @@
         return;
       }
 
+      if (currentAttachments && currentAttachments.some(att => !attachmentReadyForSend(att) && att.size > 200 * 1024)) {
+        showToast('Attachment is still local-only. Configure media storage or wait for upload.');
+        return;
+      }
+
       markLocalActivity();
+      publishTyping(false);
 
       const msgId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const targetChannelId = activeChannelId;
       const timestamp = Date.now();
+      const remoteAttachments = sanitizeAttachmentsForDisk(currentAttachments);
+      const diskAttachments = (remoteAttachments && remoteAttachments.length)
+        ? remoteAttachments
+        : (currentAttachments || [])
+            .filter(att => att && att.size <= 200 * 1024)
+            .map(att => ({ name: att.name, type: att.type, size: att.size, url: att.url }));
 
       const newMsg = {
         id: msgId,
@@ -4839,7 +5387,9 @@
         encrypted: undefined,
         attachments: currentAttachments,
         reactions: {},
-        timestamp: timestamp
+        timestamp: timestamp,
+        deliveryState: 'pending',
+        epoch: currentEpochStamp()
       };
 
       if (!attachments) {
@@ -4847,59 +5397,211 @@
         renderStagedAttachments();
       }
 
-      // Optimistic instant local append: render immediately without blocking on crypto or network
       state.messages.push(newMsg);
       saveLocalCache();
 
       if (threadRootId) renderThread();
       else renderTimeline();
 
-      // Background E2EE encryption, caching, and Git push
-      (async () => {
-        try {
-          const chanKey = await getEncryptionKeyForChannel(targetChannelId);
-          let encryptedPayload = null;
-          if (chanKey) {
-            encryptedPayload = await CryptoVault.encrypt(text, chanKey);
-          }
-
-          newMsg.encrypted = encryptedPayload || undefined;
-
-          if (encryptedPayload && chanKey) {
-            const cacheKey = getMsgDecryptCacheKey(newMsg, isVaultLocked, targetChannelId);
-            if (cacheKey) decryptedMessageCache.set(cacheKey, text);
-          }
-
-          saveLocalCache();
-
-          const relativePath = threadRootId
-            ? `channels/${targetChannelId}/threads/${threadRootId}/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`
-            : `channels/${targetChannelId}/messages/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`;
-
-          ClientDataIsolationGuard.validatePath(relativePath, config.user.id);
-
-          // Push to Git backend
-          const diskMsg = { ...newMsg, content: '[Encrypted Message]' }; // Plaintext omitted on git ref
-          pushFiles([{ relativePath, content: JSON.stringify(diskMsg, null, 2) }], config.user.id);
-        } catch (err) {
-          console.error('Background send / encryption error:', err);
+      try {
+        const chanKey = await getEncryptionKeyForChannel(targetChannelId);
+        let encryptedPayload = null;
+        if (chanKey) {
+          encryptedPayload = await CryptoVault.encrypt(text, chanKey);
         }
-      })();
+
+        newMsg.encrypted = encryptedPayload || undefined;
+
+        if (encryptedPayload && chanKey) {
+          const cacheKey = getMsgDecryptCacheKey(newMsg, isVaultLocked, targetChannelId);
+          if (cacheKey) decryptedMessageCache.set(cacheKey, text);
+        }
+
+        const relativePath = threadRootId
+          ? `channels/${targetChannelId}/threads/${threadRootId}/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`
+          : `channels/${targetChannelId}/messages/${newMsg.timestamp}_${config.user.id}_${newMsg.id}.json`;
+
+        ClientDataIsolationGuard.validatePath(relativePath, config.user.id);
+
+        const diskMsg = {
+          id: newMsg.id,
+          channelId: newMsg.channelId,
+          threadRootId: newMsg.threadRootId,
+          author: newMsg.author,
+          content: '[Encrypted Message]',
+          encrypted: newMsg.encrypted,
+          attachments: diskAttachments,
+          reactions: {},
+          timestamp: newMsg.timestamp,
+          epoch: currentEpochStamp()
+        };
+        const result = await pushFiles([{ relativePath, content: JSON.stringify(diskMsg, null, 2) }], config.user.id);
+        if (result && result.live) {
+          newMsg.deliveryState = 'sent';
+        } else if (result && result.backup) {
+          newMsg.deliveryState = 'queued';
+        } else {
+          newMsg.deliveryState = 'failed';
+          showToast('Message saved locally but sync failed — check Settings');
+        }
+        saveLocalCache();
+        if (threadRootId) renderThread();
+        else renderTimeline(true);
+      } catch (err) {
+        console.error('Send / encryption error:', err);
+        newMsg.deliveryState = 'failed';
+        showToast('Message saved locally but sync failed');
+        saveLocalCache();
+      }
     }
     window.sendMessage = sendMessage;
 
     // Delete message
     window.deleteMessage = function(msgId) {
+      const msg = state.messages.find(m => m.id === msgId);
+      if (!msg) return;
+      if (msg.author?.id !== config.user.id && getCurrentWorkspaceRole() !== 'admin') {
+        showToast('You can only delete your own messages.');
+        return;
+      }
       if (!confirm('Are you sure you want to delete this message?')) return;
-      state.messages = state.messages.filter(m => m.id !== msgId && m.threadRootId !== msgId);
+      msg.deletedAt = Date.now();
+      msg.content = '';
       saveLocalCache();
-      renderTimeline();
+      renderTimeline(true);
       if (activeThreadRootId === msgId) {
         document.getElementById('thread-drawer').classList.remove('open');
         activeThreadRootId = null;
       }
+      const ev = {
+        id: `ev_${Date.now()}`,
+        type: 'message_delete',
+        channelId: msg.channelId,
+        authorId: config.user.id,
+        targetMessageId: msgId,
+        timestamp: Date.now(),
+        epoch: currentEpochStamp()
+      };
+      const evPath = `channels/${msg.channelId}/events/${ev.timestamp}_${config.user.id}_${ev.type}_${ev.id}.json`;
+      pushFiles([{ relativePath: evPath, content: JSON.stringify(ev, null, 2) }], config.user.id);
       showToast('Message deleted');
     };
+
+    let editingMessageId = null;
+    window.editMessage = async function(msgId) {
+      const msg = state.messages.find(m => m.id === msgId);
+      if (!msg || msg.author?.id !== config.user.id) return;
+      const current = await decryptMessage(msg, msg.channelId) || msg.content || '';
+      const next = window.prompt('Edit message', current);
+      if (next == null || next.trim() === current) return;
+      const text = next.trim();
+      msg.content = text;
+      msg.editedAt = Date.now();
+      const chanKey = await getEncryptionKeyForChannel(msg.channelId);
+      if (chanKey) msg.encrypted = await CryptoVault.encrypt(text, chanKey);
+      saveLocalCache();
+      renderTimeline(true);
+      const ev = {
+        id: `ev_${Date.now()}`,
+        type: 'message_edit',
+        channelId: msg.channelId,
+        authorId: config.user.id,
+        targetMessageId: msgId,
+        timestamp: Date.now(),
+        epoch: currentEpochStamp(),
+        payload: { content: '[Encrypted Message]', encrypted: msg.encrypted }
+      };
+      const evPath = `channels/${msg.channelId}/events/${ev.timestamp}_${config.user.id}_${ev.type}_${ev.id}.json`;
+      pushFiles([{ relativePath: evPath, content: JSON.stringify(ev, null, 2) }], config.user.id);
+      showToast('Message edited');
+    };
+
+    const LAST_READ_KEY = 'git_chat_last_read';
+    function loadLastReadMap() {
+      try { return JSON.parse(localStorage.getItem(LAST_READ_KEY) || '{}'); } catch { return {}; }
+    }
+    function saveLastReadMap(map) {
+      localStorage.setItem(LAST_READ_KEY, JSON.stringify(map));
+    }
+    function markChannelRead(channelId) {
+      const map = loadLastReadMap();
+      map[channelId] = Date.now();
+      saveLastReadMap(map);
+    }
+    function unreadCountFor(channelId) {
+      const lastRead = Number(loadLastReadMap()[channelId] || 0);
+      return state.messages.filter(m =>
+        m.channelId === channelId &&
+        !m.deletedAt &&
+        m.author?.id !== config.user.id &&
+        Number(m.timestamp) > lastRead
+      ).length;
+    }
+
+    const remoteTypers = new Map();
+    function publishTyping(active) {
+      if (!window.liveMeshClient || !window.liveMeshClient.isConnected()) return;
+      window.liveMeshClient.publish({
+        type: 'typing',
+        channelId: activeChannelId,
+        userId: config.user.id,
+        userName: config.user.name,
+        active: !!active
+      });
+    }
+    function handleRemoteTyping(data) {
+      if (!data || data.userId === config.user.id || data.channelId !== activeChannelId) return;
+      if (data.active) {
+        remoteTypers.set(data.userId, { name: data.userName || 'Someone', until: Date.now() + 3000 });
+      } else {
+        remoteTypers.delete(data.userId);
+      }
+      renderTypingLine();
+    }
+    function renderTypingLine() {
+      const el = document.getElementById('typing-indicator');
+      if (!el) return;
+      const now = Date.now();
+      for (const [id, info] of remoteTypers) {
+        if (info.until < now) remoteTypers.delete(id);
+      }
+      const names = [...remoteTypers.values()].map(v => v.name);
+      el.textContent = names.length ? `${names.join(', ')} ${names.length === 1 ? 'is' : 'are'} typing…` : '';
+    }
+    setInterval(renderTypingLine, 1000);
+
+    function insertMention(name) {
+      const input = document.getElementById('message-input');
+      if (!input) return;
+      input.value = input.value.replace(/@([a-zA-Z0-9_-]*)$/, `@${name.replace(/\s+/g, '_')} `);
+      hideMentionPicker();
+      input.focus();
+    }
+    function hideMentionPicker() {
+      const picker = document.getElementById('mention-picker');
+      if (picker) picker.classList.remove('open');
+    }
+    function updateMentionPicker(text) {
+      const picker = document.getElementById('mention-picker');
+      if (!picker) return;
+      const match = String(text || '').match(/@([a-zA-Z0-9_-]*)$/);
+      if (!match) {
+        hideMentionPicker();
+        return;
+      }
+      const needle = match[1].toLowerCase();
+      const users = Object.values(state.users).filter(u =>
+        u.id !== config.user.id && (!needle || (u.name || '').toLowerCase().includes(needle) || (u.id || '').toLowerCase().includes(needle))
+      ).slice(0, 6);
+      if (!users.length) {
+        hideMentionPicker();
+        return;
+      }
+      picker.innerHTML = users.map(u => `<button type="button" onclick="insertMention('${(u.name || u.id).replace(/'/g, '')}')">${u.avatar || '👤'} ${u.name || u.id}</button>`).join('');
+      picker.classList.add('open');
+    }
+    window.insertMention = insertMention;
+    window.handleRemoteTyping = handleRemoteTyping;
 
     // Thread Drawer
     window.openThread = function(rootMsgId) {
@@ -4912,7 +5614,7 @@
     async function renderThread() {
       if (!activeThreadRootId) return;
       const rootMsg = state.messages.find(m => m.id === activeThreadRootId);
-      const replies = state.messages.filter(m => m.threadRootId === activeThreadRootId).sort((a,b) => a.timestamp - b.timestamp);
+      const replies = state.messages.filter(m => m.threadRootId === activeThreadRootId && !m.deletedAt).sort((a,b) => a.timestamp - b.timestamp);
       const container = document.getElementById('thread-timeline');
       if (!container) return;
 
@@ -5000,7 +5702,8 @@
         authorId: uid,
         targetMessageId: msgId,
         emoji,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        epoch: currentEpochStamp()
       };
       state.events.push(ev);
       saveLocalCache();
@@ -5029,6 +5732,15 @@
       if (!parsed || typeof parsed !== 'object') return false;
 
       try {
+        if (relativePath === 'workspace.json') {
+          return applyIncomingWorkspaceConfig(parsed);
+        }
+
+        if ((relativePath.includes('/messages/') || relativePath.includes('/threads/') || relativePath.includes('/events/')) &&
+            !shouldIngestChatPayload(parsed, relativePath)) {
+          return false;
+        }
+
         // User discovery: users/<userId>.json
         if (relativePath.match(/^users\/([a-zA-Z0-9_-]+)\.json$/)) {
           if (parsed.id) {
@@ -5052,11 +5764,40 @@
           return false;
         }
 
+        // Workspace roster drives admin permissions on every linked client.
+        if (relativePath === 'config/members.json') {
+          if (!Array.isArray(parsed.members)) return false;
+          const existingUpdatedAt = Number(state.membersConfig?.updatedAt || 0);
+          const incomingUpdatedAt = Number(parsed.updatedAt || 0);
+          if (existingUpdatedAt && incomingUpdatedAt && incomingUpdatedAt < existingUpdatedAt) {
+            return false;
+          }
+          state.membersConfig = {
+            workspaceId: parsed.workspaceId || 'workspace_default',
+            membershipPolicy: parsed.membershipPolicy === 'invite_only' ? 'invite_only' : 'open',
+            updatedAt: incomingUpdatedAt || Date.now(),
+            members: parsed.members
+          };
+          return true;
+        }
+
         // Channel metadata: channels/<chan_id>/meta.json
         if (relativePath.match(/^channels\/([a-zA-Z0-9_-]+)\/meta\.json$/)) {
           const existing = state.channels[parsed.id];
-          if (!existing || existing.name !== parsed.name || existing.topic !== parsed.topic) {
+          if (existing?.updatedAt && parsed.updatedAt &&
+              parsed.updatedAt < existing.updatedAt && !parsed.archivedAt) {
+            return false;
+          }
+          if (!existing ||
+              existing.name !== parsed.name ||
+              existing.topic !== parsed.topic ||
+              existing.createdBy !== parsed.createdBy ||
+              existing.updatedAt !== parsed.updatedAt ||
+              existing.archivedAt !== parsed.archivedAt) {
             state.channels[parsed.id] = { ...state.channels[parsed.id], ...parsed };
+            if (parsed.archivedAt && activeChannelId === parsed.id) {
+              setTimeout(() => selectChannel('chan_general'), 0);
+            }
             return true;
           }
           return false;
@@ -5134,9 +5875,18 @@
               }
             }
           } else if (parsed.type === 'message_delete') {
-            const beforeLen = state.messages.length;
-            state.messages = state.messages.filter(m => m.id !== parsed.targetMessageId && m.threadRootId !== parsed.targetMessageId);
-            if (state.messages.length !== beforeLen) {
+            const target = state.messages.find(m => m.id === parsed.targetMessageId);
+            if (target && !target.deletedAt) {
+              target.deletedAt = parsed.timestamp || Date.now();
+              target.content = '';
+              eventHandled = true;
+            }
+          } else if (parsed.type === 'message_edit') {
+            const target = state.messages.find(m => m.id === parsed.targetMessageId);
+            if (target) {
+              if (parsed.payload?.encrypted) target.encrypted = parsed.payload.encrypted;
+              if (typeof parsed.payload?.content === 'string') target.content = parsed.payload.content;
+              target.editedAt = parsed.timestamp || Date.now();
               eventHandled = true;
             }
           }
@@ -5234,10 +5984,23 @@
             item.path.startsWith('config/') ||
             item.path === 'workspace.json'
           )
-        );
+        ).sort((a, b) => (a.path === 'workspace.json' ? -1 : b.path === 'workspace.json' ? 1 : 0));
 
         let count = 0;
-        await Promise.all(chatBlobs.map(async (item) => {
+        for (const item of chatBlobs.filter(b => b.path === 'workspace.json')) {
+          try {
+            const blobRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/blobs/${item.sha}`, { headers });
+            if (blobRes.ok) {
+              const blobData = await blobRes.json();
+              if (blobData.content && blobData.encoding === 'base64') {
+                const text = decodeURIComponent(escape(atob(blobData.content.replace(/\s/g, ''))));
+                processSyncFile(item.path, text);
+              }
+            }
+          } catch {}
+        }
+
+        await Promise.all(chatBlobs.filter(item => item.path !== 'workspace.json').map(async (item) => {
           try {
             // Fetch via official GitHub API git/blobs endpoint - CORS compatible & supports private repos with PAT
             const blobRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/blobs/${item.sha}`, { headers });
@@ -5263,7 +6026,7 @@
 
         // Drain any pending offline changes now that GitHub connection is verified
         if (window.offlineQueue && window.offlineQueue.size() > 0) {
-          window.offlineQueue.drain(pushFilesToGitHub).then(n => {
+          drainOutboxBestEffort().then(n => {
             if (n > 0) showToast(`Synced ${n} queued offline updates to GitHub`);
           }).catch(() => {});
         }
@@ -5435,7 +6198,10 @@ Minimum version required to store current data is: `+i+`.
           ? (config.lanUrl || config.backendUrl || '').replace(/\/+$/, '')
           : (config.backendUrl || '').replace(/\/+$/, ''),
         keyVersion: 2,
-        workspaceSchemaVersion: 2
+        workspaceSchemaVersion: 3,
+        historyEpoch: currentEpochStamp(),
+        storageRepo: localStorage.getItem('git_chat_storage_repo') || '',
+        storageToken: localStorage.getItem('git_chat_storage_token') || ''
       };
 
       let b64 = '';
@@ -5511,7 +6277,10 @@ Minimum version required to store current data is: `+i+`.
         gistToken: config.gistToken || '',
         backendUrl: (config.backendUrl || '').replace(/\/+$/, ''),
         keyVersion: 2,
-        workspaceSchemaVersion: 2
+        workspaceSchemaVersion: 3,
+        historyEpoch: currentEpochStamp(),
+        storageRepo: localStorage.getItem('git_chat_storage_repo') || '',
+        storageToken: localStorage.getItem('git_chat_storage_token') || ''
       };
     }
 
@@ -5680,7 +6449,7 @@ Minimum version required to store current data is: `+i+`.
       const uRepo = document.getElementById('cfg-repo');
       if (uRepo) uRepo.value = `${config.owner}/${config.repo}`;
       const uBranch = document.getElementById('cfg-branch');
-      if (uBranch) uBranch.value = config.branch || 'git-chat';
+      if (uBranch) uBranch.value = config.branch || 'master';
       const uToken = document.getElementById('cfg-token');
       if (uToken) uToken.value = config.token || '';
       const uBackend = document.getElementById('cfg-backend-url');
@@ -5751,6 +6520,8 @@ Minimum version required to store current data is: `+i+`.
         msgInput.addEventListener('input', () => {
           msgInput.style.height = 'auto';
           msgInput.style.height = Math.min(msgInput.scrollHeight, 140) + 'px';
+          updateMentionPicker(msgInput.value);
+          publishTyping(true);
         });
       }
       const threadInput = document.getElementById('thread-input');
@@ -5822,6 +6593,17 @@ Minimum version required to store current data is: `+i+`.
       if (attachBtn && fileInput) {
         attachBtn.onclick = () => fileInput.click();
         fileInput.onchange = (e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            uploadFilesToS3(e.target.files);
+            e.target.value = '';
+          }
+        };
+      }
+      const threadFileInput = document.getElementById('thread-file-upload-input');
+      const threadAttachBtn = document.getElementById('tb-thread-attach');
+      if (threadAttachBtn && threadFileInput) {
+        threadAttachBtn.onclick = () => threadFileInput.click();
+        threadFileInput.onchange = (e) => {
           if (e.target.files && e.target.files.length > 0) {
             uploadFilesToS3(e.target.files);
             e.target.value = '';
@@ -6070,13 +6852,44 @@ Minimum version required to store current data is: `+i+`.
         if (!rawName || !rawName.trim()) return;
         const cleanName = rawName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
         const id = `chan_${cleanName}`;
-        state.channels[id] = { id, name: cleanName, topic: topic || `Discussion for #${cleanName}` };
+        if (state.channels[id]) {
+          showToast(`Channel #${cleanName} already exists or is archived. Choose another name.`);
+          return;
+        }
+        state.channels[id] = {
+          id,
+          name: cleanName,
+          topic: topic?.trim() || `Discussion for #${cleanName}`,
+          createdAt: Date.now(),
+          createdBy: config.user.id,
+          updatedAt: Date.now(),
+          updatedBy: config.user.id
+        };
         saveLocalCache();
         if (createChanModal) createChanModal.classList.remove('open');
         selectChannel(id);
         showToast(`Channel #${cleanName} created!`);
         pushFiles([{ relativePath: `channels/${id}/meta.json`, content: JSON.stringify(state.channels[id], null, 2) }], config.user.id);
       });
+
+      // Channel owner / workspace admin management
+      const manageChanModal = document.getElementById('manage-chan-modal');
+      setClickHandler('btn-channel-actions', () => openChannelManager(activeChannelId));
+      setClickHandler('btn-close-manage-chan', () => {
+        if (manageChanModal) manageChanModal.classList.remove('open');
+        managedChannelId = null;
+      });
+      setClickHandler('btn-save-channel', saveManagedChannel);
+      setClickHandler('btn-archive-channel', archiveManagedChannel);
+      const editChanName = document.getElementById('edit-chan-name');
+      if (editChanName) {
+        editChanName.addEventListener('keydown', event => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            saveManagedChannel();
+          }
+        });
+      }
 
       const newChanInput = document.getElementById('new-chan-name');
       if (newChanInput) {
@@ -6201,7 +7014,7 @@ Minimum version required to store current data is: `+i+`.
         if (!username) return;
 
         if (!state.membersConfig) {
-          state.membersConfig = { workspaceId: 'workspace_default', membershipPolicy: 'open', members: [] };
+          state.membersConfig = { workspaceId: 'workspace_default', membershipPolicy: 'open', updatedAt: Date.now(), members: [] };
         }
         const cleanUser = username.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
         const existing = state.membersConfig.members.find(m => m.gitUsername === cleanUser || m.id === `user_${cleanUser}`);
@@ -6218,6 +7031,7 @@ Minimum version required to store current data is: `+i+`.
             joinedAt: Date.now()
           });
         }
+        state.membersConfig.updatedAt = Date.now();
         if (userInput) userInput.value = '';
         saveLocalCache();
         renderMembersRoster();
@@ -6308,7 +7122,7 @@ Minimum version required to store current data is: `+i+`.
         config.workspaceSecret = document.getElementById('cfg-workspace-secret')?.value.trim() || '';
         config.gistId = (document.getElementById('cfg-gist-id')?.value || '').trim();
         config.gistToken = (document.getElementById('cfg-gist-token')?.value || '').trim();
-        config.workspaceSchemaVersion = 2;
+        config.workspaceSchemaVersion = 3;
         const nextWorkspace = `${config.owner}/${config.repo}@${config.branch || 'master'}`;
         if (nextWorkspace !== previousWorkspace) {
           state.messages = [];
@@ -6341,6 +7155,7 @@ Minimum version required to store current data is: `+i+`.
         const policyEl = document.getElementById('cfg-membership-policy');
         if (state.membersConfig && policyEl) {
           state.membersConfig.membershipPolicy = policyEl.value;
+          state.membersConfig.updatedAt = Date.now();
           pushFiles([{ relativePath: 'config/members.json', content: JSON.stringify(state.membersConfig, null, 2) }], config.user.id);
         }
 
@@ -6357,6 +7172,7 @@ Minimum version required to store current data is: `+i+`.
         lastRenderedChecksum = '';
         saveLocalCache();
         publishUserProfile();
+        await detectIdentity();
         initClientTransports();
         updateChannelMuteUI();
         renderSidebar();
@@ -6391,13 +7207,19 @@ Minimum version required to store current data is: `+i+`.
 
       // Clean Slate Workspace Reset
       setClickHandler('btn-clean-slate', async () => {
-        if (!confirm('Warning: This will purge all message history from the Git data branch and reset to a clean slate. Continue?')) return;
+        if (!confirm('Warning: This will purge all message history from the configured data repository and reset every linked client. Continue?')) return;
+        if (!config.token) {
+          showToast('A GitHub PAT is required to wipe the remote workspace.');
+          return;
+        }
         try {
-          await fetch(apiUrl('/api/workspace/reset'), { method: 'POST' });
+          await resetRemoteWorkspace();
+          showToast('Workspace reset. Reloading…');
         } catch (e) {
           console.error(e);
+          showToast('Remote reset failed. Check the PAT and try again.');
+          return;
         }
-        localStorage.clear();
         sessionStorage.clear();
         window.location.hash = '';
         window.location.reload();
@@ -6459,7 +7281,15 @@ Minimum version required to store current data is: `+i+`.
             item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-weight:600; color:var(--text-heading);">${m.author?.name || 'Unknown'}</span> <span style="font-size:11px; color:var(--text-dim);">${new Date(m.timestamp).toLocaleDateString()}</span></div><div style="font-size:11px; color:var(--accent-blue); margin-bottom:4px;">#${state.channels[m.channelId]?.name || m.channelId}</div><div style="font-size:13px; color:var(--text-main);">${renderMarkdown(match.text)}</div>`;
             item.onclick = () => {
               selectChannel(m.channelId);
+              if (m.threadRootId) openThread(m.threadRootId);
               if (searchModal) searchModal.classList.remove('open');
+              setTimeout(() => {
+                const target = document.querySelector(`[data-msg-id="${m.threadRootId || m.id}"]`);
+                if (target) {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  target.classList.add('show-actions', 'active-tap');
+                }
+              }, 80);
             };
             searchResults.appendChild(item);
           }
@@ -6630,7 +7460,13 @@ Minimum version required to store current data is: `+i+`.
           if (embedded.token) config.token = embedded.token;
           if (embedded.gistId) config.gistId = embedded.gistId;
           if (embedded.gistToken) config.gistToken = embedded.gistToken;
-          config.workspaceSchemaVersion = embedded.workspaceSchemaVersion || 2;
+          config.workspaceSchemaVersion = embedded.workspaceSchemaVersion || 3;
+          if (embedded.historyEpoch) {
+            workspaceEpoch = normalizeHistoryEpoch(embedded.historyEpoch);
+            config.historyEpoch = workspaceEpoch;
+          }
+          if (embedded.storageRepo) localStorage.setItem('git_chat_storage_repo', embedded.storageRepo);
+          if (embedded.storageToken) localStorage.setItem('git_chat_storage_token', embedded.storageToken);
           if (embedded.user && typeof embedded.user === 'object') {
             if (embedded.user.name) config.user.name = embedded.user.name;
             if (embedded.user.id) config.user.id = embedded.user.id;
@@ -6669,7 +7505,13 @@ Minimum version required to store current data is: `+i+`.
           if (parsed.token) config.token = parsed.token;
           if (parsed.gistId) config.gistId = parsed.gistId;
           if (parsed.gistToken) config.gistToken = parsed.gistToken;
-          config.workspaceSchemaVersion = parsed.workspaceSchemaVersion || 2;
+          config.workspaceSchemaVersion = parsed.workspaceSchemaVersion || 3;
+          if (parsed.historyEpoch) {
+            workspaceEpoch = normalizeHistoryEpoch(parsed.historyEpoch);
+            config.historyEpoch = workspaceEpoch;
+          }
+          if (parsed.storageRepo) localStorage.setItem('git_chat_storage_repo', parsed.storageRepo);
+          if (parsed.storageToken) localStorage.setItem('git_chat_storage_token', parsed.storageToken);
           if (parsed.password) {
             vaultPassword = parsed.password;
             vaultKey = await CryptoVault.deriveKey(vaultPassword);
@@ -6803,13 +7645,13 @@ Minimum version required to store current data is: `+i+`.
         setInterval(() => checkForUpdates(false), 30000);
         setInterval(() => {
           if (window.offlineQueue && window.offlineQueue.size() > 0) {
-            window.offlineQueue.drain(pushFilesToGitHub).catch(() => {});
+            drainOutboxBestEffort().catch(() => {});
           }
         }, 10000);
 
         window.addEventListener('online', () => {
           if (window.offlineQueue && window.offlineQueue.size() > 0) {
-            window.offlineQueue.drain(pushFilesToGitHub).then(n => {
+            drainOutboxBestEffort().then(n => {
               if (n > 0) showToast(`Reconnected: synced ${n} queued offline updates`);
             }).catch(() => {});
           }
@@ -6823,7 +7665,7 @@ Minimum version required to store current data is: `+i+`.
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') {
             if (window.offlineQueue && window.offlineQueue.size() > 0) {
-              window.offlineQueue.drain(pushFilesToGitHub).catch(() => {});
+              drainOutboxBestEffort().catch(() => {});
             }
             if (window.p2pClient) window.p2pClient.broadcastDiscovery();
             if (window.liveMeshClient && !window.liveMeshClient.isConnected()) window.liveMeshClient.connect();

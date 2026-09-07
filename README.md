@@ -1,6 +1,6 @@
 # git-chat
 
-Zero-backend, single-file, end-to-end encrypted chat. Hosted Git repos are the database, the transport, and the backup.
+Zero-backend, single-file, end-to-end encrypted chat. Live transports (P2P, Mesh, SSE) deliver messages. Hosted Git repos are the worst-case backup.
 
 **Live demo:** [https://sysoce.github.io/git-chat/](https://sysoce.github.io/git-chat/)
 
@@ -58,8 +58,8 @@ Scan the QR from your phone, or open the printed Pages URL. The `#setup=…` has
 | 1 | P2P Direct (WebRTC) | STUN reachability |
 | 2 | Mesh Live (public MQTT) | Network |
 | 3 | Live SSE | `npm start` with a matching local workspace |
-| 4 | GitHub Sync | Repo + optional PAT |
-| 5 | Gist Vault | Gist ID + token with `gist` scope |
+| 4 | GitHub Sync (backup) | Repo + PAT, used when live modes are down |
+| 5 | Gist Vault (backup) | Gist ID + token with `gist` scope |
 
 Offline writes queue locally and drain on reconnect.
 
@@ -68,6 +68,21 @@ The local SSE bridge is accepted only when its git repository matches the select
 **Optional Gist backup:** Settings → Workspace → Gist Vault ID. Every encrypted update is mirrored there as a rolling off-site backup.
 
 The green connection badge is a button. Click it to cycle **Automatic → P2P → Mesh → SSE → Git → Gist**. Selecting an unavailable mode still permits automatic fallback. **Refresh** manually asks every live peer and configured storage backend for current messages; background delivery remains enabled.
+
+---
+
+## Clean slate
+
+Settings → **Clean Slate** replaces the tip of the **configured data repository** (`sysoce/chat-data` by default) with only `workspace.json` + `#general`, then bumps `historyEpoch`. Stale offline queues, Gist vault copies, and old mesh catch-up files are rejected after the bump. A GitHub PAT is required. `npm run reset` only resets the local `git-chat` branch used by the development bridge.
+
+---
+
+## Channel management
+
+- Create channels with the **+** beside Channels.
+- Channel creators and workspace admins see a **•••** action beside manageable channels and in the channel header.
+- Rename a channel or update its topic without moving its existing message history.
+- Archive a channel to remove it from active lists on every synced client. Its encrypted history remains retained; `#general` cannot be archived.
 
 ---
 
